@@ -24,6 +24,10 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 - VoiceOver, Full Keyboard Access, light appearance, Reduce Motion and Reduce Transparency, drag and drop from Finder, a real slow or exFAT drive, read-only and full destinations, macOS 15, and Intel hardware.
 - Replacing a running installation with a newer copy, and the Quick Action's lookup with several installed copies.
 
+## 2026-10-21: Version 1.2.0 Release Candidate
+
+Release preparation updates all version declarations and the generated Quick Action to 1.2.0. The candidate passes 37 Swift tests, 89 Python converter/site/release-tool tests, version consistency, Quick Action freshness, and diff checks. The universal app rebuild passes ad-hoc signature verification and engine self-check. Native launch confirms version 1.2.0 in About; opening a real ATEM recording shows its 86 edits, the unchanged Camera 1 WAV default, and the live-mix choice. No output was written during that read-only inspection. The XML behavior and native Final Cut evidence below are unchanged by the version update. Signing, notarization, and installer acceptance for 1.2.0 remain pending the release workflow.
+
 ## 2026-10-21: Unreleased, Recorded Live Mix
 
 - **Decision:** preserve the isolated WAV default and add **ATEM live mix** to the existing soundtrack choices in the app, Python dialogs, and both command-line tools (`--live-mix`). The mix uses Program audio, falling back to an audio-bearing selected ISO. It preserves the recorded result of AFV and mixer changes; it does not reconstruct their automation. Program picture remains independent. A recording without WAVs selects live mix automatically. Silent MP4s cannot be selected as a usable soundtrack.
