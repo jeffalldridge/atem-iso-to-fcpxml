@@ -53,4 +53,5 @@ release: clean notarize
 	@echo "==> Release artifact: $(DMG_PATH)"
 
 clean:
-	rm -rf .build build
+	@# Retry once: an indexer can hold a file in .build for a moment and make the first rm fail.
+	rm -rf build .build || { sleep 2; rm -rf build .build; }
