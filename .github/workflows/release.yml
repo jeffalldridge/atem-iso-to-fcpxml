@@ -1,8 +1,12 @@
 name: Release
 
-# Push a tag like v1.1.0 to build the universal, notarized, stapled app, package it as a
-# notarized .dmg, and publish a GitHub Release together with the Quick Action and the
-# standalone Python converter.
+# Push a tag like v1.1.0 (on a commit that is on main) to build the universal, notarized,
+# stapled app, package it as a notarized .dmg, and create a DRAFT GitHub Release together with
+# the Quick Action and the standalone Python converter. Nothing becomes public or "latest"
+# until the maintainer checks the draft (see docs/releasing.md) and presses Publish.
+#
+# Two jobs: "build" holds the signing credentials and can only read the repository; "publish"
+# holds contents: write, never sees a credential, and only handles the finished files.
 #
 # Required repository secrets (the same names as macSubtitleOCR-gui, so one set of
 # values serves both projects):
@@ -21,15 +25,19 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  release:
-    name: Build, notarize, and publish
+  build:
+    name: Build, sign, and notarize
     runs-on: macos-26
     timeout-minutes: 60
+    # Lets the maintainer add protection rules (for example a required reviewer) to the release credentials.
+    environment: release
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -46,6 +54,15 @@ jobs:
           set -euo pipefail
           [[ "$GITHUB_REF" == refs/tags/* ]] || { echo "::error::Select a version tag for a release"; exit 1; }
           python scripts/check_release.py "$GITHUB_REF_NAME"
+
+      - name: Check the tagged commit is on main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::$GITHUB_REF_NAME is not on main; releases are cut from main only"
+            exit 1
+          }
 
       - name: Tests
         run: |
@@ -112,12 +129,20 @@ jobs:
           shasum -a 256 ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt
           shasum -a 256 -c SHA256SUMS.txt
 
-      - uses: softprops/action-gh-release@v2
+      - name: Verify the signed app and disk image
+        run: |
+          set -euo pipefail
+          hdiutil attach -nobrowse -readonly -mountpoint "$RUNNER_TEMP/dmg" build/ATEM-ISO-to-FCPXML.dmg
+          spctl -a -t exec -vv "$RUNNER_TEMP/dmg/ATEM ISO to FCPXML.app"
+          hdiutil detach "$RUNNER_TEMP/dmg"
+          spctl -a -t open --context context:primary-signature -vv build/ATEM-ISO-to-FCPXML.dmg
+          xcrun stapler validate build/ATEM-ISO-to-FCPXML.dmg
+
+      - uses: actions/upload-artifact@v4
         with:
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          name: ATEM ISO to FCPXML ${{ github.ref_name }}
-          files: |
+          name: release-files
+          if-no-files-found: error
+          path: |
             build/ATEM-ISO-to-FCPXML.dmg
             build/ATEM-ISO-to-FCPXML-Quick-Action.zip
             build/atem_iso_to_fcpxml.py
@@ -130,3 +155,27 @@ jobs:
           if [[ -f "$RUNNER_TEMP/build.keychain-db" ]]; then
             security delete-keychain "$RUNNER_TEMP/build.keychain-db"
           fi
+
+  publish:
+    name: Create the draft release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-files
+          path: files
+      - name: Check the files, then create the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == refs/tags/* ]] || { echo "::error::Only a version tag can create a release"; exit 1; }
+          cd files
+          sha256sum -c SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --generate-notes \
+            --title "ATEM ISO to FCPXML $GITHUB_REF_NAME" \
+            ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py SHA256SUMS.txt
