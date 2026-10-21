@@ -45,3 +45,4 @@ dist/
 .vscode/
 .claude/settings.local.json
 .build/
+.claude/launch.json

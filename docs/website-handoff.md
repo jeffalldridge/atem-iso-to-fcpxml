@@ -21,7 +21,7 @@ Search phrases the page should answer: "ATEM ISO to Final Cut Pro," "open ATEM r
 - Download page (the disk image is listed there): https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest
 - Release page: https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest
 - Source: https://github.com/jeffalldridge/atem-iso-to-fcpxml
-- Screenshots and the favicon: `docs/site/images/` and `docs/site/favicon.svg` in the repository (the screenshots show a synthetic "Live Show" recording, no real footage).
+- App icon: `docs/site/app-icon-1024.png` (and 512) in the repository, rendered by macOS from the Icon Composer source `Resources/AppIcon.icon`; use it instead of the old favicon.svg. Screenshots: `docs/site/images/` (a synthetic "Live Show" recording, no real footage).
 
 ## Release State
 

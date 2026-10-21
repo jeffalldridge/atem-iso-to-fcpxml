@@ -2,7 +2,7 @@
 
 ## 1.1.0 (Unreleased)
 
-- A native Mac app: one universal Swift binary (macOS 15+), signed and notarized, distributed as a disk image. Drop the recording folder, check cameras and soundtrack, create the XML, open it in Final Cut Pro. No Python or developer tools needed.
+- A native Mac app: one universal Swift binary (macOS 15+), signed and notarized, distributed as a disk image. Drop the recording folder, check cameras and soundtrack, create the XML, open it in Final Cut Pro. No Python or developer tools needed. The window is laid out like Compressor (live switch on top, Cameras, Audio, and Options columns, the action in a bottom bar), uses Liquid Glass on macOS 26 and standard controls on macOS 15, and has an Icon Composer icon.
 - The Swift engine is a port of the Python converter and is tested to write byte-identical XML on synthetic scenarios and on real recordings; the Python script remains the reference and the command-line tool.
 - The Finder Quick Action hands off to the app when the app is installed and otherwise shows native checkbox dialogs; the 1.0.0 dialog error (-1728) is fixed.
 - When the program recording is missing, the first selected camera stands in for keyed and faded sections with a marker instead of a silent gap.

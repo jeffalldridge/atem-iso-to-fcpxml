@@ -17,7 +17,7 @@ APP_EXEC="${BIN_DIR}/${EXEC_NAME}"
 INFO_PLIST="Resources/Info.plist"
 ENTITLEMENTS="Resources/ATEMISOtoFCPXML.entitlements"
 
-for f in "$APP_EXEC" "$INFO_PLIST" "$ENTITLEMENTS"; do
+for f in "$APP_EXEC" "$INFO_PLIST" "$ENTITLEMENTS" "Resources/AppIcon.icon/icon.json"; do
     [[ -e "$f" ]] || { echo "Error: missing $f. Run 'make build' first." >&2; exit 1; }
 done
 
@@ -34,8 +34,24 @@ for want in arm64 x86_64; do
     [[ "$archs" == *"$want"* ]] || { echo "Error: the executable is missing the $want slice (got: $archs)." >&2; exit 1; }
 done
 
-echo "==> Rendering icon"
-swift scripts/make-icon.swift "$APP/Contents/Resources/AppIcon.icns"
+# --- Icon ---
+# The Icon Composer source compiles to an Assets.car (Liquid Glass on macOS 26)
+# plus a classic .icns for everything older.
+ICON_SRC="Resources/AppIcon.icon"
+echo "==> Compiling $ICON_SRC"
+ICON_TMP="$(mktemp -d)"
+trap 'rm -rf "$ICON_TMP"' EXIT
+xcrun actool "$ICON_SRC" \
+    --compile "$ICON_TMP" \
+    --platform macosx \
+    --minimum-deployment-target 15.0 \
+    --app-icon AppIcon \
+    --output-partial-info-plist "$ICON_TMP/partial.plist" \
+    --output-format human-readable-text >/dev/null
+for asset in Assets.car AppIcon.icns; do
+    [[ -s "$ICON_TMP/$asset" ]] || { echo "Error: actool did not produce $asset." >&2; exit 1; }
+    cp "$ICON_TMP/$asset" "$APP/Contents/Resources/$asset"
+done
 
 if [[ -n "${DEV_ID:-}" ]]; then
     echo "==> Signing with Developer ID + hardened runtime"

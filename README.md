@@ -17,7 +17,7 @@ Open the disk image, drag the app to Applications, and open it. Then:
 
 1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. Double-clicking the `.drp` inside the folder works too.
 2. Check the cameras you used (the ones you switched to live are already checked), pick the WAV for the soundtrack, and add the mic inputs as extra angles if you want them.
-3. Click **Create Final Cut XML**, then **Open in Final Cut Pro**.
+3. Click **Create FCPXML**, then **Open in Final Cut Pro**.
 
 Final Cut creates an event named after the recording folder containing the multicam clip, the Live Edit project, and every source file. Trim, fix a switch in the Angle Viewer, add titles, and export.
 

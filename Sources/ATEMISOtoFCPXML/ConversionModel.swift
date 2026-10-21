@@ -27,18 +27,6 @@ struct TimelineSegment: Identifiable {
     let dissolveIn: Bool
 }
 
-/// Colors for angles: cameras take the palette in input order; stills and the program recording are neutral.
-enum AnglePalette {
-    static let colors: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .yellow, .indigo]
-    static func color(for angleID: String, cameraOrder: [Int]) -> Color {
-        if angleID.hasPrefix("input-"), let index = Int(angleID.dropFirst(6)), let position = cameraOrder.firstIndex(of: index) {
-            return colors[position % colors.count]
-        }
-        if angleID.hasPrefix("still-") { return .gray }
-        return Color(white: 0.35)
-    }
-}
-
 struct LoadedRecording {
     let log: URL
     let recording: Recording
@@ -68,9 +56,9 @@ enum TransitionStyle: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .dissolve: "Cross dissolves"
-        case .cut: "Hard cuts"
-        case .program: "Program recording"
+        case .dissolve: "Dissolves"
+        case .cut: "Cuts"
+        case .program: "Program video"
         }
     }
 }
@@ -82,11 +70,13 @@ final class ConversionModel {
 
     private(set) var phase: Phase = .empty
     private(set) var loaded: LoadedRecording?
-    var selectedCameras: Set<Int> = []
-    var soundtrack: String = ""
-    var extraAudio: Set<String> = []
-    var transitions: TransitionStyle = .dissolve
-    var includeProgramAngle = false
+    var selectedCameras: Set<Int> = [] { didSet { choiceChanged() } }
+    var soundtrack: String = "" { didSet { choiceChanged() } }
+    var extraAudio: Set<String> = [] { didSet { choiceChanged() } }
+    var transitions: TransitionStyle = TransitionStyle(rawValue: UserDefaults.standard.string(forKey: "transitions") ?? "") ?? .dissolve {
+        didSet { UserDefaults.standard.set(transitions.rawValue, forKey: "transitions"); choiceChanged() }
+    }
+    var includeProgramAngle = false { didSet { choiceChanged() } }
     private(set) var output: URL?
     private(set) var summary: [String] = []
     var errorMessage: String?
@@ -94,6 +84,27 @@ final class ConversionModel {
     var isTargeted = false
     private(set) var timeline: [TimelineSegment] = []
     var cameraOrder: [Int] { loaded?.cameras.map(\.id) ?? [] }
+    var liveSwitchText: String { "\(timeline.count) clips, \(timeline.filter(\.dissolveIn).count) dissolves" }
+    var soundtrackName: String {
+        guard let loaded else { return "" }
+        return loaded.audio.first { $0.id == soundtrack }?.title ?? "MP4 audio"
+    }
+    func angleName(_ angleID: String) -> String {
+        if angleID.hasPrefix("input-"), let index = Int(angleID.dropFirst(6)) { return loaded?.cameras.first { $0.id == index }?.name ?? angleID }
+        if angleID.hasPrefix("still-") { return "Still" }
+        if angleID == "program" { return "Program" }
+        return angleID
+    }
+    /// One line saying what the current choices make.
+    var planSummary: String {
+        guard loaded != nil else { return "" }
+        if selectedCameras.isEmpty { return "Choose at least one camera." }
+        let extras = optionalAudio.filter { extraAudio.contains($0.id) }.count
+        var angles = "\(selectedCameras.count) camera\(selectedCameras.count == 1 ? "" : "s")"
+        if extras > 0 { angles += " and \(extras) audio angle\(extras == 1 ? "" : "s")" }
+        return "Multicam clip with \(angles) · Live Edit project with \(liveSwitchText) · Soundtrack: \(soundtrackName)"
+    }
+    var recentRecordings: [URL] { NSDocumentController.shared.recentDocumentURLs }
     func color(for angleID: String) -> Color { AnglePalette.color(for: angleID, cameraOrder: cameraOrder) }
 
     var isBusy: Bool { phase == .loading || phase == .converting }
@@ -241,9 +252,11 @@ final class ConversionModel {
         phase = .empty
     }
 
-    func backToChoices() {
-        guard phase == .done, loaded != nil else { return }
+    /// Any change after a conversion makes the window ready to convert again; the saved file stays where it is.
+    private func choiceChanged() {
+        guard phase == .done else { return }
         output = nil
+        summary = []
         phase = .ready
     }
 }

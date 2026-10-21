@@ -20,6 +20,16 @@ struct ATEMApp: App {
                 Button("Open Recording…") { delegate.model.chooseRecording() }
                     .keyboardShortcut("o")
                     .disabled(delegate.model.isBusy)
+                Menu("Open Recent") {
+                    ForEach(delegate.model.recentRecordings, id: \.self) { url in
+                        Button(url.deletingPathExtension().lastPathComponent) { delegate.model.open(url) }
+                    }
+                    if !delegate.model.recentRecordings.isEmpty {
+                        Divider()
+                        Button("Clear Menu") { NSDocumentController.shared.clearRecentDocuments(nil) }
+                    }
+                }
+                .disabled(delegate.model.isBusy)
             }
             CommandGroup(replacing: .help) {
                 Link("ATEM ISO to FCPXML Help", destination: URL(string: "https://jeffalldridge.github.io/atem-iso-to-fcpxml/")!)

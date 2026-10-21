@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="none"/>
+  <!-- arrow into Final Cut -->
+  <path d="M700 472 H812 V404 L936 512 L812 620 V552 H700 Z" fill="#FF8A4C"/>
+</svg>

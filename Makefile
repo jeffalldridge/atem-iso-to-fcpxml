@@ -1,4 +1,4 @@
-.PHONY: build test app dmg package-dmg notarize submit-dmg-notarization release clean
+.PHONY: build test app dmg package-dmg notarize submit-dmg-notarization release clean site-icons
 
 APP_NAME   := ATEM ISO to FCPXML
 APP_BUNDLE := build/$(APP_NAME).app
@@ -55,3 +55,9 @@ release: clean notarize
 clean:
 	@# Retry once: an indexer can hold a file in .build for a moment and make the first rm fail.
 	rm -rf build .build || { sleep 2; rm -rf build .build; }
+
+# Render the website's favicon and app-icon PNGs from the built app's icon, as macOS draws it, and refresh the social card.
+site-icons: app
+	/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$(APP_BUNDLE)"
+	swift scripts/render-icon.swift "$(APP_BUNDLE)" docs/site
+	swift scripts/build_social_card.swift

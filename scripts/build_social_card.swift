@@ -19,7 +19,10 @@ func label(_ value: String, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat, _ ink: 
     (value as NSString).draw(at:NSPoint(x:x,y:CGFloat(height)-y-size*1.25),withAttributes:attrs)
 }
 rect(0,0,1200,630,bg)
-label("ATEM ISO → FCPXML",72,48,23,accent,.semibold)
+if let icon = NSImage(contentsOfFile: "docs/site/app-icon-1024.png") {
+    icon.draw(in: NSRect(x: 72, y: CGFloat(height) - 48 - 72, width: 72, height: 72), from: .zero, operation: .sourceOver, fraction: 1)
+}
+label("ATEM ISO to FCPXML",160,66,23,accent,.semibold)
 label("Your Live Edit.",72,132,72,text,.semibold)
 label("Ready for Final Cut.",72,214,72,accent,.semibold)
 label("Multicam. Live cuts. Uncompressed WAV audio.",76,324,27,muted)

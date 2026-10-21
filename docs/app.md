@@ -5,12 +5,13 @@
 ```
 Package.swift
 Sources/ATEMConverter/      The engine: a port of atem_iso_to_fcpxml.py (Rational, Timecode, DRP, Media, Recording, EditList, Plan, FCPXML, Converter)
-Sources/ATEMISOtoFCPXML/    The app: ATEMApp (scene, menus, document opening), ConversionModel (state), ContentView (empty, choices, converting, done)
+Sources/ATEMISOtoFCPXML/    The app: ATEMApp (scene, menus), ConversionModel (state), ContentView, RecordingHeader, ChoiceColumns, ActionBar, Theme
 Sources/atem-convert/       A command-line front end with the Python script's options, used to compare outputs
 tests/ATEMConverterTests/   XCTest: synthetic fixtures, unit tests, and parity tests that run the Python reference and compare bytes
 Resources/                  Info.plist, entitlements
 scripts/make-app.sh         Assembles the bundle (universal check, icon, signing, self-check)
-scripts/make-icon.swift     Renders AppIcon.icns from the same artwork as the website favicon
+Resources/AppIcon.icon      The Icon Composer source (icon.json plus SVG layers); make-app.sh compiles it with actool into Assets.car and AppIcon.icns
+scripts/render-icon.swift   Renders the installed app's icon as macOS draws it into the website PNGs (make site-icons)
 Makefile                    build, test, app, dmg, notarize, release, clean
 ```
 
@@ -29,14 +30,17 @@ Change behavior in the Python script first, with a test, then mirror it in Swift
 
 ## User interface
 
-The window has four states, each with a fixed size so the window follows the content:
+One window, laid out like Compressor: the recording and its live switch across the top, the choices in three columns under it, and the action in a bar along the bottom. Every band has a fixed height and the columns scroll inside themselves, so the window resizes sideways only and never shows empty space. The chrome is the system's dark appearance; the app shares only its accent and angle colors with the website.
 
-1. **Empty**: a content-unavailable view that accepts a dropped folder or `.drp`, with a Choose Recording button. ⌘O and the Dock accept recordings too; the app registers the `.drp` document type.
-2. **Choices**: a grouped form. Recording facts; camera checkboxes with "Used live" and "MP4 audio" hints; a soundtrack radio group; extra audio checkboxes for WAVs that are not already included; options for ATEM transitions and the program angle; any notes from the engine. The default selections are what the engine would choose on its own.
-3. **Converting**: a progress indicator.
-4. **Done**: Open in Final Cut Pro (default), Show in Finder, a Details disclosure with the engine's summary, Back, and Convert Another.
+- **Header**: the recording's name, format, and duration; a video lane colored by angle with a tick at each dissolve; the soundtrack lane; a ruler line with the start and end timecodes, a legend, and the clip and dissolve counts.
+- **Cameras**: a checkbox per ISO input with its lane color. Inputs the switcher never cut to are marked "Not in the switch" and start unchecked.
+- **Audio**: the soundtrack WAV (a popup) and checkboxes for the other WAVs, which become audio-only angles.
+- **Options**: transitions (dissolves, cuts, or the program video), the program recording as an angle, where the file saves, and any notes from the engine.
+- **Action bar**: one line saying what the choices make, and Create FCPXML (⌘S). While converting it shows progress; afterward it shows the saved file with Details, Show in Finder, and Open in Final Cut Pro. Changing any choice after a conversion brings Create FCPXML back.
 
-Errors are alerts with the engine's message. Replacing an existing `.fcpxml` asks first.
+Before a recording is open the same frame shows a drop target and a Choose Recording button. ⌘O, Open Recent, the Dock, and double-clicking a `.drp` open recordings too. Errors are alerts with the engine's message, and replacing an existing `.fcpxml` asks first.
+
+On macOS 26 the buttons and bars are Liquid Glass; on macOS 15 they are the standard bordered controls. `Theme.swift` holds the colors, the measurements, and the two helpers (`prominentButton()` and `glassButton()`) that pick the style at run time.
 
 ## Building
 

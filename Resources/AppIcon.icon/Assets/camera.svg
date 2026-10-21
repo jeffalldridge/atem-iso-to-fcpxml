@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" fill="none"/>
+  <!-- camera body -->
+  <rect x="112" y="352" width="420" height="320" rx="72" fill="white"/>
+  <!-- lens -->
+  <path d="M556 452 L672 384 L672 640 L556 572 Z" fill="white"/>
+</svg>
