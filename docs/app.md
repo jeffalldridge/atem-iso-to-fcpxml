@@ -42,6 +42,8 @@ One resizable window. System appearance, accent color, toolbar, radio buttons, c
 
 The camera, soundtrack, and extra-audio lists scroll independently, so eight cameras or many WAVs stay usable. The File menu has Open Recording… (⌘O), Open Recent, Close (⌘W), Create FCPXML (⌘S), Show in Finder (⌘R), and Open in Final Cut Pro.
 
+Conversion re-reads the recording instead of trusting the earlier inspection, so a file that changed or went missing in between is caught then.
+
 Every failure names what failed in its title and says what to do; failed conversions also say the recording was not changed. A failed open leaves an already saved result alone. The Open sheet, drops, Finder Open With, and the Quick Action accept one recording at a time. Recordings with several sessions are not opened (see below).
 
 ## Closing during work
