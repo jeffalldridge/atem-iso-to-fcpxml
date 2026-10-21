@@ -21,6 +21,20 @@ One import gives you an event containing:
 
 The recording is never modified. The converter writes exactly one new file, `<name>.fcpxml`, next to the `.drp`.
 
+## Native Mac App (Local Preview)
+
+A SwiftUI front end puts camera checkboxes, a single soundtrack choice, and optional audio checkboxes in one window. Extra audio is unchecked by default. Cancel closes quietly; existing XML requires confirmation before replacement.
+
+Requires macOS 13+, Python 3.9+, and Apple Command Line Tools to build:
+
+```sh
+python3 scripts/build_macos_app.py --install
+```
+
+This installs **ATEM ISO to FCPXML.app** in your user Applications folder and updates the Finder Quick Action to open it. You can also launch the app and choose a recording. The Python converter remains usable on its own.
+
+This is a local preview, not a notarized app release. See [native app development](docs/native-app.md) for build and validation details. The published 1.0.0 ZIP still contains the older dialog workflow and its known error.
+
 ## Install
 
 ### The Finder Quick Action (Recommended)

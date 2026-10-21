@@ -2,6 +2,8 @@
 
 ## 1.0.1 (Unreleased)
 
+- Add a local SwiftUI app preview with one selection window, inline errors, overwrite confirmation, and completion actions. Installed Finder workflows prefer the app; the Python CLI remains independent.
+
 - Use native checkboxes for cameras and optional audio angles, with a No extra audio button. Cancel exits quietly instead of triggering an Automator error.
 
 - When the program recording is missing, the first selected camera stands in for keyed and faded sections with a marker instead of a silent gap.

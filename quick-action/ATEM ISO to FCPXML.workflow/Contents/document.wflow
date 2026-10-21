@@ -64,6 +64,12 @@ if (( $# == 0 )); then
   /usr/bin/osascript -e 'display alert "ATEM ISO to FCPXML" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'
   exit 1
 fi
+# Prefer the installed native app; the standalone workflow remains a fallback.
+for app in "$HOME/Applications/ATEM ISO to FCPXML.app" "/Applications/ATEM ISO to FCPXML.app"; do
+  if [[ -d "$app" ]]; then
+    exec /usr/bin/open -a "$app" "$@"
+  fi
+done
 if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info &gt;= (3, 9) else 1)' &gt;/dev/null 2&gt;&amp;1; then
   /usr/bin/osascript -e 'display alert "Python 3.9 or newer is needed" message "Install the Apple Command Line Tools (open Terminal and run: xcode-select --install) or Python from python.org, then run the Quick Action again."'
   exit 1

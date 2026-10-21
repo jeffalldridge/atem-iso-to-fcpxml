@@ -2,6 +2,15 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: Local SwiftUI App Preview
+
+- Built and ad-hoc signed the native arm64 app on this Mac, then installed it in the user's Applications folder. The installed Finder workflow's exact shell step opens that app and exits successfully.
+- Walked through the actual native UI with a synthetic recording: used-camera defaults, unchecking all cameras disables conversion, MIC 1 radio selection removes it from optional audio, optional MIC 2 selection, successful XML creation, replacement confirmation, and successful explicit replacement.
+- Canceling replacement returns to the unchanged selection screen. Canceling the native file picker preserves the completed result. Cancel on the selection screen terminates the app without an error; app inventory confirms it is no longer running.
+- Inspected the generated XML for camera and audio selections. The JSON bridge tests cover read-only inspection, no-camera rejection, invalid recordings, source preservation, refusing existing output, and explicit replacement.
+- 70 Python tests pass, including installed Apple DTD validation. Quick Action consistency and Swift compilation pass. No new XML shapes were introduced.
+- No new Final Cut import, physical-device compatibility survey, VoiceOver pass, Intel execution, notarization, or clean-account installation was performed. The UI preview is not a published release.
+
 ## 2026-10-21: Checkbox Dialogs and Cancellation
 
 - Camera and optional audio selection now use AppKit checkboxes through macOS JavaScript for Automation. Optional audio also has a No extra audio button; the main soundtrack is not offered again as optional audio.

@@ -24,3 +24,14 @@ jobs:
       - run: python -m py_compile atem_iso_to_fcpxml.py scripts/build_quick_action.py
       - name: Quick Action bundle matches the converter
         run: python scripts/build_quick_action.py --check
+
+  native-app:
+    name: Build native Mac app
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - run: python scripts/build_macos_app.py
