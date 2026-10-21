@@ -25,9 +25,13 @@ func callEngine(_ request: Request) throws -> Reply {
     let data = output.fileHandleForReading.readDataToEndOfFile()
     task.waitUntilExit()
     guard let reply = try? JSONDecoder().decode(Reply.self, from: data) else {
-        throw AppError(message: String(data: data, encoding: .utf8) ?? "The converter could not run.")
+        let diagnostic = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        throw AppError(message: diagnostic.isEmpty ? "The converter could not run. Reopen the app and try again." : diagnostic)
     }
-    if !reply.ok { throw AppError(message: reply.error ?? "Conversion failed.") }
+    if !reply.ok {
+        let diagnostic = reply.error?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        throw AppError(message: diagnostic.isEmpty ? "Conversion failed. Try opening the recording again." : diagnostic)
+    }
     return reply
 }
 
@@ -65,14 +69,15 @@ func callEngine(_ request: Request) throws -> Reply {
     }
     func load(_ url: URL) {
         guard !busy else { return }
-        busy = true; status = "Reading recording…"; error = nil; output = nil; recording = nil
+        busy = true; status = "Reading recording…"; error = nil
         Task {
             do {
                 let request = Request(action: "inspect", path: url.path)
                 let reply = try await Task.detached { try callEngine(request) }.value
                 guard let rec = reply.recording else { throw AppError(message: "The recording could not be read.") }
+                // Keep the previous selection or completed result if inspection fails.
                 recording = rec; cameras = Set(rec.cameras.filter(\.used).map(\.id))
-                soundtrack = rec.soundtrack; extras = []
+                soundtrack = rec.soundtrack; extras = []; output = nil; report = ""
             } catch { self.error = error.localizedDescription }
             busy = false; status = ""
         }
@@ -135,7 +140,10 @@ struct ContentView: View {
                                         Text(camera.name)
                                         Text("Input \(camera.id)").foregroundStyle(.secondary)
                                         Spacer()
-                                        if camera.used { Text("Used live").font(.caption).foregroundStyle(.secondary) }
+                                        VStack(alignment: .trailing, spacing: 2) {
+                                            if camera.used { Text("Used live") }
+                                            if camera.wav == nil { Text("MP4 audio") }
+                                        }.font(.caption).foregroundStyle(.secondary)
                                     }
                                 }.toggleStyle(.checkbox)
                             }
@@ -155,12 +163,14 @@ struct ContentView: View {
                                     let reason = inclusionReason(audio.id, cameras: rec.cameras, selected: model.cameras, soundtrack: model.soundtrack)
                                     if let reason {
                                         HStack {
-                                            Image(systemName: "checkmark").frame(width: 14)
+                                            Image(systemName: "checkmark").frame(width: 14).accessibilityHidden(true)
                                             Text(audio.name)
                                             Spacer()
                                             Text(reason).font(.caption)
                                         }.foregroundStyle(.secondary)
-                                            .accessibilityElement(children: .combine)
+                                            .accessibilityElement(children: .ignore)
+                                            .accessibilityLabel(audio.name)
+                                            .accessibilityValue(reason == "Soundtrack" ? "Included as soundtrack" : "Included with camera")
                                     } else {
                                         Toggle(audio.name, isOn: Binding(get: { model.extras.contains(audio.id) }, set: { value in
                                             if value { model.extras.insert(audio.id) } else { model.extras.remove(audio.id) }
@@ -182,14 +192,20 @@ struct ContentView: View {
                             Text("Open an ATEM recording").font(.title2.weight(.semibold))
                             Text("Choose the recording folder or its .drp file.").foregroundStyle(.secondary)
                             Button("Choose Recording…") { model.openPanel() }.buttonStyle(.borderedProminent)
+                                .keyboardShortcut(.defaultAction)
                         }.frame(maxWidth: .infinity).padding(.vertical, 70)
-                    }
-                    if let error = model.error {
-                        Label { Text(error).textSelection(.enabled) } icon: { Image(systemName: "exclamationmark.triangle") }
-                            .foregroundStyle(.red).font(.callout)
                     }
                 }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             }.disabled(model.busy)
+            if let error = model.error {
+                Divider()
+                ViewThatFits(in: .vertical) {
+                    errorMessage(error)
+                    ScrollView { errorMessage(error) }
+                }
+                .frame(maxHeight: 100)
+                .padding(.horizontal, 20).padding(.vertical, 12)
+            }
             Divider()
             HStack {
                 if model.busy {
@@ -211,7 +227,7 @@ struct ContentView: View {
                 }
             }.padding(16).frame(height: 62)
         }
-        .frame(width: 520, height: model.recording == nil || model.output != nil ? 360 : 720)
+        .frame(width: 520, height: windowHeight)
         .onChange(of: model.cameras) { _ in model.reconcileAudio() }
         .onChange(of: model.soundtrack) { _ in model.reconcileAudio() }
         .alert("Replace existing XML?", isPresented: $model.confirmReplace) {
@@ -219,9 +235,20 @@ struct ContentView: View {
             Button("Replace", role: .destructive) { model.create(replace: true) }
         } message: { Text("An XML already exists beside this recording. Replacing it will not change your source media.") }
     }
+    private var windowHeight: CGFloat {
+        let preferred: CGFloat = model.recording == nil || model.output != nil ? 360 : 720
+        // Keep the footer reachable above the Dock, including on shorter displays.
+        let available = (NSApp.keyWindow?.screen ?? NSScreen.main)?.visibleFrame.height ?? 800
+        return min(preferred, max(360, available - 40))
+    }
+    private func errorMessage(_ message: String) -> some View {
+        Label { Text(message).textSelection(.enabled) } icon: { Image(systemName: "exclamationmark.triangle") }
+            .foregroundStyle(.red).font(.callout)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
     private func section<Content: View>(_ title: String, note: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.headline)
+            Text(title).font(.headline).accessibilityAddTraits(.isHeader)
             if !note.isEmpty { Text(note).font(.callout).foregroundStyle(.secondary) }
             VStack(alignment: .leading, spacing: 7, content: content)
                 .padding(10).frame(maxWidth: .infinity, alignment: .leading)

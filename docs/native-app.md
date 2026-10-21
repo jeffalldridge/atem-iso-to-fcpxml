@@ -17,7 +17,7 @@ The app is installed into the user's Applications folder. The builder regenerate
 
 Audio inclusion is defined in `macos/AudioSelection.swift`: the soundtrack takes priority, selected-camera WAVs are already included with their camera, and only other sources may be extra audio-only angles. Included sources remain visible with a reason. Changing cameras or soundtrack clears extras that are no longer optional; changing back does not silently reselect them. `AudioSelectionTests.swift` checks all 128 combinations of three cameras and four soundtrack sources.
 
-The app uses a compact 520-point-wide window, with a shorter opening/completion state and a scrollable selection state.
+The app uses a compact 520-point-wide window, with a shorter opening/completion state and a scrollable selection state. Its height is capped to the current screen’s usable area so the footer remains reachable. Failed attempts to open another recording preserve the current selections or completed result; errors appear above the footer.
 
 The app runs the engine off the main thread. It drains process output before waiting so long warning reports cannot fill a pipe and freeze conversion. It prevents closing or replacing the active recording during a write. Cancel before conversion produces no file; stopping a write midway is deliberately not offered. Canceling a replacement sheet preserves the current selections and existing file.
 

@@ -2,6 +2,17 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: UI and Accessibility Review
+
+Three independent source reviews covered the native workflow, website, and accessibility. Applied fixes preserve selections/results on failed inspection, keep errors above the footer, add Return on the opening screen, expose section headings and audio inclusion reasons to accessibility, and identify camera MP4-audio fallback. Window height is capped to the current screen's usable area.
+
+- Built and installed the updated app locally. In the actual app, Return opened the native recording picker; cancel returned normally. Opened the synthetic recording, selected MIC 1, then opened an invalid file. The recording and MIC 1 selection remained, with the error visibly above the action buttons. Accessibility inspection exposed the new headings and explicit inclusion descriptions.
+- Website review removed the duplicated workflow section, made all four screenshots render at the same width, and supplied complete clone/change-directory/build commands. The README no longer recommends the known-broken release ZIP. Browser checks at 1280 and 320 pixels showed no horizontal document overflow; all four images loaded at equal widths within each layout. Narrow-screen build instructions remained readable and selectable.
+- 71 Python tests, 128 Swift audio combinations, native compilation, generated-workflow consistency, and whitespace checks passed.
+- These changes do not alter the conversion engine or XML structures. No new Final Cut round trip, VoiceOver speech/navigation acceptance, physical short-display test, or clean-account installation was performed. Long diagnostic scrolling remains to be exercised.
+
+Remaining review follow-ups before public native distribution: verify interpreter availability/version instead of selecting the first executable Python path, test missing developer tools on a clean account, and exercise VoiceOver and window placement across displays. The preview is still an ad-hoc-signed source build.
+
 ## 2026-10-21: Conditional Audio and Website Captures
 
 - The pure Swift inclusion rules pass 128 camera-subset/soundtrack combinations. The native UI was also exercised: select CAM 3 as extra, make CAM 3 the soundtrack, switch to MIC 1, and confirm CAM 3 returns unchecked. CAM 1 and CAM 2 remain labeled as included with their selected cameras. MIC 2 can be added separately.
