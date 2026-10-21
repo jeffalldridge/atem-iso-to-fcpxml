@@ -801,6 +801,42 @@ class HardeningTests(unittest.TestCase):
         self.assertIn("recording media", result.stderr)
         self.assertEqual(renamed.read_bytes(), original)
 
+    def test_media_outside_supported_ranges_is_rejected(self):
+        """Extreme header values are refused with a message; they never reach the rational arithmetic."""
+        fixture = RecordingDir(frames=600)
+        self.addCleanup(fixture.cleanup)
+        video = fixture.root / "Video ISO Files" / "Show CAM 1.mp4"
+        original = video.read_bytes()
+        stts = b"stts" + struct.pack(">IIII", 0, 1, 600, 1)
+        mdhd_at = original.index(b"mdhd") + 4 + 4 + 8  # version/flags, creation and modification times
+        for label, patch in (("timescale", (mdhd_at, struct.pack(">I", 0xFFFFFFFF))),
+                             ("frame count", (original.index(stts) + 12, struct.pack(">I", 0xFFFFFFFF))),
+                             ("frame rate", (original.index(stts) + 16, struct.pack(">I", 3600)))):
+            with self.subTest(label):
+                data = bytearray(original)
+                data[patch[0]:patch[0] + 4] = patch[1]
+                video.write_bytes(bytes(data))
+                with self.assertRaisesRegex(c.ConversionError, "outside the range"):
+                    c.probe_mp4(video)
+        wav = fixture.root / "Audio Source Files" / "Show CAM 1.wav"
+        for label, kwargs in (("sample rate", dict(rate=7_999)), ("sample rate", dict(rate=768_001)),
+                              ("time reference", dict(time_reference=1 << 62))):
+            with self.subTest(label, **kwargs):
+                make_wav(wav, **{"sample_frames": 48_000, **kwargs})
+                with self.assertRaisesRegex(c.ConversionError, "outside the range"):
+                    c.probe_wav(wav)
+        make_wav(wav, 48_000, time_reference=(1 << 48), rate=768_000)  # the edge of the range is accepted
+        self.assertEqual(c.probe_wav(wav).sample_rate, 768_000)
+
+    def test_mp4_scan_stops_at_the_index(self):
+        """Python reads only up to moov; trailing boxes, even corrupt ones, are never walked."""
+        fixture = RecordingDir(frames=600)
+        self.addCleanup(fixture.cleanup)
+        video = fixture.root / "Video ISO Files" / "Show CAM 1.mp4"
+        with video.open("ab") as fh:
+            fh.write(struct.pack(">I4s", 0xFFFFFFF0, b"junk"))
+        self.assertEqual(c.probe_mp4(video).frames, 600)
+
     def test_invalid_log_containers_fail_cleanly(self):
         fixture = RecordingDir(frames=600)
         self.addCleanup(fixture.cleanup)

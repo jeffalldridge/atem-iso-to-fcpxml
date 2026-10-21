@@ -26,6 +26,52 @@ final class SafetyTests: XCTestCase {
         XCTAssertThrowsError(try probeMp4(path))
     }
 
+    func testRationalArithmeticSurvivesIntermediatesBeyondSixtyFourBits() {
+        // Each cross-multiplication below exceeds Int64 before the result is reduced.
+        XCTAssertTrue(Rational(1 << 40, 1_000_033) < Rational(1 << 40, 1_000_003))
+        XCTAssertEqual(Rational(1 << 40, 3_000_000_019) * Rational(3_000_000_019, 1 << 41), Rational(1, 2))
+        XCTAssertEqual(Rational(1 << 50, 7) - Rational(1 << 50, 7) + Rational(1, 3_000_000_019) * 3_000_000_019, Rational(1))
+        XCTAssertEqual(Rational(1 << 40, 3_000_000_019) / Rational(1 << 40, 3_000_000_019), Rational(1))
+    }
+
+    func testMediaOutsideSupportedRangesIsRejected() throws {
+        let dir = try Fixtures.RecordingDir(frames: 600)
+        defer { dir.cleanup() }
+        let video = dir.root.appendingPathComponent("Video ISO Files/Show CAM 1.mp4")
+        let original = try Data(contentsOf: video)
+        let stts = Data("stts".utf8) + Fixtures.be32(0, 1, 600, 1)
+        let sttsAt = try XCTUnwrap(original.range(of: stts)).lowerBound
+        let mdhdAt = try XCTUnwrap(original.range(of: Data("mdhd".utf8))).lowerBound + 4 + 4 + 8
+        for (label, offset, value) in [("timescale", mdhdAt, UInt32.max), ("frame count", sttsAt + 12, UInt32.max), ("frame rate", sttsAt + 16, 3600)] {
+            var data = original
+            data.replaceSubrange(offset..<(offset + 4), with: Fixtures.be32(value))
+            try data.write(to: video)
+            XCTAssertThrowsError(try probeMp4(video), label) { error in
+                XCTAssertTrue((error as? ConversionError)?.message.contains("outside the range") == true, "\(label): \(error)")
+            }
+        }
+        let wav = dir.root.appendingPathComponent("Audio Source Files/Show CAM 1.wav")
+        for (label, rate, reference) in [("rate", 7_999, nil), ("rate", 768_001, nil), ("time reference", 48_000, 1 << 62)] as [(String, Int, Int?)] {
+            try Fixtures.makeWav(wav, sampleFrames: 48_000, timeReference: reference, rate: rate)
+            XCTAssertThrowsError(try probeWav(wav), label) { error in
+                XCTAssertTrue((error as? ConversionError)?.message.contains("outside the range") == true, "\(label): \(error)")
+            }
+        }
+        try Fixtures.makeWav(wav, sampleFrames: 48_000, timeReference: 1 << 48, rate: 768_000)
+        XCTAssertEqual(try probeWav(wav).sampleRate, 768_000)
+    }
+
+    func testMP4ScanStopsAtTheIndex() throws {
+        let dir = try Fixtures.RecordingDir(frames: 600)
+        defer { dir.cleanup() }
+        let video = dir.root.appendingPathComponent("Video ISO Files/Show CAM 1.mp4")
+        let handle = try FileHandle(forWritingTo: video)
+        try handle.seekToEnd()
+        try handle.write(contentsOf: Fixtures.be32(0xFFFF_FFF0) + Data("junk".utf8))
+        try handle.close()
+        XCTAssertEqual(try probeMp4(video).frames, 600)
+    }
+
     func testZeroSampleDeltaUsesDurationFallback() throws {
         let dir = try Fixtures.RecordingDir(frames: 600)
         defer { dir.cleanup() }

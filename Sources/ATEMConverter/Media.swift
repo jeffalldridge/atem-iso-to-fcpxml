@@ -2,6 +2,18 @@ import Foundation
 
 let maxMetadataBytes = 16 * 1024 * 1024
 
+/// Supported media ranges, identical to the constants in atem_iso_to_fcpxml.py. Real ATEM files are far
+/// inside them; anything outside is corrupt or foreign, and rejecting it keeps rational arithmetic small.
+enum MediaLimits {
+    static let mp4Timescale = 1_000_000
+    static let mp4Frames = 1 << 28
+    static let mp4Duration = 1 << 48
+    static let frameRate = 1...240
+    static let wavRate = 8_000...768_000
+    static let wavSampleFrames = 1 << 40
+    static let wavTimeReference = 1 << 48
+}
+
 /// Reject unsigned metadata outside the platform range instead of trapping during conversion.
 private func mediaInteger(_ value: UInt64) throws -> Int {
     guard let result = Int(exactly: value) else {
@@ -61,7 +73,9 @@ private struct Reader {
         return try handle.read(upToCount: count) ?? Data()
     }
 
-    func boxes(_ start: Int, _ end: Int) throws -> [(kind: String, start: Int, end: Int)] {
+    /// Child boxes in `start..<end`. With `stopAfter`, scanning ends at the first box of that kind, as the
+    /// reference does for `moov`: files with many top-level boxes are not walked to the end.
+    func boxes(_ start: Int, _ end: Int, stopAfter: String? = nil) throws -> [(kind: String, start: Int, end: Int)] {
         var out: [(String, Int, Int)] = []
         var pos = start
         while pos + 8 <= end {
@@ -78,6 +92,7 @@ private struct Reader {
             }
             if size < header || size > end - pos { throw ConversionError("Invalid or truncated MP4 box.") }
             out.append((kind, pos + header, pos + size))
+            if kind == stopAfter { break }
             pos += size
         }
         return out.map { (kind: $0.0, start: $0.1, end: $0.2) }
@@ -110,7 +125,7 @@ public func probeMp4(_ path: URL) throws -> Mp4Info {
     let reader = try Reader(path)
     defer { reader.close() }
     let name = path.lastPathComponent
-    guard let moov = try reader.boxes(0, reader.size).first(where: { $0.kind == "moov" }) else {
+    guard let moov = try reader.boxes(0, reader.size, stopAfter: "moov").first(where: { $0.kind == "moov" }) else {
         throw ConversionError("No MP4 index (moov) found in \(name); the recording may be incomplete.")
     }
     var tracks: [Track] = []
@@ -149,6 +164,10 @@ public func probeMp4(_ path: URL) throws -> Mp4Info {
           let samples = video.samples, samples != 0, let duration = video.duration, duration != 0 else {
         throw ConversionError("\(name) has no video track.")
     }
+    if timescale > MediaLimits.mp4Timescale || samples > MediaLimits.mp4Frames || duration > MediaLimits.mp4Duration
+        || (video.sttsUniform ?? 0) > MediaLimits.mp4Timescale {
+        throw ConversionError("\(name): video timing is outside the range this converter supports.")
+    }
     let frameRate: Rational
     if let delta = video.sttsUniform, delta > 0 {
         frameRate = Rational(timescale, delta)
@@ -157,6 +176,9 @@ public func probeMp4(_ path: URL) throws -> Mp4Info {
         let product = samples.multipliedReportingOverflow(by: timescale)
         guard !product.overflow else { throw ConversionError("MP4 timing exceeds the supported integer range.") }
         frameRate = Rational(product.partialValue, duration)
+    }
+    guard frameRate >= Rational(MediaLimits.frameRate.lowerBound), frameRate <= Rational(MediaLimits.frameRate.upperBound) else {
+        throw ConversionError("\(name): a frame rate of \(formatG(frameRate.doubleValue)) fps is outside the range this converter supports.")
     }
     var timecodeFrames: Int?
     var drop = false
@@ -254,6 +276,9 @@ public func probeWav(_ path: URL) throws -> WavInfo {
         throw ConversionError("\(name) is missing its fmt or data chunk.")
     }
     if channels <= 0 || rate <= 0 || bits <= 0 || align <= 0 { throw ConversionError("\(name) has invalid WAV format values.") }
+    if !MediaLimits.wavRate.contains(rate) || dataSize / align > MediaLimits.wavSampleFrames || (timeReference ?? 0) > MediaLimits.wavTimeReference {
+        throw ConversionError("\(name): audio timing is outside the range this converter supports.")
+    }
     return WavInfo(channels: channels, sampleRate: rate, bits: bits, sampleFrames: dataSize / align, timeReference: timeReference)
 }
 

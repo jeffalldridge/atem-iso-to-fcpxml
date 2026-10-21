@@ -32,6 +32,16 @@ FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
 MAX_DRP_BYTES = 16 * 1024 * 1024
 MAX_METADATA_BYTES = 16 * 1024 * 1024
+# Supported media ranges. Real ATEM files are far inside them; anything outside is a corrupt or foreign
+# file, and rejecting it up front keeps every later rational calculation small and exact. The Swift engine
+# applies the same limits.
+MAX_MP4_TIMESCALE = 1_000_000
+MAX_MP4_FRAMES = 1 << 28
+MAX_MP4_DURATION = 1 << 48
+MIN_FRAME_RATE, MAX_FRAME_RATE = 1, 240
+MIN_WAV_RATE, MAX_WAV_RATE = 8_000, 768_000
+MAX_WAV_SAMPLE_FRAMES = 1 << 40
+MAX_WAV_TIME_REFERENCE = 1 << 48
 VIDEO_ISO_DIR = "Video ISO Files"
 AUDIO_DIR = "Audio Source Files"
 NTSC_RATES = {"2398": (24000, 1001), "23.98": (24000, 1001), "23.976": (24000, 1001),
@@ -324,10 +334,15 @@ def probe_mp4(path: Path) -> Mp4Info:
         if not video or not video.get("timescale") or not video.get("samples") or not video.get("duration"):
             raise ConversionError(f"{path.name} has no video track.")
         frames = video["samples"]
+        if (video["timescale"] > MAX_MP4_TIMESCALE or frames > MAX_MP4_FRAMES or video["duration"] > MAX_MP4_DURATION
+                or video.get("stts_uniform", 0) > MAX_MP4_TIMESCALE):
+            raise ConversionError(f"{path.name}: video timing is outside the range this converter supports.")
         if video.get("stts_uniform"):
             frame_rate = Fraction(video["timescale"], video["stts_uniform"])
         else:
             frame_rate = Fraction(frames * video["timescale"], video["duration"])
+        if not MIN_FRAME_RATE <= frame_rate <= MAX_FRAME_RATE:
+            raise ConversionError(f"{path.name}: a frame rate of {float(frame_rate):g} fps is outside the range this converter supports.")
         duration = Fraction(video["duration"], video["timescale"])
         timecode_frames = None
         drop = False
@@ -414,6 +429,9 @@ def probe_wav(path: Path) -> WavInfo:
         raise ConversionError(f"{path.name} is missing its fmt or data chunk.")
     if not all(info[k] > 0 for k in ("channels", "rate", "bits", "align")):
         raise ConversionError(f"{path.name} has invalid WAV format values.")
+    if (not MIN_WAV_RATE <= info["rate"] <= MAX_WAV_RATE or info["data_size"] // info["align"] > MAX_WAV_SAMPLE_FRAMES
+            or info.get("time_reference", 0) > MAX_WAV_TIME_REFERENCE):
+        raise ConversionError(f"{path.name}: audio timing is outside the range this converter supports.")
     return WavInfo(info["channels"], info["rate"], info["bits"], info["data_size"] // info["align"],
                    info.get("time_reference"))
 
