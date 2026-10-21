@@ -1,6 +1,6 @@
 # Architecture
 
-One file, five stages, no dependencies. See [vendor-reference.md](vendor-reference.md) for official sources and the boundaries between specifications and observed behavior.
+Two implementations of the same five-stage conversion, with no runtime dependencies in the Mac app. The standard-library Python file is the reference; `Sources/ATEMConverter` is the Swift port, verified by byte-for-byte parity fixtures. See [app.md](app.md) for the SwiftUI state and window architecture. See [vendor-reference.md](vendor-reference.md) for official sources and the boundaries between specifications and observed behavior.
 
 ```
 .drp + recording folder
@@ -12,7 +12,7 @@ One file, five stages, no dependencies. See [vendor-reference.md](vendor-referen
    └─ main ──────────────────────── command line, Finder dialogs, write exactly one file
 ```
 
-- **Timing** is kept as `fractions.Fraction` everywhere and only formatted as `N/Ds` at the end, so 59.94 fps recordings stay exact.
+- **Timing** is kept as Python `fractions.Fraction` or Swift `Rational` and only formatted as `N/Ds` at the end, so 59.94 fps recordings stay exact.
 - **Media inspection** reads ISO BMFF boxes (`moov` → `trak` → `mdhd`, `hdlr`, `stsd`, `stts`, `stco`) to get size, rate, frame count, and the first timecode sample, and RIFF/RF64 chunks (`fmt `, `bext`, `data`) for WAVs. Picture and audio sample data are skipped; only structural metadata and the first timecode sample are read. WAV chunks after audio are inspected by seeking across the data, including RF64 sizes larger than 4 GiB. Metadata read sizes are bounded.
 - **State** from the log is merged sparsely: arrays are keyed by `_index_` and patches only touch the keys they name.
 - **Safety**: media paths from the log must resolve inside the recording folder; the log is size-limited; outputs are never silently overwritten; nothing is written until the whole document is built and parsed back. New outputs use exclusive creation (including on exFAT); replacements use a temporary sibling and rename so hard links cannot cause recording bytes to be overwritten. Symbolic-link outputs are refused.

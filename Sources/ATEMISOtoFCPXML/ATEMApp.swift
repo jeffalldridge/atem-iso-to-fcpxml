@@ -28,7 +28,7 @@ struct ATEMApp: App {
                     }
                     if !delegate.model.recentRecordings.isEmpty {
                         Divider()
-                        Button("Clear Menu") { NSDocumentController.shared.clearRecentDocuments(nil) }
+                        Button("Clear Menu") { delegate.model.clearRecentRecordings() }
                     }
                 }
                 .disabled(delegate.model.isBusy)

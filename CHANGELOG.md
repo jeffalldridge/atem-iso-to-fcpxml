@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Reject malformed Swift CLI arguments, out-of-range media values, and invalid XML text without writing output; match Python's zero-delta timing fallback and no-extra-audio option precedence.
+- Allow opening/converting when an unused microphone WAV is damaged; validate it only when selected.
+- Stage Quick Action upgrades with rollback; require complete release credentials and consistent version declarations.
+- Bound recording-note scrolling, refresh Open Recent state, and correct obsolete agent-facing documentation.
+
 - Resizable native workspace with visible soundtrack and transition choices, system appearance, and restrained timeline colors.
 - Extra audio is opt-in in both the app and Quick Action fallback; hidden audio selections are cleared when camera or soundtrack choices change.
 - Native Open sheets, Return/⌘S conversion, preserved saved results after a failed open, and an explicit Download Updates menu link.

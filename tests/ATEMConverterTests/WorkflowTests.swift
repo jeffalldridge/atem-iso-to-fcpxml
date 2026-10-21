@@ -51,6 +51,25 @@ final class WorkflowTests: XCTestCase {
         XCTAssertNil(model.output)
     }
 
+    func testUnusedDamagedMicrophoneDoesNotBlockOpening() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let mic = fixture.root.appendingPathComponent("Audio Source Files/Show MIC 2.wav")
+        try Data("broken WAV".utf8).write(to: mic)
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        XCTAssertEqual(model.phase, .ready, model.errorMessage ?? "")
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.errorMessage ?? "")
+        model.extraAudio.insert("Show MIC 2.wav")
+        model.convert(replace: true)
+        try await settle(model)
+        XCTAssertEqual(model.phase, .ready)
+        XCTAssertNotNil(model.errorMessage)
+    }
+
     func testChangingChoicesRequiresExplicitReplacement() async throws {
         let fixture = try Fixtures.RecordingDir()
         defer { fixture.cleanup() }

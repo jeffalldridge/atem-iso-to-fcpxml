@@ -72,6 +72,7 @@ final class ConversionModel {
 
     init(recordsRecentDocuments: Bool = true) {
         self.recordsRecentDocuments = recordsRecentDocuments
+        recentRecordings = recordsRecentDocuments ? NSDocumentController.shared.recentDocumentURLs : []
     }
 
     private(set) var phase: Phase = .empty
@@ -110,7 +111,12 @@ final class ConversionModel {
         if extras > 0 { angles += " and \(extras) audio angle\(extras == 1 ? "" : "s")" }
         return "Multicam clip with \(angles) · Live Edit project with \(liveSwitchText) · Soundtrack: \(soundtrackName)"
     }
-    var recentRecordings: [URL] { NSDocumentController.shared.recentDocumentURLs }
+    private(set) var recentRecordings: [URL]
+
+    func clearRecentRecordings() {
+        if recordsRecentDocuments { NSDocumentController.shared.clearRecentDocuments(nil) }
+        recentRecordings = []
+    }
     func color(for angleID: String) -> Color { AnglePalette.color(for: angleID, cameraOrder: cameraOrder) }
 
     var isBusy: Bool { phase == .loading || phase == .converting }
@@ -155,7 +161,11 @@ final class ConversionModel {
             do {
                 let log = try locateLog(url)
                 let recording = try openRecording(log)
-                let defaults = try makePlan(recording)
+                // Inspection must use the same opt-in audio defaults as conversion: an unused
+                // damaged mic file must not prevent opening the rest of the recording.
+                var initialOptions = PlanOptions()
+                initialOptions.extraAudio = []
+                let defaults = try makePlan(recording, initialOptions)
                 let used = Set(defaults.angles.filter { $0.kind == "camera" }.compactMap(\.sourceIndex))
                 let cameras = recording.sources.filter { $0.kind == "Video" && $0.mp4 != nil }.sorted { $0.index < $1.index }
                     .map { CameraChoice(id: $0.index, name: $0.name, usedLive: used.contains($0.index), wavName: $0.wav?.lastPathComponent) }
@@ -189,7 +199,10 @@ final class ConversionModel {
         summary = []
         phase = .ready
         refreshTimeline()
-        if recordsRecentDocuments { NSDocumentController.shared.noteNewRecentDocumentURL(item.log) }
+        if recordsRecentDocuments {
+            NSDocumentController.shared.noteNewRecentDocumentURL(item.log)
+            recentRecordings = NSDocumentController.shared.recentDocumentURLs
+        }
     }
 
     /// Recompute the live-switch strip for the current camera selection (cheap: the log is tiny).

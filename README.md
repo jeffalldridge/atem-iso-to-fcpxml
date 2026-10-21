@@ -23,7 +23,7 @@ Final Cut creates an event named after the recording folder containing the multi
 
 ## What You Get in Final Cut Pro
 
-- **A multicam clip** with one angle per camera input you chose. Each angle is the camera's high-quality ISO `.mp4` for picture and its 24-bit `.wav` for sound, so the compressed AAC audio inside the MP4 is never used (a camera without a matching WAV falls back to its MP4 audio, with a note).
+- **A multicam clip** with one angle per camera input you chose. Each angle is the camera's high-quality ISO `.mp4` for picture and its 24-bit `.wav` for sound, when available. A camera without a matching WAV falls back to its MP4 audio, with a note.
 - **A "Live Edit" project**: the switch you performed on the ATEM, cut for cut. ATEM mix transitions become real, editable Cross Dissolves. The soundtrack stays on one audio angle while the picture changes, exactly like a multicam edit made in Final Cut.
 - **Extra audio-only angles** for the ATEM mic inputs, so switching the whole soundtrack to the sound board feed is one click in the Angle Viewer.
 - **Media Player stills** as their own angle, so a graphic you put on air appears in the timeline too.
@@ -63,7 +63,7 @@ Tested on two real ATEM Mini Pro ISO recordings (1080p60, 46 and 95 minutes, wit
 
 ### Updating
 
-Choose **Download Updates…** from the app menu, quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy; the Quick Action will use it automatically. Updates are manual.
+Open the [latest release](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest), quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy; the Quick Action will use it automatically. Updates are manual.
 
 ## Command Line and Automation
 
@@ -91,7 +91,7 @@ RECORDING                the .drp file, or the recording folder that contains it
 --dry-run                print what would be made and write nothing
 ```
 
-The Mac app and the Python script share one design: the app's Swift engine is tested to produce byte-identical XML to the script on every synthetic scenario and on the real recordings. `python3 scripts/build_quick_action.py --install` also builds a Finder Quick Action that embeds the script (it hands off to the app when the app is installed).
+The Mac app and the Python script share one design: the app's Swift engine is tested to produce byte-identical XML to the script on the parity scenarios listed in [validation](docs/validation.md), including comparisons with the two real recordings. `python3 scripts/build_quick_action.py --install` also builds a Finder Quick Action that embeds the script (it hands off to the app when the app is installed).
 
 Release downloads include `atem_iso_to_fcpxml.py` and `SHA256SUMS.txt`; verify with `shasum -a 256 -c --ignore-missing SHA256SUMS.txt` in the download folder.
 

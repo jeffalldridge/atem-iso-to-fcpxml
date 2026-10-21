@@ -7,14 +7,15 @@ about: Something converted wrongly or not at all
 - ATEM model and firmware:
 - Video standard (e.g. 1080p60):
 - Final Cut Pro version:
-- Converter version (`python3 atem_iso_to_fcpxml.py --version`):
-- Quick Action or command line:
+- macOS version and Mac processor (Apple silicon / Intel):
+- App version (About ATEM ISO to FCPXML), or CLI `--version`:
+- Mac app, Finder Quick Action, or command line:
 
 **What happened**
 
 **What you expected**
 
-**Dry-run output** (`python3 atem_iso_to_fcpxml.py "<recording>" --dry-run`; remove anything you do not want public)
+**Error or conversion details** (Mac app: Details after conversion; CLI: `--dry-run`). Remove personal paths and names before posting. You do not need to install Python to report an app problem.
 
 ```
 ```

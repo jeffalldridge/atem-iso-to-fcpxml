@@ -75,9 +75,18 @@ struct ChoiceColumns: View {
                 if loaded.recording.programMp4 != nil {
                     Toggle("Include the program recording as an angle", isOn: $model.includeProgramAngle)
                 }
-                ForEach(loaded.recording.warnings, id: \.self) { warning in
-                    Label(warning, systemImage: "exclamationmark.triangle")
-                        .font(.callout).fixedSize(horizontal: false, vertical: true)
+                if !loaded.recording.warnings.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(loaded.recording.warnings, id: \.self) { warning in
+                                Label(warning, systemImage: "exclamationmark.triangle")
+                                    .font(.callout).fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 88)
+                    .accessibilityLabel("Recording notes")
                 }
             }
             .padding(.horizontal, Layout.gutter).padding(.vertical, 14)
@@ -118,7 +127,7 @@ struct ChoiceColumn<Rows: View>: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 4) {
-                Text(title).font(.headline)
+                Text(title).font(.headline).accessibilityAddTraits(.isHeader)
                 Text(help).font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true).padding(.bottom, 8)
                 rows()

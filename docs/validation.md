@@ -2,6 +2,18 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+Current architecture: SwiftUI app and Swift engine, with the Python file as the reference. Entries about PyInstaller, a bundled Python interpreter, the macOS 13 preview, and its JSON bridge are historical experiments, not descriptions of the shipping app. For current packaging and release requirements use [app.md](app.md) and [releasing.md](releasing.md).
+
+## 2026-10-21: Repository audit (local, unreleased)
+
+- 22 Swift tests pass, including engine parity, malformed metadata/XML rejection, CLI subprocess argument handling, safe forced output, and the unused-damaged-microphone workflow.
+- 73 Python/site/release-tool tests pass. Quick Action installation tests cover failed copying, failed publication with rollback, and replacement without obsolete files.
+- Quick Action consistency, `actionlint` across all three workflows, release-version validation, and `git diff --check` pass.
+- `make app` produces a universal arm64/x86_64 ad-hoc-signed bundle that passes signature verification and its self-check. The newly built bundle was not installed over the copy currently under owner review.
+- No push, deployment, signed release, signing-secret change, new browser matrix, accessibility acceptance, exFAT hardware test, or Final Cut import was performed. Changes to the Swift XML writer add a well-formedness check without changing output shapes or valid parity bytes.
+- Findings, withdrawn suspicion, and outstanding priorities are recorded in [the audit](audit-2026-10-21.md).
+
+
 ## 2026-10-21: Native UX review (unreleased)
 
 - `swift test`: 14 tests passed, including byte-for-byte Python/Swift engine parity and two new application workflow tests. Audio selection reconciliation, opt-in extras, saved-result preservation after a failed open, and replacement confirmation are covered.
