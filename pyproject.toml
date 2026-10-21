@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atem-iso-to-fcpxml"
+version = "0.1.0"
+description = "Convert Blackmagic ATEM Mini ISO DRP recordings to Final Cut Pro multicam FCPXML with uncompressed WAV audio."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [{name = "Jeff Alldridge"}]
+keywords = ["atem", "blackmagic", "final-cut-pro", "fcpxml", "multicam", "drp", "iso-recording"]
+classifiers = ["Development Status :: 3 - Alpha", "Environment :: Console", "Operating System :: MacOS :: MacOS X", "Programming Language :: Python :: 3", "Topic :: Multimedia :: Video :: Non-Linear Editor"]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/jeffalldridge/atem-iso-to-fcpxml"
+Issues = "https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues"
+
+[project.scripts]
+atem-iso-to-fcpxml = "atem_iso_to_fcpxml:main"
+
+[tool.setuptools]
+py-modules = ["atem_iso_to_fcpxml"]
