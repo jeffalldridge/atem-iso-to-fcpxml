@@ -1,3 +1,5 @@
+# Reference only on GitHub project Pages: crawlers use the host-root /robots.txt.
+# Submit the sitemap directly in Search Console if you manage the property.
 User-agent: *
 Allow: /
 Sitemap: https://jeffalldridge.github.io/atem-iso-to-fcpxml/sitemap.xml

@@ -2,7 +2,7 @@ name: Deploy website
 on:
   push:
     branches: [main]
-    paths: ["docs/site/**", ".github/workflows/pages.yml"]
+    paths: ["docs/site/**", "tests/test_site.py", ".github/workflows/pages.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,6 +20,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
+      - name: Check metadata, schema, links and social image
+        run: python3 -m unittest discover -s tests -p test_site.py -v
       - run: |
           mkdir -p _site
           cp -R docs/site/. _site/

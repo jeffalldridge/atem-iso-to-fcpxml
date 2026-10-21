@@ -1,26 +1,34 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Convert ATEM Mini ISO Recordings to Final Cut Pro Multicam | ATEM ISO to FCPXML</title>
-<meta name="description" content="Free, open-source converter that turns a Blackmagic ATEM Mini ISO recording (.drp) into a Final Cut Pro multicam project with the live switch rebuilt, real dissolves, and uncompressed WAV audio. One Quick Action, no Resolve, no uploads.">
+<title>ATEM ISO to Final Cut Pro — Free FCPXML Converter</title>
+<meta name="description" content="Convert a Blackmagic ATEM ISO recording to a Final Cut Pro multicam and live edit with WAV audio. Free Mac Quick Action. No Resolve, transcoding or uploads.">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <meta name="theme-color" content="#0d0d12">
 <meta name="color-scheme" content="dark">
-<meta name="author" content="Jeff Alldridge / Tent Studios, LLC">
-<meta property="og:title" content="Convert ATEM Mini ISO recordings to Final Cut Pro multicam">
-<meta property="og:description" content="Right-click the ATEM .drp, get a Final Cut Pro multicam clip and the live edit with WAV audio. Free and open source.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://jeffalldridge.github.io/atem-iso-to-fcpxml/">
 <meta property="og:site_name" content="ATEM ISO to FCPXML">
 <meta property="og:locale" content="en_US">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Convert ATEM Mini ISO recordings to Final Cut Pro multicam">
-<meta name="twitter:description" content="Right-click the ATEM .drp, get a Final Cut Pro multicam clip and the live edit with WAV audio. Free and open source.">
+<meta property="og:title" content="Your live edit. Ready for Final Cut.">
+<meta property="og:description" content="Turn an ATEM ISO recording into a multicam clip and live-edit project with WAV audio. Free, open source, and entirely on your Mac.">
+<meta property="og:url" content="https://jeffalldridge.github.io/atem-iso-to-fcpxml/">
+<meta property="og:image" content="https://jeffalldridge.github.io/atem-iso-to-fcpxml/social-card.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ATEM ISO to Final Cut Pro. Your live edit, ready to finish. Free and open source for Mac.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Your live edit. Ready for Final Cut.">
+<meta name="twitter:description" content="A free ATEM ISO to FCPXML converter. Multicam, live cuts, dissolves and WAV audio. All on your Mac.">
+<meta name="twitter:image" content="https://jeffalldridge.github.io/atem-iso-to-fcpxml/social-card.png">
+<meta name="twitter:image:alt" content="ATEM ISO to Final Cut Pro. Your live edit, ready to finish.">
 <link rel="canonical" href="https://jeffalldridge.github.io/atem-iso-to-fcpxml/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
+<link rel="sitemap" href="sitemap.xml" type="application/xml">
+<link rel="alternate" href="llms.txt" type="text/plain" title="Project reference for assistants">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -30,49 +38,127 @@
       "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#website",
       "url": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/",
       "name": "ATEM ISO to FCPXML",
-      "description": "Convert Blackmagic ATEM Mini ISO recordings to Final Cut Pro multicam projects with WAV audio.",
       "inLanguage": "en"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#webpage",
+      "url": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/",
+      "name": "ATEM ISO to Final Cut Pro — Free FCPXML Converter",
+      "isPartOf": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#website"
+      },
+      "mainEntity": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#software"
+      },
+      "primaryImageOfPage": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#image"
+      },
+      "hasPart": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#questions"
+      },
+      "inLanguage": "en"
+    },
+    {
+      "@type": "ImageObject",
+      "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#image",
+      "url": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/social-card.png",
+      "width": 1200,
+      "height": 630,
+      "caption": "ATEM ISO to Final Cut Pro. Your live edit, ready to finish."
     },
     {
       "@type": "SoftwareApplication",
       "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#software",
       "name": "ATEM ISO to FCPXML",
-      "applicationCategory": "MultimediaApplication",
-      "applicationSubCategory": "Video editing utility",
-      "operatingSystem": "macOS",
-      "softwareRequirements": "Python 3.9 or later, Final Cut Pro 10.6 or later",
-      "softwareVersion": "1.0.0",
-      "downloadUrl": "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest",
       "url": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/",
-      "license": "https://opensource.org/licenses/MIT",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "macOS",
+      "softwareRequirements": "Python 3.9 or later; Final Cut Pro 10.6 or later. Real imports verified in Final Cut Pro 12.4.",
+      "downloadUrl": "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest",
+      "license": "https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/LICENSE",
       "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "featureList": [
-        "Reads the ATEM .drp switcher log directly",
-        "Final Cut Pro multicam clip with one angle per camera",
-        "Live switch rebuilt as a timeline with editable cross dissolves",
-        "Uncompressed 24-bit WAV audio replaces the MP4 audio",
-        "Mic inputs as extra audio angles",
-        "Finder Quick Action, no dependencies beyond macOS and Python 3",
-        "Runs locally, never modifies the recording"
-      ],
-      "author": { "@type": "Person", "name": "Jeff Alldridge", "url": "https://tentstudios.com" },
-      "codeRepository": "https://github.com/jeffalldridge/atem-iso-to-fcpxml"
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "url": "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest"
+      },
+      "image": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#image"
+      },
+      "subjectOf": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#source"
+      },
+      "description": "Free local converter for native Blackmagic ATEM ISO logs. Creates a multicam clip and live-edit project with matching WAV audio when available."
+    },
+    {
+      "@type": "SoftwareSourceCode",
+      "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#source",
+      "name": "ATEM ISO to FCPXML source code",
+      "codeRepository": "https://github.com/jeffalldridge/atem-iso-to-fcpxml",
+      "programmingLanguage": "Python",
+      "runtimePlatform": "Python 3.9+",
+      "license": "https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/LICENSE",
+      "about": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#software"
+      }
     },
     {
       "@type": "FAQPage",
       "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#questions",
+      "isPartOf": {
+        "@id": "https://jeffalldridge.github.io/atem-iso-to-fcpxml/#webpage"
+      },
       "mainEntity": [
-        { "@type": "Question", "name": "How do I open an ATEM Mini ISO recording in Final Cut Pro?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Install the ATEM ISO to FCPXML Quick Action, right-click the recording folder or its .drp file on the ATEM SSD, choose Quick Actions, and import the .fcpxml it writes with File > Import > XML in Final Cut Pro. You get a multicam clip and a project of the live switch." } },
-        { "@type": "Question", "name": "Is the ATEM .drp file a DaVinci Resolve project?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Not really. It is a newline-delimited JSON log of the switcher state that DaVinci Resolve knows how to open. This converter reads that log directly, so Resolve is not needed." } },
-        { "@type": "Question", "name": "Does it use the WAV files or the MP4 audio?",
-          "acceptedAnswer": { "@type": "Answer", "text": "The WAV files. The ISO MP4s only carry the ATEM program mix as AAC. Each camera angle is paired with its own 24-bit WAV from Audio Source Files, and the ATEM mic inputs become extra audio angles." } },
-        { "@type": "Question", "name": "What happens to transitions, keys and graphics?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Mix transitions become real Cross Dissolves of the same length. Media Player stills become an angle. Sections with a key or fade to black use the ATEM program recording as an angle with a marker, so nothing you streamed is lost." } },
-        { "@type": "Question", "name": "Does it need Homebrew, ffmpeg or an internet connection?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. It is one Python standard-library file. Python 3 comes with Apple's Command Line Tools. Nothing is uploaded and the recording is never modified." } }
+        {
+          "@type": "Question",
+          "name": "Does it use the WAV files?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, when the matching WAV is present. Camera angles pair ISO picture with that input’s uncompressed audio. Missing camera WAVs fall back to MP4 audio with a warning. You choose one soundtrack for the live edit; the mic inputs can be separate audio angles."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will it work with my recording?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Real imports were verified with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. The converter writes FCPXML 1.10 for Final Cut Pro 10.6 and later. Other models, firmware and frame rates have not been verified with real recordings. Keep the recording’s internal files and folders intact; custom input labels and a renamed recording folder are supported."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does it change or upload my footage?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Conversion runs locally and creates one .fcpxml file beside the .drp. The original recording stays intact. Final Cut’s import preferences control whether media is copied or linked. Keep the SSD connected until any copying finishes. The XML contains media paths, so treat it as private."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Will it import into my selected event?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The XML creates a named event containing the multicam, project and selected source clips. It does not target the currently selected event. Move the imported items to your preferred event afterward if needed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What should I check before exporting?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Check sync, the start and end of the project, and any marked sections. Different source start times and short files generate warnings but are not automatically corrected. Without program video, unsupported sections become gaps that also interrupt audio. Media Player changes during recording are not fully reconstructed."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need DaVinci Resolve or ffmpeg?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The converter reads the native ATEM switcher log directly using one Python 3.9+ standard-library file. It does not require Resolve, ffmpeg, Homebrew, a server or an internet connection during conversion. A .drp exported by Resolve is a different format and is not supported."
+          }
+        }
       ]
     }
   ]
@@ -80,134 +166,166 @@
 </script>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to main content</a>
-<nav class="topnav" aria-label="Primary">
-  <div class="container">
-    <a class="topnav-brand" href="./"><span class="brand-atem">ATEM ISO</span><span class="brand-arrow">→</span><span class="brand-fcp">FCPXML</span></a>
-    <ul class="topnav-links">
-      <li><a href="#how">How it works</a></li>
-      <li><a href="#install">Install</a></li>
-      <li><a href="#questions">Questions</a></li>
-      <li><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">GitHub</a></li>
-    </ul>
-  </div>
+<a class="skip-link" href="#main">Skip to content</a>
+<nav class="nav" aria-label="Main navigation">
+<div class="wrap nav-inner">
+<a class="wordmark" href="./" aria-label="ATEM ISO to FCPXML home">ATEM ISO <span aria-hidden="true">→</span> <span>FCPXML</span></a>
+<div class="nav-links"><a href="#how">Overview</a><a href="#compatibility">Compatibility</a><a href="#install">Get started</a>
+</div>
+</div>
 </nav>
-<main id="main">
-  <header class="hero">
-    <div class="container">
-      <p class="eyebrow">Free, open-source Mac utility for Blackmagic ATEM Mini ISO</p>
-      <h1>Convert ATEM Mini ISO recordings to a Final Cut Pro multicam.</h1>
-      <p class="subtagline">Right-click the <code>.drp</code> the ATEM wrote next to its recording. Get a multicam clip with every camera's ISO picture and uncompressed WAV sound, plus a timeline of the switch you performed live, cuts and dissolves included. No DaVinci Resolve, no transcoding, no uploads.</p>
-      <div class="cta">
-        <a class="button primary" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">Download the Quick Action</a>
-        <a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">View the source</a>
-      </div>
-      <p class="version">macOS · Python 3.9+ (comes with Apple's Command Line Tools) · Final Cut Pro 10.6 or later · MIT</p>
-      <figure class="workflow-diagram" aria-labelledby="workflow-caption">
-        <div class="workflow-file source-file">
-          <p class="file-label">On the ATEM SSD</p>
-          <h2>Live Show/</h2>
-          <pre><code>Live Show.drp
-Live Show.mp4
-Video ISO Files/
-  Live Show CAM 1.mp4
-  Live Show CAM 2.mp4
-Audio Source Files/
-  Live Show CAM 1.wav
-  Live Show MIC 1.wav</code></pre>
-        </div>
-        <div class="workflow-arrows" aria-hidden="true"><span><code>Quick Action</code><span>→</span></span></div>
-        <div class="workflow-file epub-file">
-          <p class="file-label">In Final Cut Pro</p>
-          <h2>Live Show.fcpxml</h2>
-          <ul>
-            <li>Multicam clip: Camera 1, Camera 2, Media Player, MIC 1</li>
-            <li>Each camera angle = ISO MP4 picture + its WAV</li>
-            <li>Live Edit project with the cuts and dissolves</li>
-            <li>All source files in the event</li>
-          </ul>
-        </div>
-      </figure>
-    </div>
-  </header>
-
-  <section class="section" id="how">
-    <div class="container">
-      <h2>How it works</h2>
-      <div class="get-started">
-        <div>
-          <h3>1. Record ISO</h3>
-          <p>Record to an SSD with ISO enabled on an ATEM Mini Pro ISO, Mini Extreme ISO, SDI ISO or Television Studio HD8 ISO. The switcher writes a <code>.drp</code> log of every cut, transition, key and fade next to the program recording.</p>
-        </div>
-        <div>
-          <h3>2. Right-click, convert</h3>
-          <p>Mount the SSD, right-click the recording folder, choose <strong>Quick Actions → ATEM ISO to FCPXML</strong>. Pick the inputs you used (the ones you switched to are pre-selected) and the WAV for the soundtrack.</p>
-        </div>
-        <div>
-          <h3>3. Import and finish</h3>
-          <p>Import the <code>.fcpxml</code> into Final Cut Pro. Trim, fix a bad switch in the Angle Viewer, swap the soundtrack to the sound board feed, add titles, and export your video and audio podcasts.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section alt" id="translation">
-    <div class="container">
-      <h2>What the ATEM did, and what Final Cut gets</h2>
-      <table class="compare">
-        <thead><tr><th>On the ATEM</th><th>In the Final Cut timeline</th></tr></thead>
-        <tbody>
-          <tr><th>Cut between inputs</th><td>Cut between multicam clips, frame-accurate</td></tr>
-          <tr><th>Mix transition (auto or T-bar)</th><td>Editable Cross Dissolve of the same length</td></tr>
-          <tr><th>Dip, wipe, DVE, stinger</th><td>Cross Dissolve plus a marker (or the rendered program picture, your choice)</td></tr>
-          <tr><th>Media Player still</th><td>Its own angle</td></tr>
-          <tr><th>Key on air, fade to black, colour bars</th><td>That stretch of the program recording as an angle, with a marker</td></tr>
-          <tr><th>Audio</th><td>Always the WAV of the soundtrack angle you chose; never the MP4's AAC</td></tr>
-        </tbody>
-      </table>
-      <p>The ISO MP4s only carry the ATEM's program mix. The WAVs in <code>Audio Source Files</code> are each input's own 24-bit audio before the mixer, which is why the converter pairs every camera with its WAV and offers the mic inputs as angles. Alignment uses the timecode and Broadcast Wave time reference the ATEM writes into every file.</p>
-    </div>
-  </section>
-
-  <section class="section" id="install">
-    <div class="container">
-      <h2>Install once. Convert on your Mac.</h2>
-      <div class="get-started">
-        <div>
-          <h3>Quick Action</h3>
-          <p>Download <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">the zip</a>, double-click <strong>ATEM ISO to FCPXML.workflow</strong>, click <strong>Install</strong>. It is a plain Automator workflow with the converter inside; open it in Automator to read every line.</p>
-          <small>Needs Python 3.9+. If macOS asks to install the Command Line Tools the first time, say yes.</small>
-        </div>
-        <div>
-          <h3>Command line</h3>
-          <pre class="code"><code>git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
-python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show"</code></pre>
-          <small>Options: <code>--cameras 1,2</code>, <code>--audio "MIC 1"</code>, <code>--transitions cut</code>, <code>--dry-run</code> and more in the README.</small>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section alt" id="questions">
-    <div class="container">
-      <h2>Questions before you convert</h2>
-      <h3>Is the ATEM <code>.drp</code> a DaVinci Resolve project?</h3>
-      <p>Not really. It is a newline-delimited JSON log of the switcher's state that Resolve knows how to open. This converter reads it directly, so Resolve is never involved. The format is written up in the <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/drp-format.md">repository docs</a>.</p>
-      <h3>Does it touch my recording?</h3>
-      <p>No. It reads the log and the file headers, and writes one new <code>.fcpxml</code> next to the <code>.drp</code>. Final Cut references the media where it is, so keep the SSD mounted or copy the folder to your edit drive first.</p>
-      <h3>Will it work with my ATEM, frame rate or Final Cut version?</h3>
-      <p>It was verified on ATEM Mini Pro ISO recordings at 1080p60 with Final Cut Pro 12.4, and writes FCPXML 1.10, which Final Cut 10.6 and later read. Other models and rates follow the same documented format and are covered by synthetic tests; please <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues">report what you find</a>.</p>
-      <h3>What about lower thirds and keys?</h3>
-      <p>Keys are not rebuilt as Final Cut effects. Those stretches show the ATEM program recording so nothing is lost, and a marker tells you where. Redoing a title on the clean ISO picture usually looks better anyway.</p>
-      <h3>Why not just use Resolve?</h3>
-      <p>You can. This exists for people who prefer Final Cut Pro's speed, especially for turning a weekly live show into a video and an audio podcast.</p>
-    </div>
-  </section>
+<main id="main" tabindex="-1">
+<header class="hero wrap">
+<p class="eyebrow">ATEM ISO to FCPXML · Free &amp; open source</p>
+<h1>Your live edit.<br><span>Ready for <span class="keep-together">Final Cut.</span></span>
+</h1>
+<p class="intro">Turn your Blackmagic ATEM ISO recording into a Final Cut Pro multicam and live-edit project. Keep the cuts. Choose your cameras. Finish with uncompressed WAV audio.</p>
+<div class="actions"><a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">Download for Mac <span aria-hidden="true">↓</span></a><a class="text-link" href="#how">See how it works <span aria-hidden="true">↗</span></a>
+</div>
+<p class="requirements">Finder Quick Action · Python 3.9+ required · No uploads</p>
+<figure class="edit-diagram" aria-labelledby="edit-caption">
+<div class="diagram-top"><span>ATEM recording</span><span aria-hidden="true">→</span><span>Final Cut Pro project</span>
+</div>
+<div class="tracks" aria-hidden="true">
+<div class="track-label">LIVE EDIT</div>
+<div class="video-track"><span>Camera 1</span><span>Camera 2</span><span>Camera 1</span><span>Camera 2</span>
+</div>
+<div class="track-label">SOUNDTRACK</div>
+<div class="audio-track"><span>Your selected WAV</span>
+<div class="wave">
+</div>
+</div>
+</div>
+<figcaption id="edit-caption">Your camera switches. One continuous soundtrack.<span>Illustration of the imported edit, not a Final Cut screenshot.</span>
+</figcaption>
+</figure>
+</header>
+<section class="section wrap" id="how" aria-labelledby="how-title">
+<div class="section-heading">
+<p class="eyebrow">From the SSD to the edit</p>
+<h2 id="how-title">Three steps.<br>One new file.</h2>
+</div>
+<ol class="steps">
+<li>
+<h3>Choose the recording.</h3>
+<p>Mount your SSD. Right-click the native ATEM <code>.drp</code> file or its folder, then choose <strong>Quick Actions → ATEM ISO to FCPXML</strong>.</p>
+</li>
+<li>
+<h3>Pick picture and sound.</h3>
+<p>Select the camera inputs you used and a WAV for the soundtrack. Add mic inputs as separate audio angles, or leave them out.</p>
+</li>
+<li>
+<h3>Open in Final Cut.</h3>
+<p>Import the new <code>.fcpxml</code>. You get a multicam clip, a Live Edit project, and the selected source clips. Trim, change a switch, add titles, and export.</p>
+</li>
+</ol>
+</section>
+<section class="band" id="translation" aria-labelledby="translation-title">
+<div class="wrap section split">
+<div>
+<p class="eyebrow">An editable starting point</p>
+<h2 id="translation-title">The live switch.<br>With room to refine.</h2>
+<p class="section-intro">Work from the high-quality ISO picture and each input’s own audio. Conversion runs locally without transcoding.</p>
+<a class="text-link" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#how-atem-operations-are-translated">Read the conversion details <span aria-hidden="true">↗</span></a>
+</div>
+<table><caption class="sr-only">How ATEM operations translate to Final Cut Pro</caption>
+<thead>
+<tr><th scope="col">On the ATEM</th><th scope="col">In Final Cut</th>
+</tr>
+</thead>
+<tbody>
+<tr><th scope="row">Camera cuts</th><td>Editable multicam cuts.</td>
+</tr>
+<tr><th scope="row">Mix transitions</th><td>Cross Dissolves. Odd frame lengths round up by one frame.</td>
+</tr>
+<tr><th scope="row">Dip, wipe, DVE, stinger</th><td>A marked dissolve approximation, or rendered program picture with the command-line option.</td>
+</tr>
+<tr><th scope="row">Media Player still</th><td>A separate still angle.</td>
+</tr>
+<tr><th scope="row">Keys and fades to black</th><td>Program picture with a marker, when the program recording is available.</td>
+</tr>
+<tr><th scope="row">Camera and mic audio</th><td>Matching WAVs when present. One selected soundtrack across camera cuts.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section class="section wrap split" id="install" aria-labelledby="install-title">
+<div>
+<p class="eyebrow">Get started</p>
+<h2 id="install-title">A small tool.<br>A simpler handoff.</h2>
+<p class="section-intro">Free under the MIT license. A plain, inspectable Automator workflow with the converter inside.</p>
+<a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">Get the Quick Action <span aria-hidden="true">↓</span></a>
+</div>
+<div class="installation">
+<h3>Install the Finder Quick Action</h3>
+<ol>
+<li>Download and unzip <strong>ATEM-ISO-to-FCPXML-Quick-Action.zip</strong> from the release page.</li>
+<li>Double-click <strong>ATEM ISO to FCPXML.workflow</strong> and choose <strong>Install</strong>.</li>
+<li>Right-click a recording in Finder to run it.</li>
+</ol>
+<p class="small">Requires Python 3.9 or newer. Install Apple’s Command Line Tools with <code>xcode-select --install</code>, or use <a href="https://www.python.org/downloads/macos/">Python for macOS</a>.</p>
+<article class="terminal">
+<h3>Command line</h3>
+<p>Clone the repository, then run the single Python file:</p>
+<pre tabindex="0" aria-label="Clone and run commands"><code>git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
+python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show"</code>
+</pre>
+<p><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#command-line-options">Camera, audio and conversion options</a> · <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#install">Verify release checksums</a>
+</p>
+</article>
+</div>
+</section>
+<section class="band" id="compatibility" aria-labelledby="compatibility-title">
+<div class="wrap section compatibility">
+<div>
+<p class="eyebrow">Before you download</p>
+<h2 id="compatibility-title">Know what’s tested.</h2>
+</div>
+<div>
+<p class="compatibility-lead">ATEM Mini Pro ISO · 1080p60 · Final Cut Pro 12.4</p>
+<p>Verified with two real recordings and an XML round trip in Final Cut. Other models, rates and firmware still need real-world validation. FCPXML 1.10 targets Final Cut Pro 10.6 and later; older versions have not been tested here.</p>
+<a class="text-link" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/validation.md">See the validation record <span aria-hidden="true">↗</span></a>
+</div>
+</div>
+</section>
+<section class="section wrap faq" id="questions" aria-labelledby="questions-title">
+<h2 id="questions-title">A few useful answers.</h2>
+<div class="answers">
+<article class="answer">
+<h3>Does it use the WAV files?</h3>
+<p>Yes, when the matching WAV is present. Camera angles pair ISO picture with that input’s uncompressed audio. Missing camera WAVs fall back to MP4 audio with a warning. You choose one soundtrack for the live edit; the mic inputs can be separate audio angles.</p>
+</article>
+<article class="answer">
+<h3>Will it work with my recording?</h3>
+<p>Real imports were verified with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. The converter writes FCPXML 1.10 for Final Cut Pro 10.6 and later. Other models, firmware and frame rates have not been verified with real recordings. Keep the recording’s internal files and folders intact; custom input labels and a renamed recording folder are supported.</p>
+</article>
+<article class="answer">
+<h3>Does it change or upload my footage?</h3>
+<p>No. Conversion runs locally and creates one .fcpxml file beside the .drp. The original recording stays intact. Final Cut’s import preferences control whether media is copied or linked. Keep the SSD connected until any copying finishes. The XML contains media paths, so treat it as private.</p>
+</article>
+<article class="answer">
+<h3>Will it import into my selected event?</h3>
+<p>The XML creates a named event containing the multicam, project and selected source clips. It does not target the currently selected event. Move the imported items to your preferred event afterward if needed.</p>
+</article>
+<article class="answer">
+<h3>What should I check before exporting?</h3>
+<p>Check sync, the start and end of the project, and any marked sections. Different source start times and short files generate warnings but are not automatically corrected. Without program video, unsupported sections become gaps that also interrupt audio. Media Player changes during recording are not fully reconstructed.</p>
+</article>
+<article class="answer">
+<h3>Do I need DaVinci Resolve or ffmpeg?</h3>
+<p>No. The converter reads the native ATEM switcher log directly using one Python 3.9+ standard-library file. It does not require Resolve, ffmpeg, Homebrew, a server or an internet connection during conversion. A .drp exported by Resolve is a different format and is not supported.</p>
+</article>
+</div>
+</section>
 </main>
-<footer class="footer">
-  <div class="container">
-    <p>By <a href="https://tentstudios.com">Tent Studios, LLC</a>. MIT licensed. <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">Source on GitHub</a> · <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues">Issues</a> · Not affiliated with Blackmagic Design or Apple.</p>
-  </div>
+<footer class="wrap footer">
+<div><a class="wordmark" href="./">ATEM ISO → <span>FCPXML</span></a>
+<p>By <a href="https://tentstudios.com/">Tent Studios, LLC</a>. Free &amp; open source.</p>
+</div>
+<nav aria-label="Project resources"><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">Source code</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues">Report an issue</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/vendor-reference.md">Technical reference</a><a href="llms.txt">Assistant reference</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/LICENSE">MIT license</a>
+</nav>
+<p class="legal">Not affiliated with Blackmagic Design or Apple. ATEM and Final Cut Pro are trademarks of their respective owners.</p>
 </footer>
 </body>
 </html>
