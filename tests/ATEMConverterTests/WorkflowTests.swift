@@ -146,6 +146,104 @@ final class WorkflowTests: XCTestCase {
         }
     }
 
+    func testLiveMixChoicePreservesDefaultsAndProgramPictureIsIndependent() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        XCTAssertEqual(model.soundtrack, "Show CAM 1.wav")
+        XCTAssertTrue(model.liveMixAvailable)
+        XCTAssertTrue(model.extraAudio.isEmpty)
+        XCTAssertFalse(model.optionalAudio.contains { $0.id == AudioChoice.liveMixID })
+        model.soundtrack = AudioChoice.liveMixID
+        model.extraAudio.insert("Show MIC 1.wav")
+        XCTAssertEqual(model.soundtrackName, "ATEM live mix")
+        XCTAssertTrue(model.planSummary.contains("2 audio angles"))
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        let destination = fixture.root.appendingPathComponent("Show.fcpxml")
+        let first = try String(contentsOf: destination, encoding: .utf8)
+        XCTAssertTrue(first.contains("angleID=\"atem-live-mix\" srcEnable=\"audio\""))
+        XCTAssertFalse(first.contains("angleID=\"program\""))
+        model.includeProgramAngle = true
+        XCTAssertEqual(model.phase, .ready)
+        XCTAssertEqual(model.soundtrack, AudioChoice.liveMixID)
+        model.convert(replace: true)
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        let second = try String(contentsOf: destination, encoding: .utf8)
+        XCTAssertTrue(second.contains("angleID=\"program\""))
+        XCTAssertTrue(second.contains("angleID=\"atem-live-mix\" srcEnable=\"audio\""))
+        model.soundtrack = "Show CAM 1.wav"
+        XCTAssertTrue(model.extraAudio.contains("Show MIC 1.wav"))
+        model.convert(replace: true)
+        try await settle(model)
+        let wav = try String(contentsOf: destination, encoding: .utf8)
+        XCTAssertFalse(wav.contains("atem-live-mix"))
+        XCTAssertTrue(wav.contains("angleID=\"input-1\" srcEnable=\"all\""))
+    }
+
+    func testLiveMixChoiceSurvivesTemporarilyClearingCameras() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        model.selectedCameras = [1]
+        model.soundtrack = AudioChoice.liveMixID
+        model.selectedCameras = []
+        XCTAssertEqual(model.soundtrack, AudioChoice.liveMixID)
+        model.selectedCameras = [2]
+        XCTAssertTrue(model.liveMixAvailable)
+        XCTAssertEqual(model.soundtrack, AudioChoice.liveMixID)
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        let xml = try String(contentsOf: fixture.root.appendingPathComponent("Show.fcpxml"), encoding: .utf8)
+        XCTAssertTrue(xml.contains("angleID=\"atem-live-mix\" srcEnable=\"audio\""))
+    }
+
+    func testLiveMixAvailabilityReconcilesCameraSelection() async throws {
+        let fixture = try Fixtures.RecordingDir(program: false)
+        defer { fixture.cleanup() }
+        try Fixtures.makeMp4(fixture.root.appendingPathComponent("Video ISO Files/Show CAM 2.mp4"),
+                             frames: fixture.frames, tcFrames: 2160000, audio: false)
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        model.selectedCameras = [1]
+        model.soundtrack = AudioChoice.liveMixID
+        XCTAssertTrue(model.liveMixAvailable)
+        model.selectedCameras = [2]
+        XCTAssertFalse(model.liveMixAvailable)
+        XCTAssertNotEqual(model.soundtrack, AudioChoice.liveMixID)
+        XCTAssertTrue(model.loaded?.audio.contains { $0.id == model.soundtrack } == true)
+    }
+
+    func testNoWAVUsesVisibleLiveMixAndShowsConversionNotes() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        try FileManager.default.removeItem(at: fixture.root.appendingPathComponent("Audio Source Files"))
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        XCTAssertEqual(model.phase, .ready, model.problem?.message ?? "")
+        XCTAssertEqual(model.soundtrack, AudioChoice.liveMixID)
+        XCTAssertEqual(model.soundtrackName, "ATEM live mix")
+        XCTAssertTrue(model.optionalAudio.isEmpty)
+        model.selectedCameras = []
+        model.selectedCameras = [1]
+        XCTAssertEqual(model.soundtrack, AudioChoice.liveMixID)
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        XCTAssertGreaterThan(model.warningCount, 0)
+        let xml = try String(contentsOf: fixture.root.appendingPathComponent("Show.fcpxml"), encoding: .utf8)
+        XCTAssertTrue(xml.contains("angleID=\"atem-live-mix\" srcEnable=\"audio\""))
+    }
+
     func testMultipleSessionsExplainTheCommandLineOption() async throws {
         let fixture = try Fixtures.RecordingDir()
         defer { fixture.cleanup() }

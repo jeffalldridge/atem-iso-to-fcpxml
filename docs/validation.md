@@ -7,6 +7,7 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 **Verified**
 
 - Camera/WAV compounds are visible browser items linked to the multicam angles; all angle kinds have populated Angle Editor timelines and the correct recording duration (unreleased visibility round trip below).
+- The recorded-live-mix choice preserves both synthetic audio sources through a native Final Cut render (unreleased live-mix entry below).
 - Real ATEM Mini Pro ISO recordings at 1080p60, with and without mix transitions, convert, import into Final Cut Pro 12.4 without warnings, and round-trip with identical offsets, durations, and angle assignments (1.0.0 entry below).
 - Final Cut's automatic audio crossfade is gain-neutral when both sides of a dissolve use the same audio angle (1.0.0).
 - The Swift engine writes byte-identical XML to the Python reference on those recordings and on the synthetic parity scenarios (1.1.0, and every `swift test` run).
@@ -22,6 +23,14 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 - Final Cut Pro versions older than 12.4.
 - VoiceOver, Full Keyboard Access, light appearance, Reduce Motion and Reduce Transparency, drag and drop from Finder, a real slow or exFAT drive, read-only and full destinations, macOS 15, and Intel hardware.
 - Replacing a running installation with a newer copy, and the Quick Action's lookup with several installed copies.
+
+## 2026-10-21: Unreleased, Recorded Live Mix
+
+- **Decision:** preserve the isolated WAV default and add **ATEM live mix** to the existing soundtrack choices in the app, Python dialogs, and both command-line tools (`--live-mix`). The mix uses Program audio, falling back to an audio-bearing selected ISO. It preserves the recorded result of AFV and mixer changes; it does not reconstruct their automation. Program picture remains independent. A recording without WAVs selects live mix automatically. Silent MP4s cannot be selected as a usable soundtrack.
+- **Native import, Final Cut Pro 12.4:** imported a 20-second synthetic recording with three camera angles, a still compound, Program picture, and a separate live-mix angle, without an import warning. The project opens with seven clips and one dissolve. Exported the event back to XML: exact rational clip and transition offsets, starts, durations, and audio/video assignments are unchanged; one project, one browser multicam, and all six angles remain. Program picture and live mix reference the same MP4 asset. Final Cut normalizes away the mix angle asset-clip's `srcEnable="audio"`; the project's audio-only `mc-source` assignments remain intact.
+- **Rendered audio:** exported that project from Final Cut as H.264/AAC. The synthetic Program recording contains 440 Hz and 880 Hz tones together, while the default camera WAV contains only 440 Hz. Both tones remain present in a three-second rendered segment spanning the picture dissolve, with their amplitude ratio preserved. This verifies both sources survive the recorded-mix workflow, not mixer automation reconstruction or lossless audio gain.
+- **Native app:** rebuilt the universal app, opened that synthetic folder, confirmed Camera 1 WAV remains selected by default, selected ATEM live mix, created XML, and checked that it contains the dedicated mix angle. The action bar displays the recording-note count after saving. Workflow tests also cover camera availability changes, a temporary empty camera selection, no-WAV defaults, reconversion, and independent Program picture selection.
+- **Checks:** 37 Swift tests, including engine parity and 12 app workflow tests; 89 Python converter, website, and release-tool tests; Quick Action regeneration and freshness; installed Apple FCPXML 1.10 DTD validation; workflow `actionlint`; release version consistency; and `git diff --check`. The universal app builds and passes ad-hoc signature verification and engine self-check. No new Developer ID signing, notarization, Gatekeeper acceptance, hardware capture, or release was performed. ISO fallback has unit/parity coverage; it has not had a separate native playback test.
 
 ## 2026-10-21: Unreleased, Media Player Visibility and Import Inventory
 

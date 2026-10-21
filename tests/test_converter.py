@@ -190,9 +190,10 @@ class InteractiveDefaultTests(unittest.TestCase):
             self.assertNotIn("Show CAM 1.wav", labels)
             return []
         with patch.object(c, "choose_checkboxes", side_effect=checkboxes), patch.object(c, "choose_from_list", return_value=["Show CAM 1.wav"]):
-            cameras, soundtrack, extras = c.interactive_choices(rec)
+            cameras, soundtrack, extras, live_mix = c.interactive_choices(rec)
         self.assertEqual(cameras, [1])
         self.assertEqual(soundtrack, "Show CAM 1.wav")
+        self.assertFalse(live_mix)
         self.assertEqual(extras, [])
 
 
@@ -1002,6 +1003,94 @@ class HardeningTests(unittest.TestCase):
                 self.assertIsNone(archive.testzip())
             (bundle / "Contents" / "Info.plist").unlink()
             self.assertFalse(builder.same_bundle(bundle, bundle))
+
+
+class LiveMixTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = RecordingDir()
+        self.addCleanup(self.fixture.cleanup)
+        self.fixture.write()
+
+    def plan(self, **kwargs):
+        return c.make_plan(c.open_recording(self.fixture.drp), **kwargs)
+
+    def silence(self, path):
+        make_mp4(path, 1200, tc_frames=self.fixture.tc_frames, audio=False)
+
+    def test_live_mix_is_explicit_and_preserves_wav_defaults(self):
+        self.assertEqual(self.plan().main_audio_angle, "input-1")
+        plan = self.plan(live_mix=True, include_program=True)
+        self.assertEqual(plan.main_audio_angle, "atem-live-mix")
+        angle = next(a for a in plan.angles if a.id == "atem-live-mix")
+        self.assertEqual(angle.video, (self.fixture.root / "Show.mp4").resolve())
+        self.assertEqual([a.id for a in self.plan(live_mix=True).angles if a.kind == "audio"],
+                         [a.id for a in self.plan().angles if a.kind == "audio"])
+        xml = ET.fromstring(c.build_fcpxml(plan))
+        mix = xml.find(".//mc-angle[@angleID='atem-live-mix']/asset-clip")
+        self.assertEqual(mix.get("srcEnable"), "audio")
+        self.assertEqual(mix.get("offset"), "0s")
+        self.assertEqual(mix.get("start"), "36000s")
+        self.assertEqual(mix.get("ref"), xml.find(".//mc-angle[@angleID='program']/clip/video").get("ref"))
+        self.assertEqual(len(xml.findall("./event/asset-clip[@name='Show']")), 1)
+        for clip in xml.findall("./event/project/sequence/spine/mc-clip"):
+            self.assertEqual(clip.find("mc-source[@srcEnable='audio']").get("angleID"), "atem-live-mix")
+        with self.assertRaisesRegex(c.ConversionError, "either --live-mix or --audio"):
+            self.plan(live_mix=True, audio="CAM 1")
+
+    def test_live_mix_uses_selected_iso_when_program_missing_or_silent(self):
+        program = self.fixture.root / "Show.mp4"
+        self.silence(program)
+        self.assertEqual(c.live_mix_source(c.open_recording(self.fixture.drp), [2]),
+                         (self.fixture.root / "Video ISO Files/Show CAM 2.mp4").resolve())
+        program.unlink()
+        plan = self.plan(live_mix=True, cameras=[2])
+        self.assertEqual(next(a.video for a in plan.angles if a.id == "atem-live-mix"),
+                         (self.fixture.root / "Video ISO Files/Show CAM 2.mp4").resolve())
+
+    def test_no_wav_fallback_uses_real_mix_and_silent_recording_errors(self):
+        for path in (self.fixture.root / c.AUDIO_DIR).glob("*.wav"):
+            path.unlink()
+        iso = self.fixture.root / "Video ISO Files/Show CAM 1.mp4"
+        self.silence(iso)
+        plan = self.plan()
+        self.assertEqual(plan.main_audio_angle, "atem-live-mix")
+        self.assertTrue(any("MP4 has no audio either" in w for w in plan.rec.warnings))
+        self.silence(self.fixture.root / "Show.mp4")
+        for live_mix in (False, True):
+            with self.assertRaisesRegex(c.ConversionError, "No recorded live mix audio"):
+                self.plan(live_mix=live_mix)
+        # The unavailable mix does not prevent using an actual WAV.
+        make_wav(self.fixture.root / c.AUDIO_DIR / "Show MIC 1.wav", self.fixture.samples, self.fixture.time_reference)
+        self.assertNotEqual(self.plan(audio="MIC 1").main_audio_angle, "atem-live-mix")
+
+    def test_interactive_live_mix_and_extra_wav_choices(self):
+        rec = c.open_recording(self.fixture.drp)
+        def pick(prompt, choices, defaults, multiple):
+            self.assertIn("ATEM live mix (recorded program audio)", choices)
+            self.assertEqual(defaults, ["Show CAM 1.wav"])
+            return ["ATEM live mix (recorded program audio)"]
+        def boxes(choices, defaults, **kwargs):
+            return defaults if kwargs["title"] == "Camera angles" else ["Show MIC 1.wav"]
+        with patch.object(c, "choose_from_list", side_effect=pick), patch.object(c, "choose_checkboxes", side_effect=boxes):
+            cameras, audio, extras, live_mix = c.interactive_choices(rec)
+        self.assertTrue(live_mix)
+        self.assertIsNone(audio)
+        self.assertEqual(extras, ["Show MIC 1.wav"])
+        self.assertEqual(c.make_plan(rec, cameras, audio, extras, live_mix=live_mix).main_audio_angle, "atem-live-mix")
+
+    def test_interactive_soundtrack_choice_overrides_initial_flag(self):
+        # Like the camera and WAV dialogs, the final dialog choice is authoritative.
+        with patch.object(c.sys, "platform", "darwin"), \
+                patch.object(c, "interactive_choices", return_value=([1, 2], "Show CAM 1.wav", [], False)), \
+                patch("sys.stdout", new=io.StringIO()) as output:
+            self.assertEqual(c.main([str(self.fixture.drp), "--interactive", "--live-mix", "--dry-run"]), 0)
+        self.assertIn("Show CAM 1.wav  (main soundtrack)", output.getvalue())
+        self.assertNotIn("Angle ATEM live mix", output.getvalue())
+
+    def test_cli_exclusive_soundtrack_choices(self):
+        with self.assertRaises(SystemExit) as error, patch("sys.stderr", new=io.StringIO()):
+            c.main([str(self.fixture.drp), "--live-mix", "--audio", "CAM 1"])
+        self.assertEqual(error.exception.code, 2)
 
 
 if __name__ == "__main__":

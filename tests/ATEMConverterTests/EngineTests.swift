@@ -173,3 +173,47 @@ final class ParityTests: XCTestCase {
         try compare(dir, rows: [header, Fixtures.me("00:00:05;00", ["source": 2]), Fixtures.me("00:00:15;02", ["onAir": false])])
     }
 }
+
+final class LiveMixTests: XCTestCase {
+    func testMixSourcesAndMissingAudio() throws {
+        let dir = try Fixtures.RecordingDir()
+        defer { dir.cleanup() }
+        try dir.write()
+        var options = PlanOptions()
+        options.liveMix = true
+        let rec = try openRecording(dir.drp)
+        XCTAssertEqual(try makePlan(rec).mainAudioAngle, "input-1")
+        XCTAssertEqual(try makePlan(rec, options).mainAudioAngle, "atem-live-mix")
+        XCTAssertEqual(try liveMixSource(rec, cameras: [2]), rec.programMp4)
+        options.audio = "CAM 1"
+        XCTAssertThrowsError(try makePlan(rec, options))
+        options.audio = nil
+        let program = dir.root.appendingPathComponent("Show.mp4")
+        try Fixtures.makeMp4(program, frames: 1200, tcFrames: 2160000, audio: false)
+        XCTAssertEqual(try liveMixSource(try openRecording(dir.drp), cameras: [2])?.resolvedPath, dir.root.appendingPathComponent("Video ISO Files/Show CAM 2.mp4").resolvedPath)
+        try FileManager.default.removeItem(at: program)
+        XCTAssertEqual(try makePlan(try openRecording(dir.drp), options).mainAudioAngle, "atem-live-mix")
+        for camera in 1...4 {
+            try Fixtures.makeMp4(dir.root.appendingPathComponent("Video ISO Files/Show CAM \(camera).mp4"), frames: 1200, tcFrames: 2160000, audio: false)
+        }
+        XCTAssertThrowsError(try makePlan(try openRecording(dir.drp), options))
+        try FileManager.default.removeItem(at: dir.root.appendingPathComponent("Audio Source Files"))
+        XCTAssertThrowsError(try makePlan(try openRecording(dir.drp)))
+    }
+}
+
+extension ParityTests {
+    func testLiveMixAndAutomaticFallback() throws {
+        let dir = try Fixtures.RecordingDir(frames: 1200)
+        defer { dir.cleanup() }
+        var options = PlanOptions()
+        options.liveMix = true
+        options.includeProgram = true
+        try compare(dir, rows: [Fixtures.header(), Fixtures.me("10:00:10:00", ["source": 2])], arguments: ["--live-mix", "--program-angle"], options: options)
+        try FileManager.default.removeItem(at: dir.root.appendingPathComponent("Show.mp4"))
+        options.includeProgram = false
+        try compare(dir, rows: dir.rows, arguments: ["--live-mix"], options: options)
+        try FileManager.default.removeItem(at: dir.root.appendingPathComponent("Audio Source Files"))
+        try compare(dir, rows: dir.rows)
+    }
+}

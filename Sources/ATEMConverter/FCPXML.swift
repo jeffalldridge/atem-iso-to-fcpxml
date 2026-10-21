@@ -166,7 +166,10 @@ public func buildFCPXML(_ plan: Plan) throws -> Data {
     // Using t0 again hides the clips in the Angle Editor and inflates the browser duration.
     for angle in plan.angles {
         let mcAngle = multicam.child("mc-angle", [("name", angle.name), ("angleID", angle.id)])
-        if angle.kind == "camera" || angle.kind == "program" {
+        if angle.kind == "program-audio" {
+            let (videoID, videoStart, videoLength) = try videoAsset(angle.video!, probeMp4(angle.video!))
+            mcAngle.child("asset-clip", [("ref", videoID), ("name", angle.name), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", min(duration, videoLength).fcpxml), ("srcEnable", "audio"), ("audioRole", "dialogue")])
+        } else if angle.kind == "camera" || angle.kind == "program" {
             let (videoID, videoStart, videoLength) = try videoAsset(angle.video!, nil)
             let clipLength = min(duration, videoLength)
             if let audio = angle.audio {
