@@ -28,6 +28,8 @@ A SwiftUI front end puts camera checkboxes, a single soundtrack choice, and opti
 Requires macOS 13+, Python 3.9+, and Apple Command Line Tools to build:
 
 ```sh
+git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
+cd atem-iso-to-fcpxml
 python3 scripts/build_macos_app.py --install
 ```
 
@@ -37,13 +39,19 @@ This is a local preview, not a notarized app release. See [native app developmen
 
 ## Install
 
-### The Finder Quick Action (Recommended)
+### The Finder Quick Action
 
-1. Download [`ATEM-ISO-to-FCPXML-Quick-Action.zip`](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) from the latest release, or grab the [`quick-action`](quick-action) folder from this repository.
-2. Double-click **ATEM ISO to FCPXML.workflow** and click **Install** when macOS asks.
-3. Mount the ATEM SSD, right-click the recording folder (or its `.drp`), and choose **Quick Actions → ATEM ISO to FCPXML**.
+The native app build above installs the Finder Quick Action too. To use only the Quick Action, without building the SwiftUI app, clone this repository, enter its folder, and run:
 
-Three dialogs follow: camera checkboxes (inputs used in the live switch are checked), a single-choice WAV soundtrack list, and optional audio-angle checkboxes. Leave the audio boxes unchecked or choose **No extra audio** to add none. **Cancel** stops without an error or output file. Press Return to accept each dialog’s defaults. When it finishes you can open the result straight into Final Cut Pro.
+```sh
+python3 scripts/build_quick_action.py --install
+```
+
+Use the current source: the published 1.0.0 ZIP has a known dialog error.
+
+Mount the ATEM SSD, right-click the recording folder (or its `.drp`), and choose **Quick Actions → ATEM ISO to FCPXML**. It opens the native app if installed.
+
+Without the native app, three dialogs follow: camera checkboxes (inputs used in the live switch are checked), a single-choice WAV soundtrack list, and optional audio-angle checkboxes. Leave the audio boxes unchecked or choose **No extra audio** to add none. **Cancel** stops without an error or output file. Press Return to accept each dialog’s defaults. When it finishes you can open the result straight into Final Cut Pro.
 
 The Quick Action is a plain Automator workflow with the converter embedded inside it; you can open it in Automator and read every line. It needs Python 3.9 or newer, which macOS installs with the Apple Command Line Tools (run `xcode-select --install` once, or install Python from [python.org](https://www.python.org/downloads/macos/)).
 
