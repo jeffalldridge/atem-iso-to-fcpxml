@@ -263,7 +263,7 @@ final class ConversionModel {
         let conversion = error as? ConversionError
         if let sessions = conversion?.sessionCount {
             problem = Problem(title: "This Recording Has \(sessions) Sessions",
-                              message: "The ATEM added more than one recording to this .drp, and the app cannot choose between them yet. The command line version can: run it with --session 1 to --session \(sessions). The README explains how.")
+                              message: "The ATEM added more than one recording to this .drp, and the app cannot choose between them yet. The command line version can open one at a time: add --session and a number from 1 to \(sessions). The README explains how.")
         } else if title == "Couldn't Create the FCPXML" {
             problem = Problem(title: title, message: "\(conversion?.message ?? error.localizedDescription)\n\nYour recording was not changed.")
         } else {
