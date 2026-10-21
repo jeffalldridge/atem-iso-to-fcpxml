@@ -55,9 +55,19 @@ Without the native app, three dialogs follow: camera checkboxes (inputs used in 
 
 The Quick Action is a plain Automator workflow with the converter embedded inside it; you can open it in Automator and read every line. It needs Python 3.9 or newer, which macOS installs with the Apple Command Line Tools (run `xcode-select --install` once, or install Python from [python.org](https://www.python.org/downloads/macos/)).
 
-### Updating an Installed Quick Action
+### Updating
 
-The workflow contains its own copy of the converter. Updating the repository does not update the workflow in Finder. Install the new workflow and replace the existing copy, or run `python3 scripts/build_quick_action.py --install` from the updated checkout.
+Downloading a new version does not update the installed copy. Quit **ATEM ISO to FCPXML**, then run this from the new source folder (or run `git pull --ff-only` in your existing checkout first):
+
+```sh
+python3 scripts/build_macos_app.py --install
+```
+
+This replaces the app in `~/Applications` and the Quick Action in `~/Library/Services`, using the same names each time. No uninstall is needed. The installer stages each new bundle before replacing the old one and restores the previous bundle if the final replacement fails. It refuses to replace a running app; reopen it after installation.
+
+For the standalone Quick Action, run `python3 scripts/build_quick_action.py --install` instead. This updates the workflow only; if the native app is installed, the workflow still opens that app, so use the app command to update both. A downloaded `.workflow` can also be installed by double-clicking it and choosing replacement when macOS asks.
+
+Keep the app in the installer’s user Applications location. Copies manually placed elsewhere, including Downloads or `/Applications`, are not removed. There is no automatic update checker or published native app download yet.
 
 If a dialog reports `Can't get item 1 of «handler promptText»` (error `-1728`), you have the broken 1.0.0 workflow. The current source fixes this. Until a newer release is published, install from the checkout using the command above. [Troubleshooting](docs/troubleshooting.md) explains how to check the installed version.
 

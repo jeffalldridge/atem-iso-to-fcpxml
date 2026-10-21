@@ -27,4 +27,4 @@ One recording is accepted at a time. Multi-session logs currently show the engin
 
 This is an ad-hoc-signed local build, not a notarized public release. Python is not bundled. Before public distribution: validate the supported macOS/Python combinations, build both Mac architectures, sign and notarize, and exercise the downloaded artifact on a clean account. Do not claim those steps are complete based on local compilation.
 
-The previous installed app is backed up under ignored `local/app-backups/` when rebuilding. Quit the app before installing a replacement. No recording, generated XML, or local UI screenshot should be committed.
+The previous installed app is backed up under ignored `local/app-backups/` when rebuilding. The installer refuses replacement while the app is running. Each bundle is copied into staging on the destination volume before replacement, with rollback if the final rename fails. App and workflow replacement are separate operations; if the workflow update fails after the app succeeds, rerun the installer. Quit the app before installing a replacement. No recording, generated XML, or local UI screenshot should be committed.

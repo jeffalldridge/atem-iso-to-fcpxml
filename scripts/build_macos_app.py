@@ -13,6 +13,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+if __package__:
+    from .install_bundle import install_bundle
+else:
+    from install_bundle import install_bundle
+
 ROOT = Path(__file__).resolve().parents[1]
 NAME = 'ATEM ISO to FCPXML'
 
@@ -21,6 +26,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--install', action='store_true')
     args = parser.parse_args()
+    if args.install and subprocess.run(
+            ['/usr/bin/pgrep', '-x', 'ATEMConverter'], stdout=subprocess.DEVNULL).returncode == 0:
+        parser.error('Quit ATEM ISO to FCPXML before installing the update, then run this command again.')
     app = ROOT / 'build' / (NAME + '.app')
     contents = app / 'Contents'
     executable = contents / 'MacOS' / 'ATEMConverter'
@@ -60,13 +68,15 @@ def main():
     if args.install:
         target = Path.home() / 'Applications' / app.name
         target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_symlink() or (target.exists() and not target.is_dir()):
+            parser.error(f'Installation destination is not an app directory: {target}')
         if target.exists():
             backup = ROOT / 'local' / 'app-backups' / app.name
             backup.parent.mkdir(parents=True, exist_ok=True)
             if backup.exists():
                 shutil.rmtree(backup)
-            shutil.move(str(target), str(backup))
-        shutil.copytree(app, target)
+            shutil.copytree(target, backup)
+        install_bundle(app, target)
         subprocess.run([sys.executable, str(ROOT / 'scripts/build_quick_action.py'), '--install'], check=True)
         print('Installed', target)
     else:

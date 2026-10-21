@@ -21,6 +21,11 @@ import uuid
 import zipfile
 from pathlib import Path
 
+if __package__:
+    from .install_bundle import install_bundle
+else:
+    from install_bundle import install_bundle
+
 ROOT = Path(__file__).resolve().parents[1]
 CONVERTER = ROOT / "atem_iso_to_fcpxml.py"
 NAME = "ATEM ISO to FCPXML"
@@ -172,11 +177,7 @@ def main() -> int:
         services = Path.home() / "Library" / "Services"
         services.mkdir(parents=True, exist_ok=True)
         target = services / BUNDLE.name
-        if target.is_symlink() or target.is_file():
-            target.unlink()
-        elif target.is_dir():
-            shutil.rmtree(target)
-        shutil.copytree(BUNDLE, target)
+        install_bundle(BUNDLE, target)
         subprocess.run(["/System/Library/CoreServices/pbs", "-update"], check=False)
         print(f"Installed {target}\nFinder → right-click the .drp or its folder → Quick Actions → {NAME}")
     return 0
