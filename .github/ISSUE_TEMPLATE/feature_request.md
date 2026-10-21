@@ -10,4 +10,4 @@ What recording or workflow are you trying to handle? Describe what happens today
 
 **Anything you have already tried**
 
-This is a deliberately small utility. Requests that stay within "read an ATEM ISO recording, write one .fcpxml" are easiest to take on. Please do not attach recordings or `.drp` files; see [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#protect-private-recordings).
+This is a deliberately small utility. Requests that stay within "read an ATEM ISO recording, write one .fcpxml" are easiest to take on. Please do not attach recordings or `.drp` files; see [CONTRIBUTING.md](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/CONTRIBUTING.md#protect-private-recordings).

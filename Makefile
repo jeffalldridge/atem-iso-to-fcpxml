@@ -13,7 +13,8 @@ build:
 
 test:
 	swift test
-	python3 -m unittest discover -s tests
+	python3 -m unittest discover -s tests -v
+	python3 scripts/build_quick_action.py --check
 
 # Pass DEV_ID="Developer ID Application: ... (TEAMID)" for a notarization-ready bundle.
 app: build

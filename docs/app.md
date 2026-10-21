@@ -30,25 +30,35 @@ Change behavior in the Python script first, with a test, then mirror it in Swift
 
 ## User interface
 
-One resizable window. System appearance, accent, toolbar, radio buttons, checkboxes, and segmented controls provide the native chrome; media colors are confined to the timeline.
+One resizable window. System appearance, accent color, toolbar, radio buttons, checkboxes, and segmented controls provide the chrome; media colors appear only in the timeline strip.
 
-- **Recording**: name, format, duration, live-switch cuts, and a continuous soundtrack lane. The strip represents edit decisions, not decoded video or an audio waveform.
-- **Camera angles**: inputs used live start checked. Each camera uses its paired WAV when available.
-- **Soundtrack**: visible radio choices select the audio that plays across cuts. Extra audio angles start unchecked. WAVs already paired with a camera or used as the soundtrack are excluded, and stale hidden selections are cleared.
-- **Transitions**: visible choices for dissolves, cuts, and program video; optional program angle beneath.
-- **Action bar**: Create FCPXML (Return or ⌘S), then Details, Show in Finder, and Open in Final Cut Pro. Changing a choice requires a fresh conversion and confirms replacement of an existing file.
+- **Empty window**: one **Choose Recording…** button (Return) and drag-and-drop. There is no action bar until a recording is open.
+- **Recording**: name, format, duration, and a strip of the actual edit decisions (cut for cut, dissolves marked) with the soundtrack beneath. The strip is drawn from the same edit list the converter uses; it is not decoded video and not a waveform.
+- **Camera angles**: inputs used live start checked. Each camera uses its paired WAV when there is one, and says so.
+- **Soundtrack**: visible radio choices select the audio that plays across every cut.
+- **Extra audio angles**: start unchecked. A WAV already paired with a selected camera, or chosen as the soundtrack, is not offered again, and a hidden choice is cleared so it cannot come back checked.
+- **Transitions**: dissolves, cuts, or program video, with the program recording as an optional angle.
+- **Action bar**: what will be made, and where (`<name>.fcpxml` next to the recording, noting an existing file that will need confirmation). **Create FCPXML** (Return or ⌘S) becomes **Details…**, **Show in Finder**, and **Open in Final Cut Pro** when it finishes. Changing a choice after a conversion makes the window ready to convert again; the saved file stays where it is, and replacing it asks first.
 
-The window grows in both dimensions; camera, soundtrack, and extra-audio panes scroll independently. ⌘O opens a native file sheet, and Cancel leaves the current recording alone. A failed open preserves an already saved result. Reassigning an unchanged choice also preserves that result. While the Open sheet is presented, additional Open commands and drops are disabled. Drop, Finder Open With, and the Quick Action accept one recording at a time instead of silently discarding additional selections.
+The camera, soundtrack, and extra-audio lists scroll independently, so eight cameras or many WAVs stay usable. The File menu has Open Recording… (⌘O), Open Recent, Close (⌘W), Create FCPXML (⌘S), Show in Finder (⌘R), and Open in Final Cut Pro.
+
+Every failure names what failed in its title and says what to do; failed conversions also say the recording was not changed. A failed open leaves an already saved result alone. The Open sheet, drops, Finder Open With, and the Quick Action accept one recording at a time. Recordings with several sessions are not opened (see below).
 
 ## Closing during work
 
-Quit is deferred while loading or converting. The operation finishes before AppKit receives the reply, so quitting cannot interrupt output publication. Success completes the quit; failure cancels it and requests the main window again so the error can be read. Closing the last window uses the same application termination policy. The policy and operation notifications have regression tests; an actual slow-disk Close/Quit/failure sequence still needs native acceptance testing.
+Only a conversion defers Quit, because it is the one operation that publishes a file. The conversion finishes before AppKit receives its reply, so quitting cannot interrupt output publication; success completes the quit, failure cancels it and brings the main window back with the error. Reading a recording is abandoned at once when the window closes or the app quits, since nothing has been written. While either operation runs, the app holds a Process Info activity so macOS neither suspends it nor automatically terminates it after its window closes.
+
+Verified by driving the real app: closing the window during a slow load quits immediately; closing during a slow conversion publishes the complete file and then quits; closing during a conversion that fails brings the window back with the error and leaves the app usable. The slow cases used a synthetic recording padded with millions of empty MP4 boxes, not a real slow external drive.
+
+## Recordings with several sessions
+
+If the ATEM appended a second recording to the same `.drp`, the app refuses to open it and explains that the command line version can choose a session with `--session`. A native chooser is deliberately not offered yet: how later sessions name their media is inferred from the log, not verified on a real stop-and-start recording, and choosing a session silently, or showing a chooser whose media association was never confirmed, risks converting the wrong take. Add one only with a real multi-session recording to test against.
 
 ## Updates and the Quick Action
 
-**Download Updates…** in the app menu opens the latest GitHub release. Updates are manual: quit the app, drag the new copy into the same Applications folder, and choose Replace. The bundle name and identifier remain stable. There is no background updater or automatic download.
+**Latest Release on GitHub…** in the app menu opens the releases page. Updates are manual and the app makes no network requests: quit the app, drag the new copy into the same Applications folder, and choose Replace. The bundle name and identifier stay stable. There is no background updater, no check, and no download.
 
-The Quick Action opens the installed app from `/Applications`, then `~/Applications`. Keep one installed copy to avoid ambiguity. Replacing that app updates the Quick Action's native experience too. Without the app, the Quick Action uses its embedded Python converter and native dialogs; its extra audio choices also start unchecked. Install the latest workflow over the existing workflow to update that fallback. Conversion options shared by both engines are verified by byte-for-byte parity tests; the fallback dialogs do not expose every app option.
+The Quick Action hands the selected recording to the installed app: first `/Applications`, then `~/Applications`, then any copy LaunchServices finds by bundle identifier (a renamed or moved app, or one running from a disk image). If the hand-off fails, or no app is found, it runs its embedded Python converter with native dialogs. Keep one installed copy to avoid ambiguity. Replacing the app updates the Quick Action's native experience too. The embedded converter does not update itself; install the newer workflow over the old one. Finder's Get Info on the workflow shows which converter version it carries. Its extra audio choices also start unchecked, and its dialogs do not expose every option the app has; the options they share are held to byte-identical output by the parity tests.
 
 ## Building
 

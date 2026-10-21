@@ -21,4 +21,4 @@ In the app, choose **Details…** after a conversion. On the command line, run w
 ```
 ```
 
-Please do not attach recordings, `.drp` files, generated `.fcpxml` files, Final Cut libraries, or screenshots of real footage. A trimmed `.drp` excerpt with the `file`, `projectPath`, `volume`, and `name` values replaced is welcome. See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#protect-private-recordings).
+Please do not attach recordings, `.drp` files, generated `.fcpxml` files, Final Cut libraries, or screenshots of real footage. A trimmed `.drp` excerpt with the `file`, `projectPath`, `volume`, and `name` values replaced is welcome. See [CONTRIBUTING.md](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/CONTRIBUTING.md#protect-private-recordings).

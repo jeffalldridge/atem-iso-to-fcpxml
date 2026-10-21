@@ -4,9 +4,13 @@
 
 Open the recording folder itself (the one containing the `.drp`, the `.mp4`, `Video ISO Files`, and `Audio Source Files`), not a parent folder or a copy that only has the `.drp`. The converter finds media relative to the `.drp`, so the subfolders must still be there. Renaming the folder is fine.
 
-## "This .drp holds 2 recording sessions"
+## "This Recording Has 2 Sessions"
 
-The ATEM appended a second session to the same log because the recording was stopped and started under the same name. Use the command line and pick one: `python3 atem_iso_to_fcpxml.py "<folder>" --session 2`.
+The ATEM appended a second session to the same log because the recording was stopped and started under the same name. The app cannot choose between sessions yet. Use the command line and pick one: `python3 atem_iso_to_fcpxml.py "<folder>" --session 2`. Check that the ISO file names in the output match the session you chose; multi-session logs have only been tested with synthetic recordings.
+
+## "Cannot find …" for a recording on a drive
+
+The drive is not connected or has a different name. Connect the SSD and open the recording again, or choose it with **Open Recording…**.
 
 ## Final Cut shows the clips as offline
 
