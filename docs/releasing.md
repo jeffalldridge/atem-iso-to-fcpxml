@@ -11,18 +11,18 @@ A release is a git tag `vX.Y.Z` on a commit that is on `main`; the workflow refu
 
 The workflow has not produced a release in its current form. The run for `v1.1.0` passed its version and test steps but skipped signing, notarization, and publishing (no signing secrets were configured then), and the four assets on that release were attached separately about ten seconds later. Review the first real run closely, or try it with a tag in a scratch repository, before relying on it. It has not been run since the draft-first, two-job restructure, which was checked with `actionlint` only.
 
-The workflow reads its credentials from the repository's `release` environment. Three of the six secrets already exist there (the certificate, its password, and the signing identity). The three notarization secrets (`NOTARY_PRIVATE_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`) have not been created, so the credentials step fails until they are added. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *Before publishing the draft*.
+The workflow reads six secrets, named exactly as in the sibling project macSubtitleOCR-gui, so the same values work for both. None exist in this repository yet. The `release` environment still holds three secrets from an older workflow (`CERTIFICATE_PASSWORD`, `DEVELOPER_ID_CERTIFICATE`, `SIGNING_IDENTITY`) that nothing uses now and that can be deleted. Until the six are added, the credentials step fails by name. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *Before publishing the draft*.
 
-## One-time setup: the `release` environment
+## One-time setup: repository secrets
 
-Create these under Settings → Environments → `release` → Environment secrets. Consider adding yourself as a required reviewer there, so a release cannot start without a click. The runner's keychain password is generated inside the job, so it is not a secret.
+Add these under Settings → Secrets and variables → Actions, with the same values as macSubtitleOCR-gui. GitHub never shows a secret's value again, so copy them from wherever you keep the original certificate export and App Store Connect key. The runner's keychain password is generated inside the job, so `KEYCHAIN_PASSWORD` is not needed. The build job also declares the `release` environment, so you can later add a required reviewer there without changing the workflow.
 
 | Secret | Value |
 | --- | --- |
-| `DEVELOPER_ID_CERTIFICATE` | Base64 of the Developer ID Application `.p12` export (certificate and private key) |
-| `CERTIFICATE_PASSWORD` | The password used for that export |
-| `SIGNING_IDENTITY` | The identity name, for example `Developer ID Application: Tent Studios, LLC (TEAMID)` |
-| `NOTARY_PRIVATE_KEY` | Base64 of the App Store Connect API key `.p8` |
+| `MACOS_CERT_P12` | Base64 of the Developer ID Application `.p12` export (certificate and private key) |
+| `MACOS_CERT_PASSWORD` | The password used for that export |
+| `DEV_ID` | The identity name, for example `Developer ID Application: Tent Studios, LLC (TEAMID)` |
+| `NOTARY_KEY` | Base64 of the App Store Connect API key `.p8` |
 | `NOTARY_KEY_ID` | The key's 10-character ID |
 | `NOTARY_ISSUER_ID` | The issuer UUID |
 
