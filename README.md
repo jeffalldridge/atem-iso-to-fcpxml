@@ -11,7 +11,7 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 
 ## Download
 
-**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg)** (macOS 15 or later, Apple silicon and Intel, signed and notarized).
+**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest)** (macOS 15 or later, Apple silicon and Intel, signed and notarized).
 
 Open the disk image, drag the app to Applications, and open it. Then:
 

@@ -10,7 +10,7 @@ The native SwiftUI app is a source-build preview requiring macOS 13+. See the RE
 
 - [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation, and compatibility.
 - [README](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/README.md): command-line options and limitations.
-- [Download for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg): signed, notarized app for macOS 15 or later; the release page also carries the Python converter and a Finder Quick Action.
+- [Download for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest): signed, notarized app for macOS 15 or later; the release page also carries the Python converter and a Finder Quick Action.
 - [Source](https://github.com/jeffalldridge/atem-iso-to-fcpxml): Swift app and engine in Sources/, the Python reference converter atem_iso_to_fcpxml.py; the two are tested to produce identical XML.
 
 ## Implementation and Evidence

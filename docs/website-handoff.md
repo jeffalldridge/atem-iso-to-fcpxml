@@ -18,11 +18,11 @@ Search phrases the page should answer: "ATEM ISO to Final Cut Pro," "open ATEM r
 ## Links
 
 - Product site: https://jeffalldridge.github.io/atem-iso-to-fcpxml/
-- Download (always the latest disk image): https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg
+- Download page (the disk image is listed there): https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest
 - Release page: https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest
 - Source: https://github.com/jeffalldridge/atem-iso-to-fcpxml
 - Screenshots and the favicon: `docs/site/images/` and `docs/site/favicon.svg` in the repository (the screenshots show a synthetic "Live Show" recording, no real footage).
 
 ## Release State
 
-Version 1.1.0 is the first release with the Mac app. Until the `v1.1.0` release exists on GitHub with `ATEM-ISO-to-FCPXML.dmg` attached, the download link above returns 404; link to the release page instead and say "coming soon." The 1.0.0 release only has a Finder Quick Action ZIP with a known dialog bug; do not link to it.
+Version 1.1.0 is the first release with the Mac app. Until the `v1.1.0` release exists on GitHub with `ATEM-ISO-to-FCPXML.dmg` attached, the release page shows only the older 1.0.0 Quick Action; say "coming soon" until then. The 1.0.0 release only has a Finder Quick Action ZIP with a known dialog bug; do not link to it.
