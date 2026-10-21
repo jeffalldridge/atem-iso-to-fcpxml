@@ -1,4 +1,4 @@
-# What the converter writes, and why
+# What the Converter Writes, and Why
 
 FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts only some of them, and it often degrades the others silently with a warning in the import sheet. The shapes below were established by importing into Final Cut Pro 12.4 and exporting the result as XML again (Final Cut writes FCPXML 1.14; the converter writes 1.10, which Final Cut 10.6 and later read).
 
@@ -10,7 +10,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
 - Stills: a `duration="0s"` asset with a `FFVideoFormatRateUndefined` format carrying the pixel size.
 - A `Cross Dissolve` effect resource (`FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265`) when any dissolve is used.
 
-## The multicam
+## The Multicam
 
 ```xml
 <media id="r11" name="Live Show Multicam">
@@ -32,7 +32,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
 
 `tcStart` is the ATEM's master timecode, so the multicam shows the same time-of-day timecode as the camera files.
 
-### Camera angles are compound clips
+### Camera Angles Are Compound Clips
 
 ```xml
 <media id="r12" name="Camera 1">
@@ -49,7 +49,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
 
 The `video` component takes only the picture of the MP4 and the connected `asset-clip` supplies the WAV. The wrapper is required: putting that same `clip` directly inside `mc-angle`, or a `sync-clip` with `sync-source` elements, imports with the warning "Anchored items were ignored because this item does not support them", and the angle ends up with the MP4's AAC audio. The compound clip round-trips intact.
 
-## The timeline
+## The Timeline
 
 ```xml
 <project name="Live Show Live Edit">
@@ -73,11 +73,11 @@ The `video` component takes only the picture of the MP4 and the connected `asset
 - Sections where the ATEM showed something the angles cannot reproduce (keys, fade to black, generators) are `mc-clip`s on a `Program` angle holding the ATEM program recording, each with a marker. If there is no program recording they become `gap`s with markers.
 - The sequence starts at `0s` so exports begin at zero; the multicam keeps time-of-day timecode.
 
-## Browser items
+## Browser Items
 
 The event holds the multicam clip, the project, and an `asset-clip` for every MP4 and WAV so the raw files are visible. Final Cut creates an event with the name given (`--event`, default the folder name). A file with no event element lands in an event named after today's date; Final Cut does not import into the selected event.
 
-## Things that were tried and do not work
+## Things That Were Tried and Do Not Work
 
 | Attempt | Result in Final Cut Pro 12.4 |
 | --- | --- |

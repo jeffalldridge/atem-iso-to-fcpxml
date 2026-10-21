@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
@@ -63,7 +63,7 @@ def parse_video_mode(mode: str) -> Tuple[Optional[int], bool, Fraction]:
         raise ConversionError("The log videoMode must be text.")
     match = re.fullmatch(r"\s*(\d{3,4})([pi])(\d{2,4}(?:\.\d+)?)\s*", mode or "", re.IGNORECASE)
     if not match:
-        raise ConversionError(f"Unrecognised ATEM videoMode {mode!r}.")
+        raise ConversionError(f"Unrecognized ATEM videoMode {mode!r}.")
     lines, scan, rate_text = int(match[1]), match[2].lower(), match[3]
     if rate_text in NTSC_RATES:
         rate = Fraction(*NTSC_RATES[rate_text])
@@ -623,7 +623,7 @@ def angle_id(source: dict, index: int) -> str:
     return f"input-{index}"
 
 
-def _picture_for(state: dict, selected: set, allow_program: bool) -> Picture:
+def _picture_for(state: dict, selected: set, fallback) -> Picture:
     blocks = [b for b in state.get("mixEffectBlocks", []) if isinstance(b, dict)]
     block = next((b for b in blocks if b.get("_index_") == 0), blocks[0] if blocks else {})
     sources = {s["_index_"]: s for s in state.get("sources", []) if isinstance(s, dict) and "_index_" in s}
@@ -648,8 +648,7 @@ def _picture_for(state: dict, selected: set, allow_program: bool) -> Picture:
         else:
             reasons.append(f"{source.get('name')} not included in the multicam")
     if reasons:
-        reason = "; ".join(reasons)
-        return Picture("program" if allow_program else "gap", reason=reason)
+        return fallback("; ".join(reasons))
     return Picture("angle", angle_id(source, index))
 
 
@@ -666,7 +665,16 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
             selected.add(angle_id(source, index))
             stills[angle_id(source, index)] = (index, str(source.get("name") or f"Media Player {index}"), source["file"])
     allow_program = rec.program_mp4 is not None
-    fallback = "program" if allow_program else "gap"
+    first_camera = next((f"input-{i}" for i in cameras if rec.sources.get(i) and rec.sources[i].mp4), None)
+
+    def fallback(reason: str) -> Picture:
+        """What stands in when the angles cannot show what the ATEM put on air."""
+        if allow_program:
+            return Picture("program", reason=reason)
+        if first_camera:
+            # No program recording: keep the soundtrack running on the first camera rather than a silent gap.
+            return Picture("angle", first_camera, reason=f"{reason}; program recording not found, showing {rec.sources[int(first_camera[6:])].name}")
+        return Picture("gap", reason=reason)
 
     # 1. Replay the log into (start, end, state snapshot) intervals on the frame grid.
     intervals: List[Tuple[int, int, dict]] = []
@@ -697,7 +705,7 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
     for start, end, snap in intervals:
         blocks = [b for b in snap.get("mixEffectBlocks", []) if isinstance(b, dict)]
         block = next((b for b in blocks if b.get("_index_") == 0), blocks[0] if blocks else {})
-        classified.append((start, end, _picture_for(snap, selected, allow_program), bool(block.get("transitionActive")),
+        classified.append((start, end, _picture_for(snap, selected, fallback), bool(block.get("transitionActive")),
                            str(block.get("transitionType") or "Mix")))
 
     # Unrelated sparse updates (e.g. an input label) can split an active mix.
@@ -714,7 +722,7 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
             joined.append(interval)
     classified = joined
 
-    # 3. Resolve transition intervals against their neighbours and merge equal pictures.
+    # 3. Resolve transition intervals against their neighbors and merge equal pictures.
     cuts: List[Cut] = []
 
     def append(start: int, end: int, picture: Picture, transition: Optional[Transition] = None) -> None:
@@ -734,11 +742,11 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
         reason = f"ATEM {kind} transition"
         if before is not None and after is not None and before == after and before.kind == "angle":
             append(start, end, before)  # a transition back to the same picture changes nothing
-        elif before is None or after is None or before.kind != "angle" or after.kind != "angle":
+        elif before is None or after is None or before.kind != "angle" or after.kind != "angle" or before.reason or after.reason:
             extra = after.reason if after is not None and after.reason else ""
-            append(start, end, Picture(fallback, reason=reason + (f"; {extra}" if extra else "")))
+            append(start, end, fallback(reason + (f"; {extra}" if extra else "")))
         elif transitions == "program":
-            append(start, end, Picture(fallback, reason=reason))
+            append(start, end, fallback(reason))
         else:
             length = end - start
             if transitions == "dissolve" and length % 2:
@@ -797,10 +805,10 @@ class Plan:
             elif angle.audio:
                 detail = angle.audio.name
             tag = "  (main soundtrack)" if angle.id == self.main_audio_angle else ""
-            lines.append(f"Angle: {angle.name} — {detail}{tag}")
+            lines.append(f"Angle {angle.name}: {detail}{tag}")
         dissolves = sum(1 for c in self.edit.cuts if c.transition_in)
-        fallbacks = [c for c in self.edit.cuts if c.picture.kind != "angle"]
-        lines.append(f"Timeline: {len(self.edit.cuts)} clips, {dissolves} cross dissolves, {len(fallbacks)} program-recording sections")
+        fallbacks = [c for c in self.edit.cuts if c.picture.kind != "angle" or c.picture.reason]
+        lines.append(f"Timeline: {len(self.edit.cuts)} clips, {dissolves} cross dissolves, {len(fallbacks)} stand-in sections")
         for cut in fallbacks:
             lines.append(f"  {rec.timecode(cut.start)}–{rec.timecode(cut.end)}: {cut.picture.reason}")
         for cut in self.edit.cuts:
@@ -1121,9 +1129,9 @@ def build_fcpxml(plan: Plan) -> bytes:
             mc_sources(clip, cut.picture.key if cut.picture.kind == "angle" else "program")
         else:
             clip = ET.SubElement(spine, "gap", name="Gap", offset=fmt_time(offset), start=fmt_time(t0 + offset), duration=fmt_time(length))
-        if cut.picture.kind != "angle":
-            ET.SubElement(clip, "marker", start=fmt_time(t0 + offset), duration=fmt_time(fd),
-                          value=f"ATEM: {cut.picture.reason}" + (" (program recording)" if cut.picture.kind == "program" else " (no program recording found)"))
+        if cut.picture.kind != "angle" or cut.picture.reason:
+            suffix = {"program": " (program recording)", "gap": " (no program recording or camera found)"}.get(cut.picture.kind, "")
+            ET.SubElement(clip, "marker", start=fmt_time(t0 + offset), duration=fmt_time(fd), value=f"ATEM: {cut.picture.reason}{suffix}")
         elif cut.transition_in and cut.transition_in.approximated:
             ET.SubElement(clip, "marker", start=fmt_time(t0 + offset), duration=fmt_time(fd),
                           value=f"ATEM {cut.transition_in.kind} transition shown as a cross dissolve")
@@ -1162,7 +1170,7 @@ end run'''
         out = _osascript(script, prompt, str(len(defaults)), *defaults, *items)
     except ConversionError as exc:
         if "-128" in str(exc) or "User canceled" in str(exc):
-            raise ConversionError("Cancelled.") from None
+            raise ConversionError("Canceled.") from None
         raise
     return [items[int(index) - 1] for index in out.split(",") if index]
 
@@ -1176,7 +1184,7 @@ end run'''
         return _osascript(script, message, title)
     except ConversionError as exc:
         if "-128" in str(exc) or "User canceled" in str(exc):
-            raise ConversionError("Cancelled.") from None
+            raise ConversionError("Canceled.") from None
         raise
 
 
@@ -1329,7 +1337,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             if interactive:
                 answer = ask_buttons(f"{output.name} already exists in this folder. Replace it?", ["Cancel", "Replace"], "Replace")
                 if answer != "Replace":
-                    raise ConversionError("Cancelled.")
+                    raise ConversionError("Canceled.")
                 replace = True
             else:
                 raise ConversionError(f"{output} already exists. Use --force to replace it or --output for a new name.")
@@ -1354,7 +1362,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 subprocess.run(["/usr/bin/open", "-R", str(output)], check=False)
         return 0
     except ConversionError as exc:
-        if str(exc) == "Cancelled.":
+        if str(exc) == "Canceled.":
             return 1
         print(f"Error: {exc}", file=sys.stderr)
         if interactive:

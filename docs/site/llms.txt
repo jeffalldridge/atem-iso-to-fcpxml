@@ -4,21 +4,21 @@
 
 This is a concise navigation aid for assistants, not a crawler policy or a promise of search visibility. The linked documentation is authoritative for current behavior.
 
-## Start here
+## Start Here
 
-- [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation and compatibility.
+- [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation, and compatibility.
 - [README](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/README.md): command-line options and limitations.
 - [Releases](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest): Finder Quick Action download.
 - [Source](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/atem_iso_to_fcpxml.py): one Python 3.9+ standard-library file.
 
-## Implementation and evidence
+## Implementation and Evidence
 
-- [Vendor reference](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/vendor-reference.md): Blackmagic and Apple documentation, implementation implications and evidence boundaries.
+- [Vendor reference](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/vendor-reference.md): Blackmagic and Apple documentation, implementation implications, and evidence boundaries.
 - [DRP observations](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/drp-format.md): observed native switcher log, not a general Resolve project archive parser.
 - [FCPXML structure](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/fcpxml-structure.md): compound camera angles and verified import shapes.
-- [Validation](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/validation.md): distinguish synthetic coverage, DTD checks and real Final Cut round trips.
+- [Validation](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/validation.md): distinguish synthetic coverage, DTD checks, and real Final Cut round trips.
 - [Contributor instructions](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/AGENTS.md): project boundaries.
 
-## Important limits
+## Important Limits
 
-Real imports were verified with ATEM Mini Pro ISO, 1080p60 and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; missing WAVs can fall back to AAC. Start-time mismatches are warned about, not automatically corrected. Keys use program footage when available; missing program footage can create silent gaps. XML import creates a named event rather than targeting the selected event. No transcoding, network calls or AI at runtime. Never publish personal recordings, logs or generated XML in bug reports.
+Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; missing WAVs can fall back to AAC. Start-time mismatches are warned about, not automatically corrected. Keys use program footage when available; otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.

@@ -29,7 +29,7 @@ NAMESPACE = uuid.UUID("5a0b9d1e-6c6e-4d5c-9a52-2f0f8c0e5a11")
 HEREDOC = "ATEM_ISO_TO_FCPXML_PY"
 
 SHELL = f'''#!/bin/zsh
-# {NAME} — Finder Quick Action. Built by scripts/build_quick_action.py; do not edit by hand.
+# {NAME}: Finder Quick Action. Built by scripts/build_quick_action.py; do not edit by hand.
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 if (( $# == 0 )); then
   /usr/bin/osascript -e 'display alert "{NAME}" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'

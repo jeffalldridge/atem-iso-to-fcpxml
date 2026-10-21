@@ -1,4 +1,4 @@
-# The ATEM `.drp` switcher log
+# The ATEM `.drp` Switcher Log
 
 Blackmagic documents the `.drp` only as "a DaVinci Resolve project file". In practice it is a newline-delimited JSON log of the switcher state during the recording, written by the ATEM firmware. DaVinci Resolve knows how to read it; nothing else officially does. This page records what two ATEM Mini Pro ISO recordings (firmware from mid and late 2026) contained. Field names are quoted exactly; values are invented.
 
@@ -16,13 +16,13 @@ Line 1 is the header, a complete snapshot at the moment recording started. Every
 
 If you stop and start recording under the same name the ATEM may append another header line, so a file can hold several sessions.
 
-## Header fields
+## Header Fields
 
 | Key | Meaning |
 | --- | --- |
 | `version` | `1` on every log seen so far. |
 | `masterTimecode` | Switcher timecode when the recording started, `HH:MM:SS:FF`. The ATEM runs time-of-day timecode by default; the embedded MP4 timecode track and the Broadcast Wave time reference of every WAV match this value exactly. |
-| `videoMode` | The switcher standard, e.g. `1080p60`. Only integer rates have been seen in the wild; the converter also accepts `1080p5994`, `1080p29.97` and similar spellings and, in any case, trusts the MP4's own frame rate. |
+| `videoMode` | The switcher standard, e.g., `1080p60`. Only integer rates have been seen in the wild; the converter also accepts `1080p5994`, `1080p29.97` and similar spellings and, in any case, trusts the MP4's own frame rate. |
 | `sources` | Every input the switcher could put on air; see below. |
 | `mixEffectBlocks` | One entry (`_index_` 0) on the Mini range. |
 | `downstreamKeys` | One entry on the Mini range. |
@@ -32,7 +32,7 @@ If you stop and start recording under the same name the ATEM may append another 
 
 | `type` | Example | Notes |
 | --- | --- | --- |
-| `Color` | `{"name":"Black","type":"Color","color":{"h":0,"s":0,"l":0},"_index_":0}` | Index 0 is Black. Colour generators `Color 1`/`Color 2` follow the cameras. |
+| `Color` | `{"name":"Black","type":"Color","color":{"h":0,"s":0,"l":0},"_index_":0}` | Index 0 is Black. Color generators `Color 1`/`Color 2` follow the cameras. |
 | `Video` | `{"name":"Camera 1","type":"Video","volume":"ATEM SSD","projectPath":"Live Show","file":"Video ISO Files/Live Show CAM 1.mp4","startTimecode":"10:00:00:00","_index_":1}` | `name` is the input label from ATEM Software Control, so it can be anything (`Computer`, `Stage`). `file` is relative to the recording folder and is what the converter uses; `volume` and `projectPath` are where the folder was when recorded and are ignored, so you can rename or move the folder. |
 | `ColorBars` | `{"name":"Color Bars","type":"ColorBars","_index_":5}` | |
 | `Still` | `{"name":"Media Player 1","type":"Still","file":"Video ISO Files/Media Files/logo.png","startTimecode":"00:00:00:00","_index_":8}` | The still loaded in the media player when recording started. |
@@ -55,14 +55,14 @@ Input numbering: 1–4 on an ATEM Mini, 1–8 on the Extreme and HD8 models.
 
 `onAir`, `isTied`, `fillSource`, `keySource`, `faderState` (`Idle` while not transitioning).
 
-## What the converter does with it
+## What the Converter Does with It
 
 1. Replays the patches onto the header to get the full state between every pair of events.
-2. Classifies each interval: a camera or still that is on air cleanly becomes an angle; a key, fade to black, generator, unknown source or deselected input becomes a stretch of the program recording.
-3. Resolves transition intervals against their neighbours: a change of picture becomes a Cross Dissolve (or a cut or program stretch, depending on `--transitions`); a transition that ends on the same picture is ignored.
+2. Classifies each interval: a camera or still that is on air cleanly becomes an angle; a key, fade to black, generator, unknown source, or deselected input becomes a stretch of the program recording.
+3. Resolves transition intervals against their neighbors: a change of picture becomes a Cross Dissolve (or a cut or program stretch, depending on `--transitions`); a transition that ends on the same picture is ignored.
 4. Clamps everything to the frame count of the program MP4 and warns if the log disagrees by more than two frames.
 
-## Companion files
+## Companion Files
 
 ```
 Live Show/                        ← record folder, named after the record palette

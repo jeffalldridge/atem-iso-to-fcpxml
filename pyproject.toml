@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atem-iso-to-fcpxml"
-version = "1.0.0"
+version = "1.0.1"
 description = "Convert Blackmagic ATEM Mini ISO recordings (.drp) to Final Cut Pro multicam FCPXML with the live switch rebuilt and uncompressed WAV audio."
 readme = "README.md"
 requires-python = ">=3.9"

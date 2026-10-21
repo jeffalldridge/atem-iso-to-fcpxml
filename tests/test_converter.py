@@ -386,14 +386,23 @@ class EditListTests(unittest.TestCase):
         self.assertIn("still image not found", edit.cuts[0].picture.reason)
         self.assertTrue(any("logo.png" in w for w in rec.warnings))
 
-    def test_deselected_camera_uses_program_and_missing_program_uses_gap(self):
+    def test_deselected_camera_uses_program_or_first_camera(self):
         rows = [header(), me("10:00:05:00", source=3), me("10:00:10:00", source=1)]
         _, edit = self.segments(rows, cameras=(1, 2))
         self.assertEqual((edit.cuts[1].picture.kind, edit.cuts[1].picture.reason), ("program", "Camera 3 not included in the multicam"))
         (self.rec_dir.root / "Show.mp4").unlink()
         rec, edit = self.segments(rows, cameras=(1, 2))
-        self.assertEqual(edit.cuts[1].picture.kind, "gap")
+        # Without a program recording the first camera stands in, so the soundtrack never drops out.
+        self.assertEqual((edit.cuts[1].picture.kind, edit.cuts[1].picture.key), ("angle", "input-1"))
+        self.assertIn("showing Camera 1", edit.cuts[1].picture.reason)
+        self.assertEqual([(x.start, x.end) for x in edit.cuts], [(0, 300), (300, 600), (600, 1200)])
         self.assertTrue(any("Program recording" in w for w in rec.warnings))
+        plan = c.make_plan(rec, cameras=[1, 2])
+        xml = ET.fromstring(c.build_fcpxml(plan))
+        spine = xml.find("./event/project/sequence/spine")
+        self.assertEqual([el.tag for el in spine], ["mc-clip", "mc-clip", "mc-clip"])
+        self.assertIn("showing Camera 1", spine[1].find("marker").get("value"))
+        self.assertNotIn("program", [a.id for a in plan.angles])
 
     def test_midnight_wrap_and_order(self):
         self.rec_dir.cleanup()

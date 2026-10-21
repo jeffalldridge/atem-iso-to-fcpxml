@@ -20,7 +20,7 @@ func label(_ value: String, _ x: CGFloat, _ y: CGFloat, _ size: CGFloat, _ ink: 
 }
 rect(0,0,1200,630,bg)
 label("ATEM ISO → FCPXML",72,48,23,accent,.semibold)
-label("Your live edit.",72,132,72,text,.semibold)
+label("Your Live Edit.",72,132,72,text,.semibold)
 label("Ready for Final Cut.",72,214,72,accent,.semibold)
 label("Multicam. Live cuts. Uncompressed WAV audio.",76,324,27,muted)
 rect(76,407,300,62,color(112,76,57)); rect(380,407,220,62,color(56,56,69)); rect(604,407,300,62,color(112,76,57)); rect(908,407,216,62,color(56,56,69))
