@@ -25,6 +25,7 @@ struct ChoiceColumns: View {
                             }
                         }
                         .help(camera.wavName ?? "Uses the MP4's own audio")
+                        .accessibilityLabel("\(camera.name), \(camera.wavName == nil ? "MP4 audio" : "paired with WAV audio")")
                         .padding(.vertical, 6)
                     }
                     if model.selectedCameras.isEmpty {

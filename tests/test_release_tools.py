@@ -36,6 +36,24 @@ class ReleaseToolsTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'pyproject.toml'):
                 checker.check(tag, root)
 
+    def test_quick_action_script_is_valid_and_stamped_with_the_converter_version(self):
+        builder = load('build_quick_action')
+        with tempfile.TemporaryDirectory() as folder:
+            bundle = Path(folder) / builder.BUNDLE.name
+            builder.build(bundle)
+            info = plistlib.loads((bundle / 'Contents' / 'Info.plist').read_bytes())
+            self.assertEqual(info['CFBundleShortVersionString'], builder.converter_version(builder.CONVERTER.read_text()))
+            document = plistlib.loads((bundle / 'Contents' / 'document.wflow').read_bytes())
+            script = Path(folder) / 'quick-action.zsh'
+            script.write_text(document['actions'][0]['action']['ActionParameters']['COMMAND_STRING'])
+            if shutil.which('zsh'):
+                import subprocess
+                self.assertEqual(subprocess.run(['zsh', '-n', str(script)], capture_output=True, text=True).returncode, 0)
+            # The app is looked up in both Applications folders, then by bundle identifier, before the embedded converter runs.
+            text = script.read_text()
+            self.assertLess(text.index('/Applications/'), text.index('open -b com.tentstudios.atem-iso-to-fcpxml'))
+            self.assertLess(text.index('open -b com.tentstudios.atem-iso-to-fcpxml'), text.index('python3 -c'))
+
     def test_install_failure_keeps_working_bundle(self):
         installer = load('build_quick_action')
         with tempfile.TemporaryDirectory() as folder:

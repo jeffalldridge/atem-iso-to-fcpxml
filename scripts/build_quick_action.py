@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -36,23 +37,30 @@ if (( $# != 1 )); then
   exit 0
 fi
 # When the Mac app is installed, hand the recording to it; the embedded converter is the fallback.
+# A copy that fails to open does not end the script, and a renamed or moved copy is found by its bundle identifier.
 for app in "/Applications/{NAME}.app" "$HOME/Applications/{NAME}.app"; do
-  if [[ -d "$app" ]]; then
-    exec /usr/bin/open -a "$app" "$@"
+  if [[ -d "$app" ]] && /usr/bin/open -a "$app" "$@"; then
+    exit 0
   fi
 done
+if /usr/bin/open -b com.tentstudios.atem-iso-to-fcpxml "$@" >/dev/null 2>&1; then
+  exit 0
+fi
 if ! python3 -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 9) else 1)' >/dev/null 2>&1; then
   /usr/bin/osascript -e 'display alert "Python 3.9 or newer is needed" message "Install the Apple Command Line Tools (open Terminal and run: xcode-select --install) or Python from python.org, then run the Quick Action again."'
   exit 1
 fi
-rc=0
-for item in "$@"; do
-  python3 - "$item" --interactive <<'{HEREDOC}' || rc=$?
+python3 - "$1" --interactive <<'{HEREDOC}'
 %s
 {HEREDOC}
-done
-exit $rc
 '''
+
+
+def converter_version(source: str) -> str:
+    match = re.search(r'^__version__ = "([^"]+)"', source, re.MULTILINE)
+    if not match:
+        raise SystemExit("The converter must declare __version__")
+    return match.group(1)
 
 
 def build(destination: Path) -> None:
@@ -106,7 +114,11 @@ def build(destination: Path) -> None:
             "workflowTypeIdentifier": "com.apple.Automator.servicesMenu",
         },
     }
+    version = converter_version(source)
     info = {
+        # Finder's Get Info shows which converter this workflow embeds.
+        "CFBundleShortVersionString": version,
+        "CFBundleVersion": version,
         "NSServices": [{
             "NSMenuItem": {"default": NAME},
             "NSMessage": "runWorkflowAsService",
@@ -194,11 +206,12 @@ def main() -> int:
     if args.install:
         if sys.platform != "darwin":
             parser.error("--install only works on macOS")
-        services = Path.home() / "Library" / "Services"
-        services.mkdir(parents=True, exist_ok=True)
-        target = services / BUNDLE.name
+        target = Path.home() / "Library" / "Services" / BUNDLE.name
         install_bundle(BUNDLE, target)
-        subprocess.run(["/System/Library/CoreServices/pbs", "-update"], check=False)
+        try:
+            subprocess.run(["/System/Library/CoreServices/pbs", "-update"], check=False)
+        except OSError:
+            pass  # the new workflow still appears the next time Finder reads the Services folder
         print(f"Installed {target}\nFinder → right-click the .drp or its folder → Quick Actions → {NAME}")
     return 0
 
