@@ -11,19 +11,18 @@ A release is a git tag `vX.Y.Z` on a commit that is on `main`; the workflow refu
 
 The workflow has not produced a release in its current form. The run for `v1.1.0` passed its version and test steps but skipped signing, notarization, and publishing (no signing secrets were configured then), and the four assets on that release were attached separately about ten seconds later. Review the first real run closely, or try it with a tag in a scratch repository, before relying on it. It has not been run since the draft-first, two-job restructure, which was checked with `actionlint` only.
 
-The workflow reads the seven repository-level secrets listed below. The repository's `release` environment currently holds three secrets under other names (`CERTIFICATE_PASSWORD`, `DEVELOPER_ID_CERTIFICATE`, `SIGNING_IDENTITY`) from an older workflow, and the repository has no secrets of its own, so the credentials step will fail until the names are reconciled. That is a maintainer decision and was not changed. Because the build job now declares `environment: release`, secrets may live at either level. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *Before publishing the draft*.
+The workflow reads its credentials from the repository's `release` environment. Three of the six secrets already exist there (the certificate, its password, and the signing identity). The three notarization secrets (`NOTARY_PRIVATE_KEY`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`) have not been created, so the credentials step fails until they are added. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *Before publishing the draft*.
 
-## One-time setup: repository secrets
+## One-time setup: the `release` environment
 
-The workflow uses the same secret names as macSubtitleOCR-gui, so the same values work for both repositories (Settings → Secrets and variables → Actions):
+Create these under Settings → Environments → `release` → Environment secrets. Consider adding yourself as a required reviewer there, so a release cannot start without a click. The runner's keychain password is generated inside the job, so it is not a secret.
 
 | Secret | Value |
 | --- | --- |
-| `MACOS_CERT_P12` | Base64 of the Developer ID Application `.p12` export (certificate and private key) |
-| `MACOS_CERT_PASSWORD` | The password used for that export |
-| `KEYCHAIN_PASSWORD` | Any random string; it protects the temporary keychain on the runner |
-| `DEV_ID` | The identity name, for example `Developer ID Application: Tent Studios, LLC (TEAMID)` |
-| `NOTARY_KEY` | Base64 of the App Store Connect API key `.p8` |
+| `DEVELOPER_ID_CERTIFICATE` | Base64 of the Developer ID Application `.p12` export (certificate and private key) |
+| `CERTIFICATE_PASSWORD` | The password used for that export |
+| `SIGNING_IDENTITY` | The identity name, for example `Developer ID Application: Tent Studios, LLC (TEAMID)` |
+| `NOTARY_PRIVATE_KEY` | Base64 of the App Store Connect API key `.p8` |
 | `NOTARY_KEY_ID` | The key's 10-character ID |
 | `NOTARY_ISSUER_ID` | The issuer UUID |
 
