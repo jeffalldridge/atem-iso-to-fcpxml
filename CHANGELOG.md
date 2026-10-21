@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Both engines reject media outside explicit supported ranges instead of risking overflow; Swift arithmetic is overflow-safe, and the Swift MP4 reader stops at the index like the Python one.
+- The window says where the `.fcpxml` will be saved (and when it already exists). Failures have specific titles, failed conversions say the recording was not changed, and a recording with several sessions is explained instead of quoting command-line flags. Closing the window while only reading quits at once; only a conversion defers Quit. The File menu regains Close (⌘W) and gains Show in Finder and Open in Final Cut Pro. The empty window has one Choose Recording button.
+- The Quick Action survives a failed hand-off, finds a renamed or moved app by bundle identifier, and carries its converter version.
+- Website: direct installer link, plain-language fixes, and new transparent screenshots of the current window. Contributor, assistant, and issue and pull request guidance rewritten.
+
 - Defer quitting until the current operation finishes; cancel quitting and restore the window on failure. Prevent overlapping Open sheets and preserve completed results when choices are unchanged.
 
 - Reject malformed Swift CLI arguments, out-of-range media values, and invalid XML text without writing output; match Python's zero-delta timing fallback and no-extra-audio option precedence.
