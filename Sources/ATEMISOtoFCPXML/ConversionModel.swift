@@ -13,8 +13,30 @@ struct CameraChoice: Identifiable, Hashable {
 
 struct AudioChoice: Identifiable, Hashable {
     let id: String  // file name
-    let title: String
+    let title: String  // the camera's name for a camera WAV, otherwise the WAV's own name
+    let detail: String  // the file name
     let isCameraAudio: Bool
+}
+
+/// One stretch of the live switch, for the timeline strip.
+struct TimelineSegment: Identifiable {
+    let id: Int
+    let start: Double  // 0...1
+    let end: Double
+    let angleID: String
+    let dissolveIn: Bool
+}
+
+/// Colors for angles: cameras take the palette in input order; stills and the program recording are neutral.
+enum AnglePalette {
+    static let colors: [Color] = [.orange, .blue, .green, .purple, .pink, .teal, .yellow, .indigo]
+    static func color(for angleID: String, cameraOrder: [Int]) -> Color {
+        if angleID.hasPrefix("input-"), let index = Int(angleID.dropFirst(6)), let position = cameraOrder.firstIndex(of: index) {
+            return colors[position % colors.count]
+        }
+        if angleID.hasPrefix("still-") { return .gray }
+        return Color(white: 0.35)
+    }
 }
 
 struct LoadedRecording {
@@ -70,6 +92,9 @@ final class ConversionModel {
     var errorMessage: String?
     var showReplaceConfirmation = false
     var isTargeted = false
+    private(set) var timeline: [TimelineSegment] = []
+    var cameraOrder: [Int] { loaded?.cameras.map(\.id) ?? [] }
+    func color(for angleID: String) -> Color { AnglePalette.color(for: angleID, cameraOrder: cameraOrder) }
 
     var isBusy: Bool { phase == .loading || phase == .converting }
 
@@ -105,11 +130,13 @@ final class ConversionModel {
                 let used = Set(defaults.angles.filter { $0.kind == "camera" }.compactMap(\.sourceIndex))
                 let cameras = recording.sources.filter { $0.kind == "Video" && $0.mp4 != nil }.sorted { $0.index < $1.index }
                     .map { CameraChoice(id: $0.index, name: $0.name, usedLive: used.contains($0.index), wavName: $0.wav?.lastPathComponent) }
-                let cameraWavs = Set(recording.sources.compactMap { $0.wav?.lastPathComponent })
+                var cameraNames: [String: String] = [:]
+                for source in recording.sources { if let wav = source.wav { cameraNames[wav.lastPathComponent] = source.name } }
                 let prefix = recording.name + " "
                 let audio = recording.audioFiles.map { entry in
-                    let title = entry.stem.hasPrefix(prefix) && entry.stem.count > prefix.count ? String(entry.stem.dropFirst(prefix.count)) : entry.stem
-                    return AudioChoice(id: entry.path.lastPathComponent, title: title, isCameraAudio: cameraWavs.contains(entry.path.lastPathComponent))
+                    let file = entry.path.lastPathComponent
+                    let short = entry.stem.hasPrefix(prefix) && entry.stem.count > prefix.count ? String(entry.stem.dropFirst(prefix.count)) : entry.stem
+                    return AudioChoice(id: file, title: cameraNames[file] ?? short, detail: file, isCameraAudio: cameraNames[file] != nil)
                 }
                 let main = defaults.angles.first { $0.id == defaults.mainAudioAngle }?.audio?.lastPathComponent ?? ""
                 let mics = Set(defaults.angles.filter { $0.kind == "audio" && $0.id != defaults.mainAudioAngle }.compactMap { $0.audio?.lastPathComponent })
@@ -131,7 +158,22 @@ final class ConversionModel {
         output = nil
         summary = []
         phase = .ready
+        refreshTimeline()
         NSDocumentController.shared.noteNewRecentDocumentURL(item.log)
+    }
+
+    /// Recompute the live-switch strip for the current camera selection (cheap: the log is tiny).
+    func refreshTimeline() {
+        guard let loaded, !selectedCameras.isEmpty,
+              let edit = try? buildEditList(loaded.recording, cameras: selectedCameras.sorted(), transitions: transitions.rawValue) else {
+            timeline = []
+            return
+        }
+        let total = Double(max(loaded.recording.totalFrames, 1))
+        timeline = edit.cuts.enumerated().map { index, cut in
+            TimelineSegment(id: index, start: Double(cut.start) / total, end: Double(cut.end) / total,
+                            angleID: cut.picture.kind == "angle" ? cut.picture.key : cut.picture.kind, dissolveIn: cut.transitionIn != nil)
+        }
     }
 
     private func fail(_ error: Error) {

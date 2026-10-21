@@ -28,6 +28,8 @@ struct ContentView: View {
                     .allowsHitTesting(false)
             }
         }
+        .onChange(of: model.selectedCameras) { model.refreshTimeline() }
+        .onChange(of: model.transitions) { model.refreshTimeline() }
         .alert("Something Went Wrong", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -47,8 +49,8 @@ extension ContentView {
     var windowHeight: CGFloat {
         switch model.phase {
         case .empty, .loading, .converting: 420
-        case .ready: 720
-        case .done: 400
+        case .ready: 820
+        case .done: 420
         }
     }
 }
@@ -60,7 +62,7 @@ struct EmptyStateView: View {
         ContentUnavailableView {
             Label("Open an ATEM Recording", systemImage: "video.badge.waveform")
         } description: {
-            Text("Drop the recording folder from your ATEM SSD here, or choose it. You will get a Final Cut Pro multicam clip with your live switch and WAV audio.")
+            Text("Drop the recording folder from your ATEM SSD here, or choose it.")
         } actions: {
             if model.phase == .loading {
                 ProgressView("Reading recording…").controlSize(.small)
@@ -79,21 +81,16 @@ struct ChoicesView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Form {
-                if let loaded = model.loaded {
+            if let loaded = model.loaded {
+                RecordingHeader(model: model, loaded: loaded)
+                Divider()
+                Form {
                     Section {
-                        LabeledContent("Recording", value: loaded.recording.name)
-                        LabeledContent("Length", value: loaded.durationText)
-                        LabeledContent("Format", value: loaded.formatText)
-                        LabeledContent("Live switch", value: "\(loaded.cutCount) clips, \(loaded.dissolveCount) dissolves")
-                    } header: {
-                        Text(loaded.folderName)
-                    }
-
-                    Section("Cameras") {
                         ForEach(loaded.cameras) { camera in
                             Toggle(isOn: binding(for: camera.id)) {
-                                HStack {
+                                HStack(spacing: 10) {
+                                    Circle().fill(model.selectedCameras.contains(camera.id) ? model.color(for: "input-\(camera.id)") : Color.secondary.opacity(0.25))
+                                        .frame(width: 10, height: 10)
                                     Text(camera.name)
                                     Spacer()
                                     if camera.usedLive { Text("Used live").foregroundStyle(.secondary) }
@@ -102,50 +99,49 @@ struct ChoicesView: View {
                             }
                             .toggleStyle(.checkbox)
                         }
-                        if model.selectedCameras.isEmpty {
-                            Text("Choose at least one camera.").foregroundStyle(.secondary).font(.callout)
-                        }
+                    } header: {
+                        Text("Cameras")
+                    } footer: {
+                        Text(model.selectedCameras.isEmpty ? "Choose at least one camera." : "Each camera becomes a multicam angle with its ISO picture and its own WAV.")
                     }
 
-                    if loaded.audio.isEmpty {
-                        Section("Soundtrack") {
-                            Text("No WAV files were found, so the first camera's MP4 audio will be the soundtrack.")
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Section {
+                    Section {
+                        if loaded.audio.isEmpty {
+                            Text("No WAV files were found, so the first camera's MP4 audio will be the soundtrack.").foregroundStyle(.secondary)
+                        } else {
                             Picker("Soundtrack", selection: $model.soundtrack) {
                                 ForEach(loaded.audio) { audio in
                                     Text(audio.title).tag(audio.id)
                                 }
                             }
-                            .pickerStyle(.radioGroup)
-                            .labelsHidden()
-                        } header: {
-                            Text("Soundtrack")
-                        } footer: {
-                            Text("Plays continuously across camera cuts. Switch it later in Final Cut's Angle Viewer.")
-                        }
-                        if !model.optionalAudio.isEmpty {
-                            Section {
-                                ForEach(model.optionalAudio) { audio in
-                                    Toggle(audio.title, isOn: binding(forAudio: audio.id)).toggleStyle(.checkbox)
+                            ForEach(model.optionalAudio) { audio in
+                                Toggle(isOn: binding(forAudio: audio.id)) {
+                                    HStack {
+                                        Text(audio.title)
+                                        Spacer()
+                                        Text(audio.detail).foregroundStyle(.secondary)
+                                    }
                                 }
-                            } header: {
-                                Text("Extra Audio Angles")
-                            } footer: {
-                                Text("Added as separate angles you can switch to. Nothing is mixed together.")
+                                .toggleStyle(.checkbox)
                             }
                         }
+                    } header: {
+                        Text("Audio")
+                    } footer: {
+                        Text("The soundtrack plays continuously across camera cuts. Checked WAVs become extra audio angles you can switch to in Final Cut.")
                     }
 
-                    Section("Options") {
+                    Section {
                         Picker("ATEM transitions", selection: $model.transitions) {
                             ForEach(TransitionStyle.allCases) { style in Text(style.title).tag(style) }
                         }
                         if loaded.recording.programMp4 != nil {
                             Toggle("Include the program recording as an angle", isOn: $model.includeProgramAngle)
                         }
+                    } header: {
+                        Text("Options")
+                    } footer: {
+                        Text("The XML is saved next to the recording as \(loaded.outputURL.lastPathComponent). Your recording is never changed.")
                     }
 
                     if !loaded.recording.warnings.isEmpty {
@@ -156,15 +152,13 @@ struct ChoicesView: View {
                         }
                     }
                 }
+                .formStyle(.grouped)
             }
-            .formStyle(.grouped)
 
             Divider()
             HStack {
                 Button("Change Recording…") { model.chooseRecording() }
                 Spacer()
-                Text("Saves \(model.loaded?.outputURL.lastPathComponent ?? "") next to the recording")
-                    .font(.callout).foregroundStyle(.secondary)
                 Button("Create Final Cut XML") { model.convert() }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
@@ -185,6 +179,76 @@ struct ChoicesView: View {
     }
 }
 
+/// The recording's name, facts, and a strip showing the live switch.
+struct RecordingHeader: View {
+    @Bindable var model: ConversionModel
+    let loaded: LoadedRecording
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(loaded.recording.name).font(.title2.weight(.semibold))
+                Spacer()
+                Text(loaded.durationText).font(.title3.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            Text("\(loaded.formatText) · \(loaded.recording.timecode(0)) to \(loaded.recording.timecode(loaded.recording.totalFrames))")
+                .font(.callout).foregroundStyle(.secondary)
+            TimelineStrip(segments: model.timeline, color: model.color(for:))
+                .frame(height: 28)
+                .padding(.top, 4)
+            HStack(spacing: 14) {
+                ForEach(loaded.cameras.filter { model.selectedCameras.contains($0.id) }) { camera in
+                    Label {
+                        Text(camera.name)
+                    } icon: {
+                        Circle().fill(model.color(for: "input-\(camera.id)")).frame(width: 8, height: 8)
+                    }
+                    .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text(liveSwitchText).font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
+    }
+
+    private var liveSwitchText: String {
+        let dissolves = model.timeline.filter(\.dissolveIn).count
+        return "\(model.timeline.count) clips, \(dissolves) dissolves"
+    }
+}
+
+/// A proportional bar of the live switch: one block per clip, colored by angle, with dissolves marked.
+struct TimelineStrip: View {
+    let segments: [TimelineSegment]
+    let color: (String) -> Color
+
+    var body: some View {
+        Canvas { context, size in
+            let bar = CGRect(x: 0, y: 0, width: size.width, height: size.height)
+            context.fill(Path(roundedRect: bar, cornerRadius: 6), with: .color(Color.secondary.opacity(0.15)))
+            context.clip(to: Path(roundedRect: bar, cornerRadius: 6))
+            for segment in segments {
+                let x = segment.start * size.width
+                let width = max(1, (segment.end - segment.start) * size.width)
+                context.fill(Path(CGRect(x: x, y: 0, width: width, height: size.height)), with: .color(color(segment.angleID)))
+            }
+            for segment in segments where segment.dissolveIn {
+                let x = segment.start * size.width
+                var mark = Path()
+                mark.move(to: CGPoint(x: x - 3, y: 0))
+                mark.addLine(to: CGPoint(x: x + 3, y: 0))
+                mark.addLine(to: CGPoint(x: x, y: 4))
+                mark.closeSubpath()
+                context.fill(mark, with: .color(.white.opacity(0.75)))
+            }
+        }
+        .accessibilityLabel("Live switch timeline with \(segments.count) clips")
+    }
+}
+
 struct ConvertingView: View {
     var body: some View {
         VStack(spacing: 12) {
@@ -202,12 +266,16 @@ struct DoneView: View {
     var body: some View {
         VStack(spacing: 0) {
             ContentUnavailableView {
-                Label("Ready for Final Cut Pro", systemImage: "checkmark.circle.fill")
-                    .symbolRenderingMode(.multicolor)
+                VStack(spacing: 12) {
+                    if let output = model.output {
+                        Image(nsImage: NSWorkspace.shared.icon(forFile: output.path)).resizable().frame(width: 72, height: 72)
+                    }
+                    Text("Ready for Final Cut Pro").font(.title2.weight(.semibold))
+                }
             } description: {
                 VStack(spacing: 6) {
                     Text(model.output?.lastPathComponent ?? "").font(.headline).textSelection(.enabled)
-                    Text("Saved next to the recording. Importing it creates an event with the multicam clip, the live edit, and every source file.")
+                    Text("Saved next to the recording. Opening it in Final Cut creates an event with the multicam clip, the live edit, and every source file.")
                 }
             } actions: {
                 HStack {
@@ -216,6 +284,7 @@ struct DoneView: View {
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
                 }
+                .fixedSize()
             }
 
             Divider()
