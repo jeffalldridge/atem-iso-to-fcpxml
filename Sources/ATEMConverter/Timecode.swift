@@ -22,7 +22,9 @@ public enum VideoMode {
         guard let match = pattern.firstMatch(in: mode, range: range) else {
             throw ConversionError("Unrecognized ATEM videoMode \(pyRepr(mode)).")
         }
-        let lines = Int(mode[Range(match.range(at: 1), in: mode)!])!
+        guard let lines = Int(mode[Range(match.range(at: 1), in: mode)!]) else {
+            throw ConversionError("Unrecognized ATEM videoMode \(pyRepr(mode)).")
+        }
         let scan = mode[Range(match.range(at: 2), in: mode)!].lowercased()
         let rateText = String(mode[Range(match.range(at: 3), in: mode)!])
         var rate: Rational
@@ -72,7 +74,9 @@ public struct Timecode: Sendable {
             throw ConversionError("Invalid timecode \(pyRepr(label)).")
         }
         func group(_ i: Int) -> String { String(trimmed[Range(match.range(at: i), in: trimmed)!]) }
-        let h = Int(group(1))!, m = Int(group(2))!, s = Int(group(3))!, f = Int(group(5))!
+        guard let h = Int(group(1)), let m = Int(group(2)), let s = Int(group(3)), let f = Int(group(5)) else {
+            throw ConversionError("Invalid timecode \(pyRepr(label)).")
+        }
         let drop = group(4) == ";" || group(4) == ","
         let nominal = Timecode.nominal(fps)
         if h >= 24 || m >= 60 || s >= 60 || f >= nominal {

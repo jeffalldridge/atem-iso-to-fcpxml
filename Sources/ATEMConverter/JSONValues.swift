@@ -12,7 +12,7 @@ enum JSONValues {
         guard let number = value as? NSNumber, !isBool(value) else { return nil }
         let type = String(cString: number.objCType)
         if type == "d" || type == "f" { return nil }
-        return number.intValue
+        return Int(number.stringValue)
     }
 
     static func string(_ value: Any?) -> String? {

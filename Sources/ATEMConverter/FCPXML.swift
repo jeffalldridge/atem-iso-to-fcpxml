@@ -250,5 +250,12 @@ public func buildFCPXML(_ plan: Plan) throws -> Data {
 
     var body = ""
     root.serialize(level: 0, into: &body)
-    return Data(("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE fcpxml>\n\n" + body + "\n").utf8)
+    let payload = Data(("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE fcpxml>\n\n" + body + "\n").utf8)
+    // Match the Python entry point: reject invalid XML characters before opening an output file.
+    let parser = XMLParser(data: payload)
+    parser.shouldResolveExternalEntities = false
+    guard parser.parse() else {
+        throw ConversionError("The recording contains text that cannot be written as XML: \(parser.parserError?.localizedDescription ?? "invalid XML").")
+    }
+    return payload
 }

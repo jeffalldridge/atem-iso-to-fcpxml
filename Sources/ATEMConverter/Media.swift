@@ -2,6 +2,14 @@ import Foundation
 
 let maxMetadataBytes = 16 * 1024 * 1024
 
+/// Reject unsigned metadata outside the platform range instead of trapping during conversion.
+private func mediaInteger(_ value: UInt64) throws -> Int {
+    guard let result = Int(exactly: value) else {
+        throw ConversionError("Media metadata exceeds the supported integer range.")
+    }
+    return result
+}
+
 public struct Mp4Info: Sendable {
     public let width: Int
     public let height: Int
@@ -36,7 +44,7 @@ private struct Reader {
 
     /// Lengths in media headers are untrusted: bound every read and keep it inside its box.
     func read(_ pos: Int, _ count: Int, end: Int? = nil) throws -> Data {
-        if count < 0 || count > maxMetadataBytes || (end != nil && pos + count > end!) {
+        if pos < 0 || pos > size || count < 0 || count > maxMetadataBytes || count > size - pos || (end != nil && (pos > end! || count > end! - pos)) {
             throw ConversionError("Invalid or oversized media metadata field.")
         }
         try handle.seek(toOffset: UInt64(pos))
@@ -46,6 +54,9 @@ private struct Reader {
     }
 
     func raw(_ pos: Int, _ count: Int) throws -> Data {
+        guard pos >= 0, count >= 0, count <= maxMetadataBytes else {
+            throw ConversionError("Invalid or oversized media metadata field.")
+        }
         try handle.seek(toOffset: UInt64(pos))
         return try handle.read(upToCount: count) ?? Data()
     }
@@ -60,12 +71,12 @@ private struct Reader {
             let kind = head.ascii(4, 4)
             var header = 8
             if size == 1 {
-                size = Int(try read(pos + 8, 8).be64(0))
+                size = try mediaInteger(read(pos + 8, 8).be64(0))
                 header = 16
             } else if size == 0 {
                 size = end - pos
             }
-            if size < header || pos + size > end { throw ConversionError("Invalid or truncated MP4 box.") }
+            if size < header || size > end - pos { throw ConversionError("Invalid or truncated MP4 box.") }
             out.append((kind, pos + header, pos + size))
             pos += size
         }
@@ -117,7 +128,7 @@ public func probeMp4(_ path: URL) throws -> Mp4Info {
                         let version = try reader.read(inner.start, 1, end: inner.end)[0]
                         if version == 1 {
                             let data = try reader.read(inner.start + 20, 12, end: inner.end)
-                            track.timescale = Int(data.be32(0)); track.duration = Int(data.be64(4))
+                            track.timescale = Int(data.be32(0)); track.duration = try mediaInteger(data.be64(4))
                         } else {
                             let data = try reader.read(inner.start + 12, 8, end: inner.end)
                             track.timescale = Int(data.be32(0)); track.duration = Int(data.be32(4))
@@ -138,7 +149,15 @@ public func probeMp4(_ path: URL) throws -> Mp4Info {
           let samples = video.samples, samples != 0, let duration = video.duration, duration != 0 else {
         throw ConversionError("\(name) has no video track.")
     }
-    let frameRate = video.sttsUniform.map { Rational(timescale, $0) } ?? Rational(samples * timescale, duration)
+    let frameRate: Rational
+    if let delta = video.sttsUniform, delta > 0 {
+        frameRate = Rational(timescale, delta)
+    } else {
+        // Match Python's fallback for a zero sample delta, without overflowing Int.
+        let product = samples.multipliedReportingOverflow(by: timescale)
+        guard !product.overflow else { throw ConversionError("MP4 timing exceeds the supported integer range.") }
+        frameRate = Rational(product.partialValue, duration)
+    }
     var timecodeFrames: Int?
     var drop = false
     if let tc = tracks.first(where: { $0.handler == "tmcd" && $0.tcFlags != nil }), let chunk = tc.firstChunk {
@@ -183,7 +202,7 @@ private func readSampleTable(_ reader: Reader, _ start: Int, _ end: Int, _ track
             let count = Int(try reader.read(s + 4, 4, end: e).be32(0))
             if count != 0 {
                 if box.kind == "stco" { track.firstChunk = Int(try reader.read(s + 8, 4, end: e).be32(0)) }
-                else { track.firstChunk = Int(try reader.read(s + 8, 8, end: e).be64(0)) }
+                else { track.firstChunk = try mediaInteger(reader.read(s + 8, 8, end: e).be64(0)) }
             }
         }
     }
@@ -206,10 +225,10 @@ public func probeWav(_ path: URL) throws -> WavInfo {
         let tag = header.ascii(0, 4)
         var chunkSize = Int(header.le32(4))
         let body = pos + 8
-        if tag != "data" && body + chunkSize > size { throw ConversionError("\(name) has a truncated WAV chunk.") }
+        if tag != "data" && chunkSize > size - body { throw ConversionError("\(name) has a truncated WAV chunk.") }
         if tag == "ds64" && chunkSize >= 16 {
             let data = try reader.raw(body, 16)
-            ds64Data = Int(data.le64(8))
+            ds64Data = try mediaInteger(data.le64(8))
         } else if tag == "fmt " && chunkSize >= 16 {
             let data = try reader.raw(body, 16)
             var format = Int(data.le16(0))
@@ -218,7 +237,7 @@ public func probeWav(_ path: URL) throws -> WavInfo {
             if format != 1 && format != 3 { throw ConversionError("\(name) is not PCM; ATEM WAVs should be uncompressed.") }
             channels = ch; rate = sampleRate; align = blockAlign != 0 ? blockAlign : ch * bitDepth / 8; bits = bitDepth
         } else if tag == "bext" && chunkSize >= 346 {
-            timeReference = Int(try reader.raw(body + 338, 8).le64(0))
+            timeReference = try mediaInteger(reader.read(body + 338, 8).le64(0))
         } else if tag == "data" {
             var length = chunkSize
             if chunkSize == 0xFFFF_FFFF, let ds64 = ds64Data { length = ds64 }
@@ -228,7 +247,7 @@ public func probeWav(_ path: URL) throws -> WavInfo {
             dataSize = length
             chunkSize = length  // RF64 uses ds64, not the 32-bit sentinel; BWF metadata may follow the samples.
         }
-        if body + chunkSize > size { throw ConversionError("\(name) has a truncated WAV chunk.") }
+        if chunkSize > size - body { throw ConversionError("\(name) has a truncated WAV chunk.") }
         pos = body + chunkSize + (chunkSize & 1)
     }
     guard let rate, let dataSize, let channels, let align, let bits else {

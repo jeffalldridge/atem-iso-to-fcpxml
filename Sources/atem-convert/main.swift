@@ -10,6 +10,7 @@ var session: Int?
 var force = false, dryRun = false, noEvent = false
 var extras: [String] = []
 var extrasGiven = false
+var noExtraAudio = false
 
 func value(_ flag: String) -> String {
     guard !arguments.isEmpty else { fputs("Error: \(flag) needs a value\n", stderr); exit(2) }
@@ -20,25 +21,36 @@ while !arguments.isEmpty {
     let argument = arguments.removeFirst()
     switch argument {
     case "-o", "--output": output = value(argument)
-    case "--cameras": options.cameras = value(argument).split(whereSeparator: { $0 == "," || $0 == " " }).map { Int($0)! }
+    case "--cameras":
+        let fields = value(argument).split(whereSeparator: { $0 == "," || $0 == " " })
+        let cameras = fields.compactMap { Int($0) }
+        guard !cameras.isEmpty, cameras.count == fields.count else {
+            fputs("Error: --cameras needs comma-separated input numbers\n", stderr); exit(2)
+        }
+        options.cameras = cameras
     case "--audio": options.audio = value(argument)
     case "--extra-audio": extras.append(value(argument)); extrasGiven = true
-    case "--no-extra-audio": extrasGiven = true; extras = []
+    case "--no-extra-audio": noExtraAudio = true
     case "--transitions": options.transitions = value(argument)
     case "--program-angle": options.includeProgram = true
     case "--name": options.name = value(argument)
     case "--event": options.event = value(argument)
     case "--no-event": noEvent = true
-    case "--session": session = Int(value(argument))
+    case "--session":
+        guard let number = Int(value(argument)), number > 0 else {
+            fputs("Error: --session needs a positive integer\n", stderr); exit(2)
+        }
+        session = number
     case "--force": force = true
     case "--dry-run": dryRun = true
     case "--version": print("atem-convert \(converterVersion)"); exit(0)
     default:
         if argument.hasPrefix("-") { fputs("Error: unknown option \(argument)\n", stderr); exit(2) }
+        guard input == nil else { fputs("Error: select one recording at a time\n", stderr); exit(2) }
         input = argument
     }
 }
-if extrasGiven { options.extraAudio = extras }
+if noExtraAudio { options.extraAudio = [] } else if extrasGiven { options.extraAudio = extras }
 if noEvent { options.event = "" }
 guard let input else { fputs("usage: atem-convert RECORDING [options]\n", stderr); exit(2) }
 
