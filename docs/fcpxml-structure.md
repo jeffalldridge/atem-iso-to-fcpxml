@@ -70,7 +70,7 @@ The `video` component takes only the picture of the MP4 and the connected `asset
 - Every clip names a video angle and the main audio angle. When they are the same angle, one `mc-source srcEnable="all"` is used.
 - Adjacent clips butt-join. A transition of *n* frames gets `offset = cut − n/2` and sits between them; Final Cut pulls the handles from the continuous ISO media. Odd ATEM transition lengths are rounded up to an even frame count so the cut lands on a frame. This matches what Final Cut exports for its own dissolves; the DTD comment describing clip overlap does not.
 - Final Cut adds `<filter-audio name="Audio Crossfade"/>` to every transition on import. With the same audio angle on both sides the measured output gain through the dissolve is flat (−0.1 dB, the AAC export's own loss), so the soundtrack is untouched.
-- Sections where the ATEM showed something the angles cannot reproduce (keys, fade to black, generators) are `mc-clip`s on a `Program` angle holding the ATEM program recording, each with a marker. If there is no program recording they become `gap`s with markers.
+- Sections where the ATEM showed something the angles cannot reproduce (keys, fade to black, generators) are `mc-clip`s on a `Program` angle holding the ATEM program recording, each with a marker. In 1.0.0, missing program recordings produced `gap`s with markers. The current 1.0.1 source uses the first selected camera instead, retaining the soundtrack and marker. That fallback has synthetic and DTD coverage but has not had a new Final Cut round trip.
 - The sequence starts at `0s` so exports begin at zero; the multicam keeps time-of-day timecode.
 
 ## Browser Items

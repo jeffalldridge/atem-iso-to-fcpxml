@@ -1,6 +1,6 @@
 # ATEM ISO to FCPXML
 
-**Convert a Blackmagic ATEM Mini ISO recording into a Final Cut Pro multicam project, with the live switch rebuilt as a timeline and every camera's audio replaced by its uncompressed WAV.**
+**Convert a Blackmagic ATEM Mini ISO recording into a Final Cut Pro multicam project, with the live switch rebuilt as a timeline and matching WAV audio when available.**
 
 Right-click the `.drp` the ATEM wrote next to its recording, pick the inputs you used, and import the resulting `.fcpxml` into Final Cut Pro. No DaVinci Resolve round trip, no transcoding, no uploads, no dependencies beyond macOS and Python 3.
 
@@ -32,6 +32,12 @@ The recording is never modified. The converter writes exactly one new file, `<na
 Three small dialogs follow: which inputs become angles (the ones you actually switched to are pre-selected), which WAV is the main soundtrack, and which extra audio inputs to add as angles (deselect all to add none). Press Return through them to accept the defaults. When it finishes you can open the result straight into Final Cut Pro.
 
 The Quick Action is a plain Automator workflow with the converter embedded inside it; you can open it in Automator and read every line. It needs Python 3.9 or newer, which macOS installs with the Apple Command Line Tools (run `xcode-select --install` once, or install Python from [python.org](https://www.python.org/downloads/macos/)).
+
+### Updating an Installed Quick Action
+
+The workflow contains its own copy of the converter. Updating the repository does not update the workflow in Finder. Install the new workflow and replace the existing copy, or run `python3 scripts/build_quick_action.py --install` from the updated checkout.
+
+If a dialog reports `Can't get item 1 of «handler promptText»` (error `-1728`), you have the broken 1.0.0 workflow. The current source fixes this. Until a newer release is published, install from the checkout using the command above. [Troubleshooting](docs/troubleshooting.md) explains how to check the installed version.
 
 ### The Command Line
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.1 (2026-10-21)
+## 1.0.1 (Unreleased)
 
 - When the program recording is missing, the first selected camera stands in for keyed and faded sections with a marker instead of a silent gap.
 - American English spelling and Chicago style throughout the documentation, website, and messages.
@@ -11,7 +11,7 @@
 
 - Protect output writes against symbolic links, hard links, concurrent creation, and failed replacement; retain exFAT-compatible exclusive creation.
 - Correct 29.97/59.94 drop-frame midnight wrap and reject drop-frame labels at integer rates.
-- Allow no extra audio in Finder dialogs, preserve multiline choices, reject empty camera lists and session zero, and discover uppercase DRP extensions.
+- Fix the Finder list-dialog `promptText` handler error (-1728). Allow no extra audio in Finder dialogs, preserve multiline choices, reject empty camera lists and session zero, and discover uppercase DRP extensions.
 - Enforce recording-folder containment for WAVs and program video; keep custom audio angle IDs unique.
 - Warn about source-start mismatches and short media, reject mixed video formats, and handle malformed media headers more clearly.
 - Add a vendor reference for maintainers and assistants; correct audio, import, and sync claims in public docs.
