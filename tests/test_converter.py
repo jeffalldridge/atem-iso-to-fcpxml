@@ -751,7 +751,9 @@ class RegressionTests(unittest.TestCase):
                 c.choose_checkboxes(items, [], title="Cameras", prompt="Choose")
 
     def test_interactive_cancel_exits_successfully_without_output(self):
-        with patch.object(c, "interactive_choices", side_effect=c.ConversionError("Canceled.")), \
+        # This is the macOS dialog path even when the suite runs on Linux CI.
+        with patch.object(c.sys, "platform", "darwin"), \
+                patch.object(c, "interactive_choices", side_effect=c.ConversionError("Canceled.")), \
                 patch.object(c, "show_alert") as alert, patch.object(c, "write_output") as write:
             self.assertEqual(c.main([str(self.fixture.drp), "--interactive"]), 0)
             alert.assert_not_called()

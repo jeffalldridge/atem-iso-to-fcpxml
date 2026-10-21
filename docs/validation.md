@@ -2,6 +2,14 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: Self-Contained Mac Packaging
+
+- Built the app with Python 3.13 and PyInstaller, signed it with Developer ID, and verified the nested signatures and hardened runtime. Installed this build locally and converted the synthetic demo through the actual UI, including the existing-file confirmation. The Finder Quick Action menu showed its replacement prompt and then confirmed successful installation.
+- The bundled engine passed the inspection/conversion/replacement and invalid-input tests with an empty `PATH` and an unusable external `PYTHONHOME`. The engine is executed directly from the app; users of this build do not need Python installed.
+- GitHub Actions run `39659903107` built and packaged both Apple silicon (`macos-15`) and Intel (`macos-15-intel`) previews. Both native jobs passed the audio matrix, bundled engine checks, and disk image creation. That run's Linux jobs exposed an older cancellation test that did not select the macOS path; the test now explicitly mocks that platform branch.
+- The local 74-test Python suite, Quick Action consistency, workflow lint, and whitespace checks pass. App packaging includes Python/PyInstaller licenses; downloaded production builds are created on CI rather than this workstation.
+- The release workflow requires signing secrets, notarizes and staples the app and DMG, and creates a draft only after both architectures succeed. Those notarization/publication steps have not been run: repository signing secrets are not configured. A local Developer ID signature does not establish notarization, Gatekeeper download acceptance, clean-account installation, minimum macOS support, or a new Final Cut round trip.
+
 ## 2026-10-21: UI and Accessibility Review
 
 Three independent source reviews covered the native workflow, website, and accessibility. Applied fixes preserve selections/results on failed inspection, keep errors above the footer, add Return on the opening screen, expose section headings and audio inclusion reasons to accessibility, and identify camera MP4-audio fallback. Window height is capped to the current screen's usable area.

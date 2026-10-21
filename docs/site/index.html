@@ -169,12 +169,12 @@
 <main id="main" tabindex="-1">
 <header class="hero wrap">
 <p class="eyebrow">ATEM ISO to FCPXML · Free &amp; open source</p>
-<h1>Your ATEM recording.<br><span>Edit in <span class="keep-together">Final Cut.</span></span>
+<h1>ATEM ISO recordings.<br><span>Edit in <span class="keep-together">Final Cut.</span></span>
 </h1>
 <p class="intro">Convert your Blackmagic ATEM ISO recording into a Final Cut Pro multicam project with the live cuts and WAV audio.</p>
-<div class="actions"><a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#native-mac-app-local-preview">Build the Mac app <span aria-hidden="true">↗</span></a><a class="text-link" href="#how">See how it works</a>
+<div class="actions"><a class="button" href="#install">Get started</a><a class="text-link" href="#how">See how it works</a>
 </div>
-<p class="requirements">Mac app preview · macOS 13+ · Python 3.9+</p>
+<p class="requirements">Mac app preview · macOS 13+</p>
 <div class="format-path" aria-label="ATEM recording to Final Cut Pro">
 <div><img src="images/drp.png" width="64" height="64" alt=""><span>ATEM .drp</span></div>
 <span class="format-arrow" aria-hidden="true">→</span>
@@ -227,14 +227,14 @@
 </section>
 <section class="section wrap split" id="install" aria-labelledby="install-title">
 <div><h2 id="install-title">Install the Mac app</h2>
-<p class="section-intro">Build the app from source using the commands below. The installer also adds the Finder Quick Action.</p>
+<p class="section-intro">A Mac download with Python included is being prepared. Until it is signed and released, you can build the preview using the commands below.</p>
 <a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#native-mac-app-local-preview">Build instructions <span aria-hidden="true">↗</span></a></div>
 <div class="installation"><h3>Build from source</h3>
 <ol><li>Install Apple’s Command Line Tools and Python 3.9 or newer.</li><li>Run these commands in Terminal:
 <pre><code>git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
 cd atem-iso-to-fcpxml
 python3 scripts/build_macos_app.py --install</code></pre></li><li>Open <strong>ATEM ISO to FCPXML</strong> from your user Applications folder.</li></ol>
-<p class="small">Requires macOS 13 or newer. The published 1.0.0 ZIP contains an older workflow with a dialog error; use the source build above.</p>
+<p class="small">This source build requires macOS 13+ and Python 3.9+. Use the current source; the older 1.0.0 ZIP has a dialog error.</p>
 <p class="small">For command-line use: <a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml#command-line-options">Use the Python script</a>.</p></div></section>
 <section class="band" id="compatibility" aria-labelledby="compatibility-title">
 <div class="wrap section compatibility">

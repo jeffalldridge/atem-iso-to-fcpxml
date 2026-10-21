@@ -2,7 +2,7 @@
 
 The download build is a SwiftUI app with a bundled Python engine. Users need neither Python nor developer tools. The standalone converter remains one standard-library Python file. PyInstaller is a **build dependency**, not a service or a dependency users install.
 
-Two DMGs are built: Apple silicon and Intel. Each contains the app, an Applications shortcut, and brief installation instructions. Drag the app to Applications; when updating, quit it and choose Replace. The app menu can open the bundled Finder Quick Action for macOS to install. Opening an installed app records its location so the Quick Action uses that copy rather than an older source preview.
+Two DMGs are built: Apple silicon and Intel. Each contains the app, an Applications shortcut, and brief installation instructions. Drag the app to Applications; when updating, quit it and choose Replace. The app menu installs the bundled Finder Quick Action into the user’s Services folder and asks before replacing an existing copy. Installation stages the new bundle and restores the previous one if replacement fails. Opening an installed app records its location so the Quick Action uses that copy rather than an older source preview.
 
 ## Current status
 

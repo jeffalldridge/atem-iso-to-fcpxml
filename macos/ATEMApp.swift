@@ -56,6 +56,8 @@ func callEngine(_ request: Request) throws -> Reply {
     @Published var output: URL?
     @Published var report = ""
     @Published var confirmReplace = false
+    @Published var confirmQuickActionReplace = false
+    @Published var quickActionInstalled = false
 
     var optionalAudio: [Audio] {
         guard let r = recording else { return [] }
@@ -108,12 +110,40 @@ func callEngine(_ request: Request) throws -> Reply {
             busy = false; status = ""
         }
     }
-    func installQuickAction() {
-        guard let workflow = Bundle.main.resourceURL?.appendingPathComponent("ATEM ISO to FCPXML.workflow"),
-              NSWorkspace.shared.open(workflow) else {
-            error = "The Finder Quick Action could not be opened. Reinstall the app and try again."
-            return
-        }
+    func installQuickAction(replace: Bool = false) {
+        let manager = FileManager.default
+        let services = manager.homeDirectoryForCurrentUser.appendingPathComponent("Library/Services")
+        let target = services.appendingPathComponent("ATEM ISO to FCPXML.workflow")
+        guard let source = Bundle.main.resourceURL?.appendingPathComponent(target.lastPathComponent) else { return }
+        do {
+            if let type = try? manager.attributesOfItem(atPath: target.path)[.type] as? FileAttributeType {
+                guard type == .typeDirectory else { throw AppError(message: "The Quick Action destination is not a workflow folder.") }
+                if !replace { confirmQuickActionReplace = true; return }
+            }
+            try manager.createDirectory(at: services, withIntermediateDirectories: true)
+            let staging = services.appendingPathComponent(".atem-install-" + UUID().uuidString)
+            try manager.createDirectory(at: staging, withIntermediateDirectories: false)
+            var cleanUp = true
+            defer { if cleanUp { try? manager.removeItem(at: staging) } }
+            let fresh = staging.appendingPathComponent("new")
+            let previous = staging.appendingPathComponent("previous")
+            try manager.copyItem(at: source, to: fresh)
+            let hadPrevious = manager.fileExists(atPath: target.path)
+            if hadPrevious { try manager.moveItem(at: target, to: previous) }
+            do { try manager.moveItem(at: fresh, to: target) }
+            catch {
+                if hadPrevious {
+                    do { try manager.moveItem(at: previous, to: target) }
+                    catch {
+                        cleanUp = false
+                        throw AppError(message: "The update failed. The previous Quick Action is saved at " + previous.path)
+                    }
+                }
+                throw error
+            }
+            NSUpdateDynamicServices()
+            quickActionInstalled = true
+        } catch { self.error = error.localizedDescription }
     }
     func openFinalCut() {
         guard let output else { return }
@@ -247,6 +277,13 @@ struct ContentView: View {
         .frame(width: 520, height: windowHeight)
         .onChange(of: model.cameras) { _ in model.reconcileAudio() }
         .onChange(of: model.soundtrack) { _ in model.reconcileAudio() }
+        .alert("Replace Finder Quick Action?", isPresented: $model.confirmQuickActionReplace) {
+            Button("Cancel", role: .cancel) {}
+            Button("Replace") { model.installQuickAction(replace: true) }
+        } message: { Text("This updates the installed ATEM ISO to FCPXML action. Your recordings are not changed.") }
+        .alert("Finder Quick Action installed", isPresented: $model.quickActionInstalled) {
+            Button("OK", role: .cancel) {}
+        } message: { Text("In Finder, right-click a recording folder or .drp file and choose Quick Actions → ATEM ISO to FCPXML.") }
         .alert("Replace existing XML?", isPresented: $model.confirmReplace) {
             Button("Cancel", role: .cancel) {}
             Button("Replace", role: .destructive) { model.create(replace: true) }
