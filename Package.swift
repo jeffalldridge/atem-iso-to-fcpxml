@@ -16,7 +16,7 @@ let package = Package(
         .executableTarget(name: "ATEMISOtoFCPXML", dependencies: ["ATEMConverter"], path: "Sources/ATEMISOtoFCPXML"),
         // A command-line front end used to compare the Swift engine with the Python reference.
         .executableTarget(name: "atem-convert", dependencies: ["ATEMConverter"], path: "Sources/atem-convert"),
-        .testTarget(name: "ATEMConverterTests", dependencies: ["ATEMConverter"], path: "tests/ATEMConverterTests"),
+        .testTarget(name: "ATEMConverterTests", dependencies: ["ATEMConverter", "ATEMISOtoFCPXML"], path: "tests/ATEMConverterTests"),
     ],
     swiftLanguageModes: [.v5]
 )

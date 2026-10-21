@@ -60,9 +60,9 @@
 					<string>#!/bin/zsh
 # ATEM ISO to FCPXML: Finder Quick Action. Built by scripts/build_quick_action.py; do not edit by hand.
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-if (( $# == 0 )); then
-  /usr/bin/osascript -e 'display alert "ATEM ISO to FCPXML" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'
-  exit 1
+if (( $# != 1 )); then
+  /usr/bin/osascript -e 'display alert "ATEM ISO to FCPXML" message "Select one ATEM .drp file or its recording folder, then run the Quick Action."'
+  exit 0
 fi
 # When the Mac app is installed, hand the recording to it; the embedded converter is the fallback.
 for app in "/Applications/ATEM ISO to FCPXML.app" "$HOME/Applications/ATEM ISO to FCPXML.app"; do
@@ -1349,12 +1349,10 @@ def interactive_choices(rec: Recording) -&gt; Tuple[List[int], Optional[str], Li
                             [w.name for w in wavs], [default_main], False)[0]
 
     selected_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video" and s.index in selected}
-    camera_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video"}
     candidates = [w for w in wavs if w.stem not in selected_stems and w.name != main]
     extras: List[str] = []
     if candidates:
-        suggested = [w.name for w in candidates if w.stem not in camera_stems]
-        extras = choose_checkboxes([w.name for w in candidates], suggested, title="Extra audio angles",
+        extras = choose_checkboxes([w.name for w in candidates], [], title="Extra audio angles",
                                    prompt="Check WAVs to add as separate audio angles. Your main soundtrack is already included.",
                                    allow_empty=True)
     return selected, main, extras

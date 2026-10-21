@@ -1,82 +1,96 @@
 import SwiftUI
 import ATEMConverter
 
-/// The middle band: Cameras, Audio, and Options as three flat panes, like Compressor's, each scrolling on its own.
+/// Audio choices stay visible, with separate controls for the continuous soundtrack and optional angles.
 struct ChoiceColumns: View {
     @Bindable var model: ConversionModel
     let loaded: LoadedRecording
 
     var body: some View {
-        HStack(spacing: 0) {
-            ChoiceColumn("Cameras", help: model.selectedCameras.isEmpty ? "Choose at least one camera." : "Each checked camera becomes an angle.") {
-                ForEach(loaded.cameras) { camera in
-                    Toggle(isOn: binding(for: camera.id)) {
-                        HStack(spacing: 8) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(model.selectedCameras.contains(camera.id) ? model.color(for: "input-\(camera.id)") : Color.secondary.opacity(0.25))
-                                .frame(width: 10, height: 10)
-                            Text(camera.name)
-                            Spacer()
-                            if !camera.usedLive { Text("Not in the switch").font(.caption).foregroundStyle(.secondary) }
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ChoiceColumn("Camera angles", help: "Inputs used in the live switch start checked.") {
+                    ForEach(loaded.cameras) { camera in
+                        Toggle(isOn: binding(for: camera.id)) {
+                            HStack(alignment: .top, spacing: 8) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(model.color(for: "input-\(camera.id)"))
+                                    .frame(width: 10, height: 10).padding(.top, 3)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(camera.name).fixedSize(horizontal: false, vertical: true)
+                                    Text(camera.wavName == nil ? "MP4 audio" : "Paired with WAV audio")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
                         }
+                        .help(camera.wavName ?? "Uses the MP4's own audio")
+                        .padding(.vertical, 6)
                     }
-                    .help(camera.wavName.map { "ISO picture with \($0)" } ?? "ISO picture with the MP4's own audio")
-                    .choiceRow()
+                    if model.selectedCameras.isEmpty {
+                        Label("Choose at least one camera.", systemImage: "exclamationmark.triangle")
+                            .font(.callout).padding(.top, 8)
+                    }
                 }
-            }
-            Divider()
-            ChoiceColumn("Audio", help: loaded.audio.isEmpty ? "No WAV files were found; the first camera's MP4 audio is the soundtrack." : "Checked WAVs become audio-only angles.") {
-                if !loaded.audio.isEmpty {
-                    LabeledContent("Soundtrack") {
+                Divider()
+                ChoiceColumn("Soundtrack", help: "One audio source plays through every camera cut.") {
+                    if loaded.audio.isEmpty {
+                        Label("Camera MP4 audio", systemImage: "waveform")
+                            .padding(.vertical, 6)
+                    } else {
                         Picker("Soundtrack", selection: $model.soundtrack) {
-                            ForEach(loaded.audio) { audio in Text(audio.title).tag(audio.id) }
+                            ForEach(loaded.audio) { audio in
+                                Text(audio.title).help(audio.detail).tag(audio.id)
+                            }
                         }
                         .labelsHidden()
-                        .pickerStyle(.menu)
-                        .fixedSize()
+                        .pickerStyle(.radioGroup)
+                        .padding(.vertical, 6)
                     }
-                    .help("The WAV that plays through every cut")
-                    .choiceRow()
-                    if !model.optionalAudio.isEmpty {
-                        Text("Extra angles").font(.subheadline).foregroundStyle(.secondary).padding(.top, 6).choiceRow()
+                }
+                Divider()
+                ChoiceColumn("Extra audio angles", help: "Optional WAVs to switch to in Final Cut.") {
+                    if model.optionalAudio.isEmpty {
+                        Text("All WAVs are already included.")
+                            .font(.callout).foregroundStyle(.secondary)
+                    } else {
                         ForEach(model.optionalAudio) { audio in
                             Toggle(audio.title, isOn: binding(forAudio: audio.id))
-                                .help(audio.detail)
-                                .choiceRow()
+                                .help(audio.detail).padding(.vertical, 6)
                         }
                     }
                 }
             }
+            .frame(minHeight: Layout.columnsHeight, maxHeight: .infinity)
             Divider()
-            ChoiceColumn("Options", help: "Next to the recording; the recording is never changed.") {
-                LabeledContent("Transitions") {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    Text("Transitions").font(.headline)
                     Picker("Transitions", selection: $model.transitions) {
                         ForEach(TransitionStyle.allCases) { style in Text(style.title).tag(style) }
                     }
-                    .labelsHidden()
-                    .pickerStyle(.menu)
-                    .fixedSize()
+                    .labelsHidden().pickerStyle(.segmented).frame(maxWidth: 310)
+                    Spacer(minLength: 0)
                 }
-                .help("How mix transitions from the switcher are rebuilt")
-                .choiceRow()
+                Text(transitionHelp).font(.caption).foregroundStyle(.secondary)
                 if loaded.recording.programMp4 != nil {
-                    Toggle("Add program recording as an angle", isOn: $model.includeProgramAngle)
-                        .help("Also add the ATEM's own program recording as a multicam angle")
-                        .choiceRow()
+                    Toggle("Include the program recording as an angle", isOn: $model.includeProgramAngle)
                 }
-                LabeledContent("Saves to") { Text(loaded.outputURL.lastPathComponent).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle) }
-                    .choiceRow()
-                if !loaded.recording.warnings.isEmpty {
-                    Text("Notes").font(.subheadline).foregroundStyle(.secondary).padding(.top, 6).choiceRow()
-                    ForEach(loaded.recording.warnings, id: \.self) { warning in
-                        Label(warning, systemImage: "exclamationmark.triangle").font(.callout).foregroundStyle(.secondary)
-                            .padding(.vertical, 4)
-                    }
+                ForEach(loaded.recording.warnings, id: \.self) { warning in
+                    Label(warning, systemImage: "exclamationmark.triangle")
+                        .font(.callout).fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .padding(.horizontal, Layout.gutter).padding(.vertical, 14)
         }
         .toggleStyle(.checkbox)
-        .frame(height: Layout.columnsHeight)
+    }
+
+    private var transitionHelp: String {
+        switch model.transitions {
+        case .dissolve: "Rebuild the switcher's mix transitions as editable dissolves."
+        case .cut: "Use straight cuts between cameras."
+        case .program: "Use the recorded program picture during transitions."
+        }
     }
 
     private func binding(for camera: Int) -> Binding<Bool> {
@@ -90,7 +104,6 @@ struct ChoiceColumns: View {
     }
 }
 
-/// One pane: a heading, a one-line helper, and rows that scroll when there are more than fit.
 struct ChoiceColumn<Rows: View>: View {
     let title: String
     let help: String
@@ -103,24 +116,17 @@ struct ChoiceColumn<Rows: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.headline)
-            Text(help).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) { rows() }
-                    .padding(.top, 8)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.headline)
+                Text(help).font(.callout).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true).padding(.bottom, 8)
+                rows()
             }
-            .scrollIndicators(.automatic)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(Layout.gutter)
         }
-        .padding(.horizontal, Layout.columnInset)
-        .padding(.top, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-}
-
-extension View {
-    /// A row in a choice column: one control, a fixed height, full width.
-    func choiceRow() -> some View {
-        frame(maxWidth: .infinity, minHeight: Layout.rowHeight, alignment: .leading)
+        .accessibilityElement(children: .contain)
     }
 }

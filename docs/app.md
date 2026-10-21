@@ -30,17 +30,21 @@ Change behavior in the Python script first, with a test, then mirror it in Swift
 
 ## User interface
 
-One window, laid out like Compressor: the recording and its live switch across the top, the choices in three columns under it, and the action in a bar along the bottom. Every band has a fixed height and the columns scroll inside themselves, so the window resizes sideways only and never shows empty space. The chrome is the system's dark appearance; the app shares only its accent and angle colors with the website.
+One resizable window. System appearance, accent, toolbar, radio buttons, checkboxes, and segmented controls provide the native chrome; media colors are confined to the timeline.
 
-- **Header**: the recording's name, format, and duration; a video lane colored by angle with a tick at each dissolve; the soundtrack lane; a ruler line with the start and end timecodes, a legend, and the clip and dissolve counts.
-- **Cameras**: a checkbox per ISO input with its lane color. Inputs the switcher never cut to are marked "Not in the switch" and start unchecked.
-- **Audio**: the soundtrack WAV (a popup) and checkboxes for the other WAVs, which become audio-only angles.
-- **Options**: transitions (dissolves, cuts, or the program video), the program recording as an angle, where the file saves, and any notes from the engine.
-- **Action bar**: one line saying what the choices make, and Create FCPXML (⌘S). While converting it shows progress; afterward it shows the saved file with Details, Show in Finder, and Open in Final Cut Pro. Changing any choice after a conversion brings Create FCPXML back.
+- **Recording**: name, format, duration, live-switch cuts, and a continuous soundtrack lane. The strip represents edit decisions, not decoded video or an audio waveform.
+- **Camera angles**: inputs used live start checked. Each camera uses its paired WAV when available.
+- **Soundtrack**: visible radio choices select the audio that plays across cuts. Extra audio angles start unchecked. WAVs already paired with a camera or used as the soundtrack are excluded, and stale hidden selections are cleared.
+- **Transitions**: visible choices for dissolves, cuts, and program video; optional program angle beneath.
+- **Action bar**: Create FCPXML (Return or ⌘S), then Details, Show in Finder, and Open in Final Cut Pro. Changing a choice requires a fresh conversion and confirms replacement of an existing file.
 
-Before a recording is open the same frame shows a drop target and a Choose Recording button. ⌘O, Open Recent, the Dock, and double-clicking a `.drp` open recordings too. Errors are alerts with the engine's message, and replacing an existing `.fcpxml` asks first.
+The window grows in both dimensions; camera, soundtrack, and extra-audio panes scroll independently. ⌘O opens a native file sheet, and Cancel leaves the current recording alone. A failed open preserves an already saved result. Drop, Finder Open With, and the Quick Action accept one recording at a time instead of silently discarding additional selections.
 
-On macOS 26 the buttons and bars are Liquid Glass; on macOS 15 they are the standard bordered controls. `Theme.swift` holds the colors, the measurements, and the two helpers (`prominentButton()` and `glassButton()`) that pick the style at run time.
+## Updates and the Quick Action
+
+**Download Updates…** in the app menu opens the latest GitHub release. Updates are manual: quit the app, drag the new copy into the same Applications folder, and choose Replace. The bundle name and identifier remain stable. There is no background updater or automatic download.
+
+The Quick Action opens the installed app from `/Applications`, then `~/Applications`. Keep one installed copy to avoid ambiguity. Replacing that app updates the Quick Action's native experience too. Without the app, the Quick Action uses its embedded Python converter and native dialogs; its extra audio choices also start unchecked. Install the latest workflow over the existing workflow to update that fallback. Conversion options shared by both engines are verified by byte-for-byte parity tests; the fallback dialogs do not expose every app option.
 
 ## Building
 

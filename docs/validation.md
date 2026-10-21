@@ -2,6 +2,17 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: Native UX review (unreleased)
+
+- `swift test`: 14 tests passed, including byte-for-byte Python/Swift engine parity and two new application workflow tests. Audio selection reconciliation, opt-in extras, saved-result preservation after a failed open, and replacement confirmation are covered.
+- `python3 -m unittest discover -s tests -v`: 71 tests passed, including fallback dialog defaults and website contracts.
+- `python3 scripts/build_quick_action.py --check`: generated workflow matches source.
+- `make app`: universal arm64/x86_64 bundle builds, passes signature verification and its self-check. This local test build is ad-hoc signed; it is not a new notarized release.
+- Exercised the installed app with a synthetic Live Show folder: native Open sheet, Cancel back to the workspace, visible camera/soundtrack/extra controls, MIC 1 soundtrack with no extras, and successful output. Dark appearance was visually inspected. Full VoiceOver, light appearance, macOS 15, and Intel hardware acceptance remain unverified.
+- Website checked in the local browser: GitHub link, corrected WAV fallback copy, and PNGs without CSS borders, shadows, or rounded clipping. Gallery images still depict released 1.1.0; new alpha-preserving captures are needed for the next release. The available automated native capture produced flattened JPEG, so it was not substituted for the existing transparent PNGs.
+- The FCPXML engine shapes were not changed; this is not a new Final Cut import round trip.
+
+
 ## 2026-10-21: Self-Contained Mac Packaging
 
 - Built the app with Python 3.13 and PyInstaller, signed it with Developer ID, and verified the nested signatures and hardened runtime. Installed this build locally and converted the synthetic demo through the actual UI, including the existing-file confirmation. The Finder Quick Action menu showed its replacement prompt and then confirmed successful installation.

@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Resizable native workspace with visible soundtrack and transition choices, system appearance, and restrained timeline colors.
+- Extra audio is opt-in in both the app and Quick Action fallback; hidden audio selections are cleared when camera or soundtrack choices change.
+- Native Open sheets, Return/⌘S conversion, preserved saved results after a failed open, and an explicit Download Updates menu link.
+- Single-recording Quick Action handoff prevents silently ignoring extra selected files.
+- Website screenshot alpha edges are preserved; GitHub, free availability, and manual update instructions are prominent.
+
 ## 1.1.0 (2026-10-21)
 
 - A native Mac app: one universal Swift binary (macOS 15+), signed and notarized, distributed as a disk image. Drop the recording folder, check cameras and soundtrack, create the XML, open it in Final Cut Pro. No Python or developer tools needed. The window is laid out like Compressor (live switch on top, Cameras, Audio, and Options columns, the action in a bottom bar), uses Liquid Glass on macOS 26 and standard controls on macOS 15, and has an Icon Composer icon.

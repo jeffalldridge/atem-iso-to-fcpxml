@@ -17,15 +17,6 @@ struct RecordingHeader: View {
             TimelineLanes(model: model)
             HStack(spacing: 14) {
                 Text(loaded.recording.timecode(0)).monospacedDigit()
-                ForEach(loaded.cameras.filter { model.selectedCameras.contains($0.id) }) { camera in
-                    LegendItem(name: camera.name, color: model.color(for: "input-\(camera.id)"))
-                }
-                if model.timeline.contains(where: { $0.angleID.hasPrefix("still-") }) {
-                    LegendItem(name: "Still", color: model.color(for: "still-"))
-                }
-                if model.timeline.contains(where: { $0.angleID == "program" }) {
-                    LegendItem(name: "Program", color: model.color(for: "program"))
-                }
                 Spacer()
                 Text(model.liveSwitchText)
                 Text(loaded.recording.timecode(loaded.recording.totalFrames)).monospacedDigit()
@@ -35,15 +26,6 @@ struct RecordingHeader: View {
         }
         .padding(.horizontal, Layout.gutter)
         .frame(height: Layout.headerHeight)
-    }
-}
-
-struct LegendItem: View {
-    let name: String
-    let color: Color
-    var body: some View {
-        Label { Text(name) } icon: { RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 9, height: 9) }
-            .labelStyle(.titleAndIcon)
     }
 }
 
@@ -76,16 +58,7 @@ struct TimelineLanes: View {
             context.fill(Path(roundedRect: audio, cornerRadius: 5), with: .color(.audioLane))
             context.drawLayer { layer in
                 layer.clip(to: Path(roundedRect: audio, cornerRadius: 5))
-                var seed: UInt32 = 7
-                var x: CGFloat = 4
-                while x < size.width - 4 {
-                    seed = seed &* 1103515245 &+ 12345
-                    let amplitude = CGFloat((seed >> 16) % 100) / 100
-                    let h = 2 + amplitude * (audio.height - 8)
-                    layer.fill(Path(CGRect(x: x, y: audio.midY - h / 2, width: 2, height: h)), with: .color(.audioInk.opacity(0.4)))
-                    x += 4
-                }
-                let label = layer.resolve(Text(model.soundtrackName).font(.caption).foregroundStyle(Color.audioInk))
+                let label = layer.resolve(Text("Soundtrack · \(model.soundtrackName)").font(.caption).foregroundStyle(Color.audioInk))
                 let labelSize = label.measure(in: CGSize(width: size.width, height: audio.height))
                 layer.fill(Path(roundedRect: CGRect(x: 5, y: audio.minY + 3, width: labelSize.width + 12, height: audio.height - 6), cornerRadius: 4),
                            with: .color(.audioLane))

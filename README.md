@@ -15,7 +15,7 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 
 Open the disk image, drag the app to Applications, and open it. Then:
 
-1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. Double-clicking the `.drp` inside the folder works too.
+1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. You can also select the `.drp` in Finder and use **Open With → ATEM ISO to FCPXML**.
 2. Check the cameras you used (the ones you switched to live are already checked), pick the WAV for the soundtrack, and add the mic inputs as extra angles if you want them.
 3. Click **Create FCPXML**, then **Open in Final Cut Pro**.
 
@@ -60,6 +60,10 @@ Each WAV carries a Broadcast Wave time reference that matches the ATEM's master 
 - Final Cut imports into the event named in the file, not the event you have selected. Move the items afterward if you want them elsewhere.
 
 Tested on two real ATEM Mini Pro ISO recordings (1080p60, 46 and 95 minutes, with and without transitions). Other models, frame rates, and firmware versions follow the same documented format but have only synthetic test coverage; please report what you find.
+
+### Updating
+
+Choose **Download Updates…** from the app menu, quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy; the Quick Action will use it automatically. Updates are manual.
 
 ## Command Line and Automation
 

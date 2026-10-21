@@ -12,7 +12,8 @@ struct ActionBar: View {
             buttons
         }
         .padding(.horizontal, Layout.gutter)
-        .frame(height: Layout.barHeight)
+        .padding(.vertical, 12)
+        .frame(minHeight: Layout.barHeight)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
         .sheet(isPresented: $showDetails) { DetailsSheet(lines: model.summary) { showDetails = false } }
@@ -43,20 +44,20 @@ struct ActionBar: View {
         switch model.phase {
         case .empty, .loading:
             Button("Choose Recording…") { model.chooseRecording() }
-                .prominentButton()
+                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(model.isBusy)
         case .ready, .converting:
             Button("Create FCPXML") { model.convert() }
-                .prominentButton()
-                .keyboardShortcut("s")
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
                 .help("Save the Final Cut Pro XML next to the recording (⌘S)")
                 .disabled(model.isBusy || model.selectedCameras.isEmpty)
         case .done:
-            ButtonCluster {
-                Button("Details…") { showDetails = true }.glassButton()
-                Button("Show in Finder") { model.revealInFinder() }.glassButton()
-                Button("Open in Final Cut Pro") { model.openInFinalCut() }.prominentButton().keyboardShortcut(.defaultAction)
+            HStack(spacing: 8) {
+                Button("Details…") { showDetails = true }.buttonStyle(.bordered)
+                Button("Show in Finder") { model.revealInFinder() }.buttonStyle(.bordered)
+                Button("Open in Final Cut Pro") { model.openInFinalCut() }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
             }
             .fixedSize()
         }

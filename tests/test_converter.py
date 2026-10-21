@@ -177,6 +177,25 @@ def frames_to_tc(frames: int, fps: int = 60) -> str:
 
 # ---------------------------------------------------------------------------- tests
 
+class InteractiveDefaultTests(unittest.TestCase):
+    def test_extra_audio_is_opt_in(self):
+        fixture = RecordingDir()
+        self.addCleanup(fixture.cleanup)
+        rec = c.open_recording(fixture.write())
+        def checkboxes(labels, defaults, **kwargs):
+            if kwargs["title"] == "Camera angles":
+                return defaults
+            self.assertEqual(defaults, [])
+            self.assertTrue(kwargs["allow_empty"])
+            self.assertNotIn("Show CAM 1.wav", labels)
+            return []
+        with patch.object(c, "choose_checkboxes", side_effect=checkboxes), patch.object(c, "choose_from_list", return_value=["Show CAM 1.wav"]):
+            cameras, soundtrack, extras = c.interactive_choices(rec)
+        self.assertEqual(cameras, [1])
+        self.assertEqual(soundtrack, "Show CAM 1.wav")
+        self.assertEqual(extras, [])
+
+
 class TimingTests(unittest.TestCase):
     def test_video_modes(self):
         self.assertEqual(c.parse_video_mode("1080p60"), (1080, False, F(60)))

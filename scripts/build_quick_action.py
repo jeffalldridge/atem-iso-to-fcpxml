@@ -31,9 +31,9 @@ HEREDOC = "ATEM_ISO_TO_FCPXML_PY"
 SHELL = f'''#!/bin/zsh
 # {NAME}: Finder Quick Action. Built by scripts/build_quick_action.py; do not edit by hand.
 export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-if (( $# == 0 )); then
-  /usr/bin/osascript -e 'display alert "{NAME}" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'
-  exit 1
+if (( $# != 1 )); then
+  /usr/bin/osascript -e 'display alert "{NAME}" message "Select one ATEM .drp file or its recording folder, then run the Quick Action."'
+  exit 0
 fi
 # When the Mac app is installed, hand the recording to it; the embedded converter is the fallback.
 for app in "/Applications/{NAME}.app" "$HOME/Applications/{NAME}.app"; do

@@ -2,9 +2,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 import ATEMConverter
 
-/// The one window, laid out like Compressor: the recording and its live switch across the top, the choices in three
-/// columns under it, and the action in a bar along the bottom. Every band has a fixed height and the columns scroll
-/// inside themselves, so the window resizes sideways only and never shows empty space.
+/// One recording workspace; the choice panes grow with the window.
 struct ContentView: View {
     @Bindable var model: ConversionModel
 
@@ -20,6 +18,7 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: Layout.minWidth, idealWidth: Layout.idealWidth, maxWidth: .infinity)
+        .frame(minHeight: 560, maxHeight: .infinity)
         .safeAreaInset(edge: .bottom, spacing: 0) { ActionBar(model: model) }
         .toolbar {
             ToolbarItem(placement: .navigation) {
@@ -29,10 +28,8 @@ struct ContentView: View {
             }
         }
         .navigationTitle("ATEM ISO to FCPXML")
-        .preferredColorScheme(.dark)
-        .tint(.brandAccent)
         .dropDestination(for: URL.self) { urls, _ in
-            guard let url = urls.first, !model.isBusy else { return false }
+            guard urls.count == 1, let url = urls.first, url.isFileURL, !model.isBusy else { return false }
             model.open(url)
             return true
         } isTargeted: { model.isTargeted = $0 }
@@ -43,15 +40,13 @@ struct ContentView: View {
                     .allowsHitTesting(false)
             }
         }
-        .onChange(of: model.selectedCameras) { model.refreshTimeline() }
-        .onChange(of: model.transitions) { model.refreshTimeline() }
         .alert("Something Went Wrong", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
         .confirmationDialog("Replace the existing FCPXML?", isPresented: $model.showReplaceConfirmation, titleVisibility: .visible) {
-            Button("Replace") { model.convert(replace: true) }
+            Button("Replace", role: .destructive) { model.convert(replace: true) }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("\(model.loaded?.outputURL.lastPathComponent ?? "") already exists next to the recording. Your recording is never changed.")
@@ -76,6 +71,6 @@ struct EmptyStateView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: Layout.headerHeight + 1 + Layout.columnsHeight)
+        .frame(maxHeight: .infinity)
     }
 }

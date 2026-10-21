@@ -1270,12 +1270,10 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
                             [w.name for w in wavs], [default_main], False)[0]
 
     selected_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video" and s.index in selected}
-    camera_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video"}
     candidates = [w for w in wavs if w.stem not in selected_stems and w.name != main]
     extras: List[str] = []
     if candidates:
-        suggested = [w.name for w in candidates if w.stem not in camera_stems]
-        extras = choose_checkboxes([w.name for w in candidates], suggested, title="Extra audio angles",
+        extras = choose_checkboxes([w.name for w in candidates], [], title="Extra audio angles",
                                    prompt="Check WAVs to add as separate audio angles. Your main soundtrack is already included.",
                                    allow_empty=True)
     return selected, main, extras

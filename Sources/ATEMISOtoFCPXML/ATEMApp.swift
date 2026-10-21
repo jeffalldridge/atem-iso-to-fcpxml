@@ -13,7 +13,9 @@ struct ATEMApp: App {
         Window("ATEM ISO to FCPXML", id: "converter") {
             ContentView(model: delegate.model)
         }
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: Layout.idealWidth, height: 620)
+        .windowToolbarStyle(.unifiedCompact)
         .defaultPosition(.center)
         .commands {
             CommandGroup(replacing: .newItem) {
@@ -30,6 +32,14 @@ struct ATEMApp: App {
                     }
                 }
                 .disabled(delegate.model.isBusy)
+            }
+            CommandGroup(after: .appInfo) {
+                Link("Download Updates…", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest")!)
+            }
+            CommandGroup(replacing: .saveItem) {
+                Button("Create FCPXML") { delegate.model.convert() }
+                    .keyboardShortcut("s")
+                    .disabled(delegate.model.phase != .ready || delegate.model.selectedCameras.isEmpty)
             }
             CommandGroup(replacing: .help) {
                 Link("ATEM ISO to FCPXML Help", destination: URL(string: "https://jeffalldridge.github.io/atem-iso-to-fcpxml/")!)
@@ -48,7 +58,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        guard let url = urls.first else { return }
+        guard urls.count == 1, let url = urls.first else {
+            model.errorMessage = "Open one recording at a time. Select its folder or .drp file."
+            return
+        }
         model.open(url)
         NSApp.windows.first?.makeKeyAndOrderFront(nil)
     }

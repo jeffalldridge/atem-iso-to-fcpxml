@@ -68,13 +68,19 @@ enum TransitionStyle: String, CaseIterable, Identifiable {
 final class ConversionModel {
     enum Phase { case empty, loading, ready, converting, done }
 
+    private let recordsRecentDocuments: Bool
+
+    init(recordsRecentDocuments: Bool = true) {
+        self.recordsRecentDocuments = recordsRecentDocuments
+    }
+
     private(set) var phase: Phase = .empty
     private(set) var loaded: LoadedRecording?
-    var selectedCameras: Set<Int> = [] { didSet { choiceChanged() } }
-    var soundtrack: String = "" { didSet { choiceChanged() } }
+    var selectedCameras: Set<Int> = [] { didSet { reconcileAudio(); choiceChanged(); refreshTimeline() } }
+    var soundtrack: String = "" { didSet { reconcileAudio(); choiceChanged() } }
     var extraAudio: Set<String> = [] { didSet { choiceChanged() } }
     var transitions: TransitionStyle = TransitionStyle(rawValue: UserDefaults.standard.string(forKey: "transitions") ?? "") ?? .dissolve {
-        didSet { UserDefaults.standard.set(transitions.rawValue, forKey: "transitions"); choiceChanged() }
+        didSet { UserDefaults.standard.set(transitions.rawValue, forKey: "transitions"); choiceChanged(); refreshTimeline() }
     }
     var includeProgramAngle = false { didSet { choiceChanged() } }
     private(set) var output: URL?
@@ -84,7 +90,7 @@ final class ConversionModel {
     var isTargeted = false
     private(set) var timeline: [TimelineSegment] = []
     var cameraOrder: [Int] { loaded?.cameras.map(\.id) ?? [] }
-    var liveSwitchText: String { "\(timeline.count) clips, \(timeline.filter(\.dissolveIn).count) dissolves" }
+    var liveSwitchText: String { "\(timeline.count) clip\(timeline.count == 1 ? "" : "s"), \(timeline.filter(\.dissolveIn).count) dissolves" }
     var soundtrackName: String {
         guard let loaded else { return "" }
         return loaded.audio.first { $0.id == soundtrack }?.title ?? "MP4 audio"
@@ -126,11 +132,23 @@ final class ConversionModel {
         panel.canChooseFiles = true
         panel.allowsMultipleSelection = false
         panel.allowedContentTypes = [.folder, .atemLog]
-        if panel.runModal() == .OK, let url = panel.url { open(url) }
+        if let window = NSApp.keyWindow {
+            panel.beginSheetModal(for: window) { response in
+                if response == .OK, let url = panel.url { self.open(url) }
+            }
+        } else {
+            panel.begin { response in
+                if response == .OK, let url = panel.url { self.open(url) }
+            }
+        }
     }
 
     func open(_ url: URL) {
-        guard !isBusy else { return }
+        guard !isBusy else {
+            errorMessage = "A recording is being processed. Open the next recording when it finishes."
+            return
+        }
+        guard url.isFileURL else { return }
         phase = .loading
         errorMessage = nil
         Task.detached(priority: .userInitiated) {
@@ -150,11 +168,10 @@ final class ConversionModel {
                     return AudioChoice(id: file, title: cameraNames[file] ?? short, detail: file, isCameraAudio: cameraNames[file] != nil)
                 }
                 let main = defaults.angles.first { $0.id == defaults.mainAudioAngle }?.audio?.lastPathComponent ?? ""
-                let mics = Set(defaults.angles.filter { $0.kind == "audio" && $0.id != defaults.mainAudioAngle }.compactMap { $0.audio?.lastPathComponent })
                 let item = LoadedRecording(log: log, recording: recording, cameras: cameras, audio: audio,
                                            cutCount: defaults.edit.cuts.count, dissolveCount: defaults.edit.cuts.filter { $0.transitionIn != nil }.count,
                                            outputURL: log.deletingPathExtension().appendingPathExtension("fcpxml"))
-                await MainActor.run { self.finishLoading(item, cameras: used, soundtrack: main, extras: mics) }
+                await MainActor.run { self.finishLoading(item, cameras: used, soundtrack: main, extras: []) }
             } catch {
                 await MainActor.run { self.fail(error) }
             }
@@ -166,11 +183,13 @@ final class ConversionModel {
         selectedCameras = cameras
         self.soundtrack = soundtrack
         extraAudio = extras
+        includeProgramAngle = false
+        showReplaceConfirmation = false
         output = nil
         summary = []
         phase = .ready
         refreshTimeline()
-        NSDocumentController.shared.noteNewRecentDocumentURL(item.log)
+        if recordsRecentDocuments { NSDocumentController.shared.noteNewRecentDocumentURL(item.log) }
     }
 
     /// Recompute the live-switch strip for the current camera selection (cheap: the log is tiny).
@@ -189,7 +208,7 @@ final class ConversionModel {
 
     private func fail(_ error: Error) {
         errorMessage = (error as? ConversionError)?.message ?? error.localizedDescription
-        phase = loaded == nil ? .empty : .ready
+        phase = loaded == nil ? .empty : (output == nil ? .ready : .done)
     }
 
     func convert(replace: Bool = false) {
@@ -249,7 +268,20 @@ final class ConversionModel {
         loaded = nil
         output = nil
         summary = []
+        selectedCameras = []
+        soundtrack = ""
+        extraAudio = []
+        includeProgramAngle = false
+        timeline = []
+        errorMessage = nil
+        showReplaceConfirmation = false
         phase = .empty
+    }
+
+    /// A hidden extra must not silently return checked when a camera or soundtrack changes again.
+    private func reconcileAudio() {
+        let valid = extraAudio.intersection(Set(optionalAudio.map(\.id)))
+        if valid != extraAudio { extraAudio = valid }
     }
 
     /// Any change after a conversion makes the window ready to convert again; the saved file stays where it is.
