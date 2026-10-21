@@ -2,6 +2,13 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: Checkbox Dialogs and Cancellation
+
+- Camera and optional audio selection now use AppKit checkboxes through macOS JavaScript for Automation. Optional audio also has a No extra audio button; the main soundtrack is not offered again as optional audio.
+- Cancellation returns success to Automator, preventing its empty Run Shell Script error. A regression verifies cancellation does not call the output writer or show an error alert.
+- 68 synthetic tests pass, including checkbox result mapping for empty, multiple, and unusual filenames, cancellation, and Apple DTD validation. The regenerated Quick Action passes its consistency check and was installed locally.
+- The native dialog process reached its modal wait in a smoke test, but the UI automation tool could not attach to the osascript process. Checkbox interaction, keyboard navigation, scrolling, and Finder integration remain to be checked manually; mocked return values do not verify those interactions.
+
 ## 2026-10-21: Unreleased Review Fixes
 
 - 61 synthetic tests pass under Apple's Python 3.9.6, including validation against the installed Apple FCPXML 1.10 DTD. Added regressions cover output links and failed replacement, exFAT-compatible creation without hard links, media containment, drop-frame midnight at 29.97 and 59.94, custom labels and audio ID collisions, dialog selection mapping, malformed headers, and invalid options.

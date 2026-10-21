@@ -737,6 +737,26 @@ class RegressionTests(unittest.TestCase):
             self.assertEqual(c.choose_from_list("Prompt", ["a"], [], True, allow_empty=True), [])
             self.assertIn("with empty selection allowed", run.call_args.args[0])
 
+    def test_checkbox_selections_and_cancel(self):
+        items = ['MIC "1".wav', 'Mic\n2.wav']
+        for reply, expected in [('[]', []), ('[1]', [items[1]]), ('[0, 1]', items)]:
+            with self.subTest(reply=reply), patch.object(c, "_osascript", return_value=reply) as run:
+                self.assertEqual(c.choose_checkboxes(items, items[:1], title="Extra audio", prompt="Choose", allow_empty=True), expected)
+                data = json.loads(run.call_args.args[1])
+                self.assertEqual(data["items"], items)
+                self.assertTrue(data["allowEmpty"])
+                self.assertEqual(run.call_args.kwargs["language"], "JavaScript")
+        with patch.object(c, "_osascript", return_value="cancel"):
+            with self.assertRaisesRegex(c.ConversionError, "Canceled"):
+                c.choose_checkboxes(items, [], title="Cameras", prompt="Choose")
+
+    def test_interactive_cancel_exits_successfully_without_output(self):
+        with patch.object(c, "interactive_choices", side_effect=c.ConversionError("Canceled.")), \
+                patch.object(c, "show_alert") as alert, patch.object(c, "write_output") as write:
+            self.assertEqual(c.main([str(self.fixture.drp), "--interactive"]), 0)
+            alert.assert_not_called()
+            write.assert_not_called()
+
     def test_uppercase_drp_in_folder(self):
         renamed = self.fixture.drp.with_suffix(".DRP")
         self.fixture.drp.rename(renamed)

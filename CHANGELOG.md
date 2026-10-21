@@ -2,6 +2,8 @@
 
 ## 1.0.1 (Unreleased)
 
+- Use native checkboxes for cameras and optional audio angles, with a No extra audio button. Cancel exits quietly instead of triggering an Automator error.
+
 - When the program recording is missing, the first selected camera stands in for keyed and faded sections with a marker instead of a silent gap.
 - American English spelling and Chicago style throughout the documentation, website, and messages.
 - Preserve dissolves across unrelated sparse log updates; label dip-to-dissolve conversions as approximations.

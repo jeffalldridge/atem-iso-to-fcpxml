@@ -1216,8 +1216,8 @@ def build_fcpxml(plan: Plan) -&gt; bytes:
 
 # ----------------------------------------------------------------------------- macOS
 
-def _osascript(script: str, *args: str) -&gt; str:
-    result = subprocess.run(["/usr/bin/osascript", "-", *args], input=script, capture_output=True, text=True)
+def _osascript(script: str, *args: str, language: str = "AppleScript") -&gt; str:
+    result = subprocess.run(["/usr/bin/osascript", "-l", language, "-", *args], input=script, capture_output=True, text=True)
     if result.returncode != 0:
         raise ConversionError(result.stderr.strip() or "The dialog could not be shown.")
     return result.stdout.rstrip("\n")
@@ -1248,6 +1248,61 @@ end run'''
     return [items[int(index) - 1] for index in out.split(",") if index]
 
 
+
+def choose_checkboxes(items: Sequence[str], defaults: Sequence[str], *, title: str, prompt: str, allow_empty: bool = False) -&gt; List[str]:
+    """Native AppKit checkboxes via macOS JXA; no Python GUI dependency.
+
+    Pass filenames as JSON data, never executable script text. Return indices so
+    punctuation, Unicode, and newlines in filenames cannot change selection parsing.
+    """
+    script = r'''ObjC.import('AppKit');
+function run(argv) {
+    const data = JSON.parse(argv[0]);
+    const app = $.NSApplication.sharedApplication;
+    app.setActivationPolicy($.NSApplicationActivationPolicyAccessory);
+    const alert = $.NSAlert.alloc.init;
+    alert.messageText = data.title;
+    alert.informativeText = data.prompt;
+    alert.addButtonWithTitle('Continue');
+    alert.addButtonWithTitle('Cancel');
+    if (data.allowEmpty) alert.addButtonWithTitle('No extra audio');
+    const height = Math.max(32, data.items.length * 32);
+    const view = $.NSView.alloc.initWithFrame($.NSMakeRect(0, 0, 440, height));
+    const boxes = data.items.map(function (name, index) {
+        const box = $.NSButton.alloc.initWithFrame($.NSMakeRect(0, height - (index + 1) * 32, 420, 28));
+        box.setButtonType($.NSSwitchButton);
+        box.title = name;
+        box.toolTip = name;
+        box.state = data.defaults.indexOf(name) &gt;= 0 ? $.NSOnState : $.NSOffState;
+        view.addSubview(box);
+        return box;
+    });
+    // Keep long recordings with many sources within the screen height.
+    const scroll = $.NSScrollView.alloc.initWithFrame($.NSMakeRect(0, 0, 440, Math.min(height, 256)));
+    scroll.hasVerticalScroller = true;
+    scroll.documentView = view;
+    view.scrollPoint($.NSMakePoint(0, height));
+    alert.accessoryView = scroll;
+    app.activateIgnoringOtherApps(true);
+    while (true) {
+        const response = alert.runModal;
+        if (data.allowEmpty &amp;&amp; response === $.NSAlertThirdButtonReturn) return '[]';
+        if (response !== $.NSAlertFirstButtonReturn) return 'cancel';
+        const selected = boxes.reduce(function (result, box, index) {
+            if (box.state === $.NSOnState) result.push(index);
+            return result;
+        }, []);
+        if (data.allowEmpty || selected.length) return JSON.stringify(selected);
+        alert.informativeText = 'Select at least one camera to continue.';
+    }
+}
+'''
+    out = _osascript(script, json.dumps({"items": list(items), "defaults": list(defaults), "title": title, "prompt": prompt, "allowEmpty": allow_empty}), language="JavaScript")
+    if out == "cancel":
+        raise ConversionError("Canceled.")
+    return [items[index] for index in json.loads(out)]
+
+
 def ask_buttons(message: str, buttons: Sequence[str], default: str, title: str = "ATEM ISO to FCPXML") -&gt; str:
     script = f'''on run argv
 set answer to display dialog (item 1 of argv) with title (item 2 of argv) buttons {{{", ".join(json.dumps(b) for b in buttons)}}} default button {json.dumps(default)}
@@ -1273,8 +1328,8 @@ def interactive_choices(rec: Recording) -&gt; Tuple[List[int], Optional[str], Li
     used = [i for i in cameras if f"input-{i}" in probe.angles_used]
     labels = {f"Input {i}: {rec.sources[i].name}" + ("  (used in the live switch)" if i in used else ""): i for i in cameras}
     defaults = [label for label, i in labels.items() if i in used] or list(labels)[:1]
-    chosen = choose_from_list("Which inputs should be angles in the multicam clip?\n\nEach angle uses the camera's ISO recording with its uncompressed WAV audio.",
-                              list(labels), defaults, True)
+    chosen = choose_checkboxes(list(labels), defaults, title="Camera angles",
+                               prompt="Select the cameras to include. Inputs used in the live switch are checked.")
     selected = [labels[c] for c in chosen]
     if not selected:
         raise ConversionError("Choose at least one input.")
@@ -1289,12 +1344,13 @@ def interactive_choices(rec: Recording) -&gt; Tuple[List[int], Optional[str], Li
 
     selected_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video" and s.index in selected}
     camera_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video"}
-    candidates = [w for w in wavs if w.stem not in selected_stems]
+    candidates = [w for w in wavs if w.stem not in selected_stems and w.name != main]
     extras: List[str] = []
     if candidates:
-        suggested = [w.name for w in candidates if w.stem not in camera_stems or w.name == main]
-        extras = choose_from_list("Add these WAVs as extra audio-only angles?\n\nThey stay separate; nothing is mixed together.",
-                                  [w.name for w in candidates], suggested, True, allow_empty=True)
+        suggested = [w.name for w in candidates if w.stem not in camera_stems]
+        extras = choose_checkboxes([w.name for w in candidates], suggested, title="Extra audio angles",
+                                   prompt="Check WAVs to add as separate audio angles. Your main soundtrack is already included.",
+                                   allow_empty=True)
     return selected, main, extras
 
 
@@ -1436,7 +1492,8 @@ def main(argv: Optional[Sequence[str]] = None) -&gt; int:
         return 0
     except ConversionError as exc:
         if str(exc) == "Canceled.":
-            return 1
+            # Automator treats nonzero status as a failed Run Shell Script action.
+            return 0
         print(f"Error: {exc}", file=sys.stderr)
         if interactive:
             show_alert(str(exc))

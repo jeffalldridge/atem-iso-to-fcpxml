@@ -29,7 +29,7 @@ The recording is never modified. The converter writes exactly one new file, `<na
 2. Double-click **ATEM ISO to FCPXML.workflow** and click **Install** when macOS asks.
 3. Mount the ATEM SSD, right-click the recording folder (or its `.drp`), and choose **Quick Actions → ATEM ISO to FCPXML**.
 
-Three small dialogs follow: which inputs become angles (the ones you actually switched to are pre-selected), which WAV is the main soundtrack, and which extra audio inputs to add as angles (deselect all to add none). Press Return through them to accept the defaults. When it finishes you can open the result straight into Final Cut Pro.
+Three dialogs follow: camera checkboxes (inputs used in the live switch are checked), a single-choice WAV soundtrack list, and optional audio-angle checkboxes. Leave the audio boxes unchecked or choose **No extra audio** to add none. **Cancel** stops without an error or output file. Press Return to accept each dialog’s defaults. When it finishes you can open the result straight into Final Cut Pro.
 
 The Quick Action is a plain Automator workflow with the converter embedded inside it; you can open it in Automator and read every line. It needs Python 3.9 or newer, which macOS installs with the Apple Command Line Tools (run `xcode-select --install` once, or install Python from [python.org](https://www.python.org/downloads/macos/)).
 
