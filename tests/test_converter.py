@@ -109,7 +109,7 @@ def make_png(path: Path, width: int = 1920, height: int = 1080) -> None:
 
 # ---------------------------------------------------------------- synthetic recording
 
-def header(tc: str = "10:00:00:00", mode: str = "1080p60", name: str = "Service", first_source: int = 1,
+def header(tc: str = "10:00:00:00", mode: str = "1080p60", name: str = "Show", first_source: int = 1,
            transition_type: str | None = "Mix") -> dict:
     block = dict(_index_=0, onAir=True, source=first_source, transitionActive=False, transitionPosition=1.0,
                  fadeToBlack="Inactive", upstreamKeys=[dict(_index_=0, keyType="Luma", onAir=False, fillSource=8)])
@@ -132,7 +132,7 @@ def me(tc: str, **changes) -> dict:
 class RecordingDir:
     """A fake ATEM recording folder on disk."""
 
-    def __init__(self, tc: str = "10:00:00:00", frames: int = 1200, name: str = "Service", folder: str = "Service",
+    def __init__(self, tc: str = "10:00:00:00", frames: int = 1200, name: str = "Show", folder: str = "Show",
                  mode: str = "1080p60", tc_fps: int = 60, cameras=(1, 2, 3, 4), mics=("MIC 1", "MIC 2"), program: bool = True,
                  still: bool = True, drop: bool = False):
         self.tmp = tempfile.TemporaryDirectory(prefix="atem test & ")
@@ -387,7 +387,7 @@ class EditListTests(unittest.TestCase):
         rows = [header(), me("10:00:05:00", source=3), me("10:00:10:00", source=1)]
         _, edit = self.segments(rows, cameras=(1, 2))
         self.assertEqual((edit.cuts[1].picture.kind, edit.cuts[1].picture.reason), ("program", "Camera 3 not included in the multicam"))
-        (self.rec_dir.root / "Service.mp4").unlink()
+        (self.rec_dir.root / "Show.mp4").unlink()
         rec, edit = self.segments(rows, cameras=(1, 2))
         self.assertEqual(edit.cuts[1].picture.kind, "gap")
         self.assertTrue(any("Program recording" in w for w in rec.warnings))
@@ -418,16 +418,16 @@ class PlanTests(unittest.TestCase):
     def test_defaults_follow_the_live_switch(self):
         plan = c.make_plan(c.open_recording(self.rec_dir.drp))
         self.assertEqual([(a.id, a.kind) for a in plan.angles],
-                         [("input-1", "camera"), ("input-2", "camera"), ("audio-service-mic-1", "audio"), ("audio-service-mic-2", "audio")])
+                         [("input-1", "camera"), ("input-2", "camera"), ("audio-show-mic-1", "audio"), ("audio-show-mic-2", "audio")])
         self.assertEqual(plan.main_audio_angle, "input-1")
         self.assertEqual(plan.angles[2].name, "MIC 1")
-        self.assertEqual((plan.name, plan.event), ("Service", "Service"))
+        self.assertEqual((plan.name, plan.event), ("Show", "Show"))
 
     def test_explicit_choices(self):
         rec = c.open_recording(self.rec_dir.drp)
-        plan = c.make_plan(rec, cameras=[1, 2, 3], audio="MIC 1", extra_audio=["CAM 4"], name="Sunday", event="")
-        self.assertEqual([a.id for a in plan.angles], ["input-1", "input-2", "input-3", "audio-service-mic-1", "audio-service-cam-4"])
-        self.assertEqual(plan.main_audio_angle, "audio-service-mic-1")
+        plan = c.make_plan(rec, cameras=[1, 2, 3], audio="MIC 1", extra_audio=["CAM 4"], name="Demo", event="")
+        self.assertEqual([a.id for a in plan.angles], ["input-1", "input-2", "input-3", "audio-show-mic-1", "audio-show-cam-4"])
+        self.assertEqual(plan.main_audio_angle, "audio-show-mic-1")
         self.assertEqual(plan.event, "")
         with self.assertRaisesRegex(c.ConversionError, "no ISO recording"):
             c.make_plan(rec, cameras=[9])
@@ -437,7 +437,7 @@ class PlanTests(unittest.TestCase):
             c.make_plan(rec, audio="1")
 
     def test_camera_without_wav_keeps_mp4_audio(self):
-        (self.rec_dir.root / "Audio Source Files" / "Service CAM 2.wav").unlink()
+        (self.rec_dir.root / "Audio Source Files" / "Show CAM 2.wav").unlink()
         rec = c.open_recording(self.rec_dir.drp)
         plan = c.make_plan(rec, extra_audio=[])
         self.assertIsNone(plan.angles[1].audio)
@@ -455,7 +455,7 @@ class PlanTests(unittest.TestCase):
 
 class XmlTests(unittest.TestCase):
     def setUp(self):
-        self.rec_dir = RecordingDir(frames=1200, folder="Sunday & Service")
+        self.rec_dir = RecordingDir(frames=1200, folder="Live & Show")
         self.addCleanup(self.rec_dir.cleanup)
         self.rec_dir.write([header(first_source=8), me("10:00:02:00", transitionActive=True), me("10:00:02:30", source=1, transitionActive=False),
                             me("10:00:10:00", source=2), dict(masterTimecode="10:00:15:00", downstreamKeys=[dict(_index_=0, onAir=True)]),
@@ -468,7 +468,7 @@ class XmlTests(unittest.TestCase):
         fmt = self.xml.find("./resources/format")
         self.assertEqual((fmt.get("frameDuration"), fmt.get("width"), fmt.get("name")), ("1/60s", "1920", "FFVideoFormat1080p60"))
         angles = self.xml.findall("./resources/media/multicam/mc-angle")
-        self.assertEqual([a.get("angleID") for a in angles], ["input-1", "input-2", "still-8-logo", "program", "audio-service-mic-1", "audio-service-mic-2"])
+        self.assertEqual([a.get("angleID") for a in angles], ["input-1", "input-2", "still-8-logo", "program", "audio-show-mic-1", "audio-show-mic-2"])
         self.assertEqual([a.get("name") for a in angles], ["Camera 1", "Camera 2", "Media Player 1", "Program", "MIC 1", "MIC 2"])
         multicam = self.xml.find("./resources/media/multicam")
         self.assertEqual(multicam.get("tcStart"), "36000s")
@@ -491,17 +491,17 @@ class XmlTests(unittest.TestCase):
 
     def test_urls_are_escaped(self):
         text = self.payload.decode()
-        self.assertIn("Sunday%20%26%20Service", text)
-        self.assertNotIn("Sunday & Service/", text)
+        self.assertIn("Live%20%26%20Show", text)
+        self.assertNotIn("Live & Show/", text)
 
     def test_event_and_browser_clips(self):
         event = self.xml.find("./event")
-        self.assertEqual(event.get("name"), "Sunday & Service")
+        self.assertEqual(event.get("name"), "Live & Show")
         names = [el.get("name") for el in event]
-        self.assertEqual(names[0], "Sunday & Service Multicam")
-        self.assertIn("Service CAM 1", names)
-        self.assertIn("Service MIC 2", names)
-        self.assertEqual(event.find("project").get("name"), "Sunday & Service Live Edit")
+        self.assertEqual(names[0], "Live & Show Multicam")
+        self.assertIn("Show CAM 1", names)
+        self.assertIn("Show MIC 2", names)
+        self.assertEqual(event.find("project").get("name"), "Live & Show Live Edit")
 
     def test_timeline(self):
         spine = self.xml.find("./event/project/sequence/spine")
@@ -531,11 +531,11 @@ class XmlTests(unittest.TestCase):
         self.assertEqual(clips[1].get("offset"), c.fmt_time(F(600 * 1001, 60000)))
 
     def test_no_event_and_custom_names(self):
-        plan = c.make_plan(c.open_recording(self.rec_dir.drp), name="Sunday", event="")
+        plan = c.make_plan(c.open_recording(self.rec_dir.drp), name="Demo", event="")
         xml = ET.fromstring(c.build_fcpxml(plan))
         self.assertIsNone(xml.find("./event"))
-        self.assertEqual(xml.find("./project").get("name"), "Sunday Live Edit")
-        self.assertEqual(xml.find("./mc-clip").get("name"), "Sunday Multicam")
+        self.assertEqual(xml.find("./project").get("name"), "Demo Live Edit")
+        self.assertEqual(xml.find("./mc-clip").get("name"), "Demo Multicam")
 
     @unittest.skipUnless(FCP_DTD.is_file() and shutil.which("xmllint"), "Final Cut Pro DTD and xmllint are only available on a Mac with Final Cut Pro")
     def test_validates_against_apple_dtd(self):
@@ -565,7 +565,7 @@ class CliTests(unittest.TestCase):
     def test_folder_input_writes_beside_the_drp(self):
         code, out, _ = self.run_main(self.rec_dir.root)
         self.assertEqual(code, 0, out)
-        output = self.rec_dir.root / "Service.fcpxml"
+        output = self.rec_dir.root / "Show.fcpxml"
         self.assertTrue(output.is_file())
         self.assertIn("Wrote", out)
         self.assertIn("2 clips", out)
@@ -577,7 +577,7 @@ class CliTests(unittest.TestCase):
     def test_dry_run_writes_nothing(self):
         code, out, _ = self.run_main(self.rec_dir.drp, "--dry-run", "--cameras", "1,2,3", "--audio", "MIC 2", "--transitions", "cut")
         self.assertEqual(code, 0)
-        self.assertFalse((self.rec_dir.root / "Service.fcpxml").exists())
+        self.assertFalse((self.rec_dir.root / "Show.fcpxml").exists())
         self.assertIn("Would write", out)
         self.assertIn("MIC 2", out)
 
@@ -590,10 +590,10 @@ class CliTests(unittest.TestCase):
 
     def test_output_option_and_event(self):
         target = self.rec_dir.root / "custom.fcpxml"
-        code, _, _ = self.run_main(self.rec_dir.drp, "-o", target, "--event", "Sunday", "--no-extra-audio")
+        code, _, _ = self.run_main(self.rec_dir.drp, "-o", target, "--event", "Demo", "--no-extra-audio")
         self.assertEqual(code, 0)
         xml = ET.parse(target).getroot()
-        self.assertEqual(xml.find("./event").get("name"), "Sunday")
+        self.assertEqual(xml.find("./event").get("name"), "Demo")
         self.assertEqual(len(xml.findall(".//mc-angle")), 2)
 
 

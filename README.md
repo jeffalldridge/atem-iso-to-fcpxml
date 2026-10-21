@@ -42,7 +42,7 @@ git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
 ```
 
 ```bash
-python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Sunday Service"
+python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show"
 ```
 
 `pip install .` adds an `atem-iso-to-fcpxml` command if you prefer.
@@ -70,7 +70,7 @@ RECORDING                the .drp file, or the recording folder that contains it
 Example: two cameras, the sound board on `MIC 1`, no other mics:
 
 ```bash
-python3 atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Sunday Service" --cameras 1,2 --audio "MIC 1" --no-extra-audio
+python3 atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show" --cameras 1,2 --audio "MIC 1" --no-extra-audio
 ```
 
 ## How ATEM operations are translated

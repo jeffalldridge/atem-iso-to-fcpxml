@@ -106,20 +106,20 @@
       <figure class="workflow-diagram" aria-labelledby="workflow-caption">
         <div class="workflow-file source-file">
           <p class="file-label">On the ATEM SSD</p>
-          <h2>Sunday Service/</h2>
-          <pre><code>Sunday Service.drp
-Sunday Service.mp4
+          <h2>Live Show/</h2>
+          <pre><code>Live Show.drp
+Live Show.mp4
 Video ISO Files/
-  Sunday Service CAM 1.mp4
-  Sunday Service CAM 2.mp4
+  Live Show CAM 1.mp4
+  Live Show CAM 2.mp4
 Audio Source Files/
-  Sunday Service CAM 1.wav
-  Sunday Service MIC 1.wav</code></pre>
+  Live Show CAM 1.wav
+  Live Show MIC 1.wav</code></pre>
         </div>
         <div class="workflow-arrows" aria-hidden="true"><span><code>Quick Action</code><span>→</span></span></div>
         <div class="workflow-file epub-file">
           <p class="file-label">In Final Cut Pro</p>
-          <h2>Sunday Service.fcpxml</h2>
+          <h2>Live Show.fcpxml</h2>
           <ul>
             <li>Multicam clip: Camera 1, Camera 2, Media Player, MIC 1</li>
             <li>Each camera angle = ISO MP4 picture + its WAV</li>
@@ -181,7 +181,7 @@ Audio Source Files/
         <div>
           <h3>Command line</h3>
           <pre class="code"><code>git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
-python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Sunday Service"</code></pre>
+python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show"</code></pre>
           <small>Options: <code>--cameras 1,2</code>, <code>--audio "MIC 1"</code>, <code>--transitions cut</code>, <code>--dry-run</code> and more in the README.</small>
         </div>
       </div>
@@ -200,7 +200,7 @@ python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Sunday Servi
       <h3>What about lower thirds and keys?</h3>
       <p>Keys are not rebuilt as Final Cut effects. Those stretches show the ATEM program recording so nothing is lost, and a marker tells you where. Redoing a title on the clean ISO picture usually looks better anyway.</p>
       <h3>Why not just use Resolve?</h3>
-      <p>You can. This exists for people who prefer Final Cut Pro's speed, especially for exporting a weekly service as a video and an audio podcast.</p>
+      <p>You can. This exists for people who prefer Final Cut Pro's speed, especially for turning a weekly live show into a video and an audio podcast.</p>
     </div>
   </section>
 </main>

@@ -13,7 +13,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
 ## The multicam
 
 ```xml
-<media id="r11" name="Sunday Service Multicam">
+<media id="r11" name="Live Show Multicam">
   <multicam format="r1" tcStart="36000s" tcFormat="NDF">
     <mc-angle name="Camera 1" angleID="input-1">
       <ref-clip ref="r12" name="Camera 1" offset="36000s" start="0s" duration="2798s"/>
@@ -23,7 +23,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
         <video ref="r6" offset="0s" start="0s" duration="2798s"/>
       </clip>
     </mc-angle>
-    <mc-angle name="MIC 1" angleID="audio-sunday-service-mic-1">
+    <mc-angle name="MIC 1" angleID="audio-live-show-mic-1">
       <asset-clip ref="r8" name="MIC 1" offset="36000s" start="36000s" duration="2798s" audioRole="dialogue"/>
     </mc-angle>
   </multicam>
@@ -40,7 +40,7 @@ FCPXML lets you describe the same edit in several ways. Final Cut Pro accepts on
     <spine>
       <clip name="Camera 1" offset="0s" start="0s" duration="2798s" format="r1" tcFormat="NDF">
         <video ref="r2" offset="0s" start="36000s" duration="2798s"/>
-        <asset-clip ref="r3" lane="-1" offset="0s" name="Sunday Service CAM 1" start="36000s" duration="2798s" audioRole="dialogue"/>
+        <asset-clip ref="r3" lane="-1" offset="0s" name="Live Show CAM 1" start="36000s" duration="2798s" audioRole="dialogue"/>
       </clip>
     </spine>
   </sequence>
@@ -52,16 +52,16 @@ The `video` component takes only the picture of the MP4 and the connected `asset
 ## The timeline
 
 ```xml
-<project name="Sunday Service Live Edit">
+<project name="Live Show Live Edit">
   <sequence format="r1" duration="2798s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k">
     <spine>
-      <mc-clip ref="r11" name="Sunday Service Multicam" offset="0s" start="36000s" duration="8143/60s">
+      <mc-clip ref="r11" name="Live Show Multicam" offset="0s" start="36000s" duration="8143/60s">
         <mc-source angleID="input-1" srcEnable="all"/>
       </mc-clip>
       <transition name="Cross Dissolve" offset="2032/15s" duration="1/2s">
         <filter-video ref="r10" name="Cross Dissolve"/>
       </transition>
-      <mc-clip ref="r11" name="Sunday Service Multicam" offset="8143/60s" start="250847/6s" duration="31/4s">
+      <mc-clip ref="r11" name="Live Show Multicam" offset="8143/60s" start="250847/6s" duration="31/4s">
         <mc-source angleID="still-8-logo" srcEnable="video"/>
         <mc-source angleID="input-1" srcEnable="audio"/>
       </mc-clip>

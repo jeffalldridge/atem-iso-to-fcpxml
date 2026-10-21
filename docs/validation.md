@@ -28,7 +28,7 @@ Synthetic tests (`python3 -m unittest discover -s tests`): 37 tests covering tim
 - Other ATEM models (Extreme ISO, SDI ISO, Television Studio HD8 ISO) and other frame rates, especially 59.94/29.97 drop-frame recordings, with real media. Synthetic coverage only.
 - Keys, fade to black and non-mix transitions on real recordings (the fallback to the program recording is exercised synthetically).
 - A multi-session `.drp` from a real stop/start recording; the ISO file naming for later sessions is inferred from the log.
-- Lip sync by ear over a full service. The alignment is by timecode and Broadcast Wave time reference, which match exactly on the two recordings; no waveform analysis is done.
+- Lip sync by ear over a full-length recording. The alignment is by timecode and Broadcast Wave time reference, which match exactly on the two recordings; no waveform analysis is done.
 - Final Cut Pro versions older than 12.4.
 
 ## 2026-10-21 — version 0.1.0
