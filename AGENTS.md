@@ -1,6 +1,6 @@
-# Instructions for AI coding assistants
+# AGENTS.md
 
-Human contributors should start with [CONTRIBUTING.md](CONTRIBUTING.md). This file adds only what is specific to working on this repository with an assistant. `CLAUDE.md` and `GEMINI.md` exist only to point here; keep all instructions in this file.
+Instructions for AI coding agents working in this repository. Human contributors should start with [CONTRIBUTING.md](CONTRIBUTING.md); this file adds only what is specific to agents. `CLAUDE.md` and `GEMINI.md` import this file so that every tool reads the same instructions.
 
 Read [README.md](README.md), [docs/fcpxml-structure.md](docs/fcpxml-structure.md), and [docs/validation.md](docs/validation.md) before changing behavior. For vendor documentation and the line between specification, observed ATEM behavior, and Final Cut round-trip evidence, read [docs/vendor-reference.md](docs/vendor-reference.md).
 
@@ -42,5 +42,5 @@ If the converter changed, rebuild the Quick Action with `python3 scripts/build_q
 
 - Report only checks you ran, and keep them distinct: unit tests, engine parity, XML well-formedness, DTD validation, native UI interaction, Final Cut import, signing, notarization, Gatekeeper, hardware. None substitutes for another.
 - Comments explain non-obvious compatibility and safety decisions, not what a line does. Match the surrounding style.
-- American English, Chicago style, plain language. No marketing filler, and no references to past assistant conversations.
+- American English, Chicago style, plain language, no marketing filler.
 - Do not push, tag, publish a release, deploy the website, change signing credentials, or change repository settings unless the maintainer asks.

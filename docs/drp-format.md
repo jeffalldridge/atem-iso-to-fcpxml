@@ -1,6 +1,6 @@
 # The ATEM `.drp` Switcher Log
 
-Blackmagic documents the `.drp` only as "a DaVinci Resolve project file". In practice it is a newline-delimited JSON log of the switcher state during the recording, written by the ATEM firmware. DaVinci Resolve knows how to read it; nothing else officially does. This page records what two ATEM Mini Pro ISO recordings (firmware from mid and late 2026) contained. Field names are quoted exactly; values are invented.
+Blackmagic documents the `.drp` only as "a DaVinci Resolve project file". In practice it is a newline-delimited JSON log of the switcher state during the recording, written by the ATEM firmware. DaVinci Resolve knows how to read it; nothing else officially does. This page records what real ATEM Mini Pro ISO recordings (firmware from mid and late 2026) contained. Field names are quoted exactly; values are invented.
 
 ## Layout
 

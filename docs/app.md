@@ -50,8 +50,6 @@ Every failure names what failed in its title and says what to do; failed convers
 
 Only a conversion defers Quit, because it is the one operation that publishes a file. The conversion finishes before AppKit receives its reply, so quitting cannot interrupt output publication; success completes the quit, failure cancels it and brings the main window back with the error. Reading a recording is abandoned at once when the window closes or the app quits, since nothing has been written. While either operation runs, the app holds a Process Info activity so macOS neither suspends it nor automatically terminates it after its window closes.
 
-Verified by driving the real app: closing the window during a slow load quits immediately; closing during a slow conversion publishes the complete file and then quits; closing during a conversion that fails brings the window back with the error and leaves the app usable. The slow cases used a synthetic recording padded with millions of empty MP4 boxes, not a real slow external drive.
-
 ## Recordings with several sessions
 
 If the ATEM appended a second recording to the same `.drp`, the app refuses to open it and explains that the command line version can choose a session with `--session`. A native chooser is deliberately not offered yet: how later sessions name their media is inferred from the log, not verified on a real stop-and-start recording, and choosing a session silently, or showing a chooser whose media association was never confirmed, risks converting the wrong take. Add one only with a real multi-session recording to test against.

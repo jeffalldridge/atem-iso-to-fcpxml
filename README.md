@@ -59,7 +59,7 @@ Each WAV carries a Broadcast Wave time reference that matches the ATEM's master 
 - The XML references the media where it is. Keep the SSD mounted while Final Cut imports (and copies, if your import settings copy media), or copy the recording folder to your edit drive first.
 - Final Cut imports into the event named in the file, not the event you have selected. Move the items afterward if you want them elsewhere.
 
-Tested on two real ATEM Mini Pro ISO recordings (1080p60, 46 and 95 minutes, with and without transitions). Other models, frame rates, and firmware versions follow the same documented format but have only synthetic test coverage; please report what you find.
+Tested with recordings from the ATEM Mini Pro ISO at 1080p60, with and without transitions, imported into Final Cut Pro 12.4. Other ATEM ISO models, frame rates, and firmware use the same format but have only been tested with synthetic recordings; reports are welcome.
 
 ### Updating
 
@@ -91,13 +91,13 @@ RECORDING                the .drp file, or the recording folder that contains it
 --dry-run                print what would be made and write nothing
 ```
 
-The Mac app and the Python script share one design: the app's Swift engine is tested to produce byte-identical XML to the script on the parity scenarios listed in [validation](docs/validation.md), including comparisons with the two real recordings. `python3 scripts/build_quick_action.py --install` also builds a Finder Quick Action that embeds the script (it hands off to the app when the app is installed).
+The Mac app and the Python script share one design: the app's Swift engine is tested to produce byte-identical XML to the script on the parity scenarios listed in [validation](docs/validation.md), including real recordings. `python3 scripts/build_quick_action.py --install` also builds a Finder Quick Action that embeds the script (it hands off to the app when the app is installed).
 
 Release downloads include `atem_iso_to_fcpxml.py` and `SHA256SUMS.txt`; verify with `shasum -a 256 -c --ignore-missing SHA256SUMS.txt` in the download folder.
 
 ## How It Works
 
-The `.drp` is not a DaVinci Resolve project archive. It is a newline-delimited JSON log the switcher writes while recording: a header listing the inputs, media files, and video mode, then one sparse state update per switcher event. [docs/drp-format.md](docs/drp-format.md) describes it. The converter replays that log onto the recording's frame grid, reads the MP4 and WAV headers directly (no ffmpeg) to confirm frame counts and timecode, and writes FCPXML in the shapes Final Cut Pro actually accepts, which took some finding; see [docs/fcpxml-structure.md](docs/fcpxml-structure.md).
+The `.drp` is not a DaVinci Resolve project archive. It is a newline-delimited JSON log the switcher writes while recording: a header listing the inputs, media files, and video mode, then one sparse state update per switcher event. [docs/drp-format.md](docs/drp-format.md) describes it. The converter replays that log onto the recording's frame grid, reads the MP4 and WAV headers directly (no ffmpeg) to confirm frame counts and timecode, and writes FCPXML in the structures Final Cut Pro imports faithfully, established by import and export round trips; see [docs/fcpxml-structure.md](docs/fcpxml-structure.md).
 
 ## Alternatives
 
@@ -105,17 +105,17 @@ The `.drp` is not a DaVinci Resolve project archive. It is a newline-delimited J
 - [ATEM Exporter](https://atemexporter.fcp.cafe/) logs the switcher live over the network instead of reading the `.drp`.
 - [drp-trimmer](https://github.com/faithncode/drp-trimmer) trims `.drp` recordings and exports Premiere or Final Cut XML, with FFmpeg.
 
-This project is the small, free, inspectable option: a native Mac app with no dependencies, WAV audio by default, and a one-file script that does the same thing.
+This project is free and open source: a native Mac app with no dependencies, per-camera WAV audio, and a one-file script that does the same conversion.
 
-## Building and Contributing
+## Contributing
+
+Bug reports, synthetic reproductions, and focused fixes are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how to build, test, and propose a change, and [SECURITY.md](SECURITY.md) covers privacy and vulnerability reports. Please never attach real recordings, `.drp` logs, generated `.fcpxml` files, or Final Cut libraries to an issue; they contain personal paths and often people.
 
 ```bash
 swift test && python3 -m unittest discover -s tests
-make app
+make app      # build/ATEM ISO to FCPXML.app, universal and ad-hoc signed
 ```
 
-`make app` assembles the universal, ad-hoc signed app in `build/`. [docs/releasing.md](docs/releasing.md) covers signing, notarization, and the release workflow; [docs/app.md](docs/app.md) covers the app's structure. The maintainer notes start at [docs/vendor-reference.md](docs/vendor-reference.md).
-
-Bug reports, synthetic reproductions, and focused fixes are welcome; [CONTRIBUTING.md](CONTRIBUTING.md) explains how to build, test, and propose a change. Please never attach real recordings, `.drp` logs, generated `.fcpxml` files, or Final Cut libraries to an issue; they contain personal paths and often people.
+Technical documentation is in [docs/](docs/): [app structure](docs/app.md), [architecture](docs/architecture.md), the [`.drp` format](docs/drp-format.md), the [FCPXML structures](docs/fcpxml-structure.md), [validation](docs/validation.md), [vendor references](docs/vendor-reference.md), [releasing](docs/releasing.md), and the [website](docs/website.md).
 
 MIT licensed. Not affiliated with Blackmagic Design or Apple; ATEM, Final Cut Pro, and DaVinci Resolve are their trademarks.

@@ -2,23 +2,25 @@
 
 ## 1.1.1 (2026-10-21)
 
-- Both engines reject media outside explicit supported ranges instead of risking overflow; Swift arithmetic is overflow-safe, and the Swift MP4 reader stops at the index like the Python one.
-- The window says where the `.fcpxml` will be saved (and when it already exists). Failures have specific titles, failed conversions say the recording was not changed, and a recording with several sessions is explained instead of quoting command-line flags. Closing the window while only reading quits at once; only a conversion defers Quit. The File menu regains Close (⌘W) and gains Show in Finder and Open in Final Cut Pro. The empty window has one Choose Recording button.
-- The Quick Action survives a failed hand-off, finds a renamed or moved app by bundle identifier, and carries its converter version.
-- Website: direct installer link, plain-language fixes, and new transparent screenshots of the current window. Contributor, assistant, and issue and pull request guidance rewritten.
+### Changed
 
-- Defer quitting until the current operation finishes; cancel quitting and restore the window on failure. Prevent overlapping Open sheets and preserve completed results when choices are unchanged.
+- The window states where the `.fcpxml` will be saved, and says up front when a file by that name already exists.
+- Failures have specific titles and say what to do. A failed conversion says the recording was not changed. A recording whose `.drp` holds several sessions is explained in plain terms, and a missing recording suggests checking the drive.
+- Closing the window while only reading a recording quits at once; only a conversion defers Quit, and it finishes first. While reading or writing, macOS no longer suspends or automatically terminates the app.
+- The File menu has Close (⌘W), Show in Finder, and Open in Final Cut Pro. The empty window has one **Choose Recording…** button. Timeline labels are drawn only when the whole name fits.
+- Extra audio starts unchecked in the app and in the Quick Action fallback. Hidden audio selections are cleared when camera or soundtrack choices change, and unchanged choices keep a completed result.
+- Opening a recording ignores an unused damaged microphone WAV; it is checked only when selected.
+- The menu item for updates is **Latest Release on GitHub…**; updates remain manual.
+- The Quick Action tries both Applications folders, then the app's bundle identifier, before its embedded converter, and carries its converter version. Upgrades are staged with rollback, and a selection of more than one recording is refused.
+- Release automation builds and signs in one job, creates a draft release in a separate job, and accepts tags on `main` only.
+- Website: a direct installer link, new screenshots of the current window, and clearer copy. Contribution and security guidance rewritten.
 
-- Reject malformed Swift CLI arguments, out-of-range media values, and invalid XML text without writing output; match Python's zero-delta timing fallback and no-extra-audio option precedence.
-- Allow opening/converting when an unused microphone WAV is damaged; validate it only when selected.
-- Stage Quick Action upgrades with rollback; require complete release credentials and consistent version declarations.
-- Bound recording-note scrolling, refresh Open Recent state, and correct obsolete agent-facing documentation.
+### Fixed
 
-- Resizable native workspace with visible soundtrack and transition choices, system appearance, and restrained timeline colors.
-- Extra audio is opt-in in both the app and Quick Action fallback; hidden audio selections are cleared when camera or soundtrack choices change.
-- Native Open sheets, Return/⌘S conversion, preserved saved results after a failed open, and an explicit Download Updates menu link.
-- Single-recording Quick Action handoff prevents silently ignoring extra selected files.
-- Website screenshot alpha edges are preserved; GitHub, free availability, and manual update instructions are prominent.
+- Corrupt media with extreme timescales, frame counts, sample rates, or time references could overflow the Swift engine. Both engines now reject media outside the same supported ranges, and Swift's rational arithmetic is overflow-safe.
+- The Swift MP4 reader walked every top-level box instead of stopping at the index, taking about 33 seconds on a file with 12 million trailing boxes.
+- Malformed Swift command-line arguments, out-of-range media values, and invalid XML text are rejected without writing output. Zero-delta timing and the order of `--no-extra-audio` now match the Python script.
+- Open Recent refreshes when cleared, and long recording notes scroll instead of enlarging the window.
 
 ## 1.1.0 (2026-10-21)
 

@@ -2,7 +2,7 @@
 
 > Free, MIT-licensed Mac app (and one-file Python converter) that turns a native Blackmagic ATEM ISO recording into a Final Cut Pro multicam project with the live switch and WAV audio.
 
-This is a concise navigation aid for assistants, not a crawler policy or a promise of search visibility. The linked documentation is authoritative for current behavior.
+A short navigation aid, not a crawler policy. The linked documentation is authoritative for current behavior.
 
 The native SwiftUI app requires macOS 15 or later and includes a Swift conversion engine. The Python 3.9+ command-line tool remains the reference implementation. GUI audio extras are opt-in; the CLI includes unpaired WAVs by default unless --no-extra-audio is supplied. Updates are manual through GitHub Releases.
 
@@ -23,4 +23,4 @@ The native SwiftUI app requires macOS 15 or later and includes a Swift conversio
 
 ## Important Limits
 
-Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. A .drp that holds several recording sessions is not opened by the app; the command-line version can choose one with --session. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.
+Tested with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. Other models and frame rates are untested on real media. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. A .drp that holds several recording sessions is not opened by the app; the command-line version can choose one with --session. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.

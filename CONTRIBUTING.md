@@ -2,7 +2,7 @@
 
 Thank you for helping other ATEM owners get into Final Cut Pro faster. This is a small, focused utility, and it is meant to stay that way: it reads an ATEM ISO recording and writes one `.fcpxml`. Bug reports, synthetic reproductions, and focused fixes are the most useful contributions.
 
-It is maintained in spare time. Issues and pull requests are read, but there is no support commitment or response time.
+This project is maintained by one person in their spare time. Issues and pull requests are welcome and are read, but there is no support commitment or guaranteed response time.
 
 ## Reporting a problem
 
@@ -84,4 +84,5 @@ Maintainers use the [release checklist](docs/releasing.md). Contributors do not 
 - [README.md](README.md): what the tool does and its limits.
 - [docs/architecture.md](docs/architecture.md) and [docs/app.md](docs/app.md): how the converter and app are structured.
 - [docs/validation.md](docs/validation.md): what has and has not been verified.
-- [AGENTS.md](AGENTS.md): the same rules, written for AI coding assistants.
+- [SECURITY.md](SECURITY.md): privacy and reporting a vulnerability.
+- [AGENTS.md](AGENTS.md): the same rules for AI coding agents.
