@@ -2,10 +2,14 @@
 
 A release is a git tag `vX.Y.Z` on `main`. The Release workflow builds the universal app, signs it with Developer ID, notarizes and staples the app and the disk image, and publishes a GitHub Release with four files:
 
-- `ATEM-ISO-to-FCPXML.dmg` (the download the website links to; the name never changes so `releases/latest/download/` always works)
+- `ATEM-ISO-to-FCPXML.dmg` (the download the website and README link to directly as `releases/latest/download/ATEM-ISO-to-FCPXML.dmg`; keep the name unchanged or those links break)
 - `ATEM-ISO-to-FCPXML-Quick-Action.zip`
 - `atem_iso_to_fcpxml.py`
 - `SHA256SUMS.txt`
+
+## Workflow status
+
+The workflow has not published a release in its current form. The run for `v1.1.0` passed its version and test steps but skipped signing, notarization, and publishing (no signing secrets were configured then), and the four assets on that release were attached separately about ten seconds later. Review the first real run closely, or try it with a tag in a scratch repository, before relying on it. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *After publishing*.
 
 ## One-time setup: repository secrets
 
@@ -41,8 +45,17 @@ With the Developer ID certificate in the login keychain and a notarytool profile
 DEV_ID="Developer ID Application: Tent Studios, LLC (TEAMID)" make release
 ```
 
-`build/ATEM-ISO-to-FCPXML.dmg` is then signed, notarized, and stapled, and can be attached to a release by hand with `gh release create`. Use `NOTARY_PROFILE=name` to pick a different stored profile.
+`build/ATEM-ISO-to-FCPXML.dmg` is then signed, notarized, and stapled. To publish by hand, also produce the other three assets and create the release (draft first, so you can check it before it becomes "latest"):
+
+```bash
+python3 scripts/build_quick_action.py --zip build/ATEM-ISO-to-FCPXML-Quick-Action.zip
+cp atem_iso_to_fcpxml.py build/
+(cd build && shasum -a 256 ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt)
+gh release create vX.Y.Z --draft --title "vX.Y.Z" --notes-file notes.md build/ATEM-ISO-to-FCPXML.dmg build/ATEM-ISO-to-FCPXML-Quick-Action.zip build/atem_iso_to_fcpxml.py build/SHA256SUMS.txt
+```
+
+Use `NOTARY_PROFILE=name` to pick a different stored profile.
 
 ## After publishing
 
-Download the disk image from the release page on a Mac that has never seen the build, open it, drag the app to Applications, and open it: no Gatekeeper warning should appear. Confirm the website's download button resolves to the new file.
+Download the disk image from the release page on a Mac that has never seen the build, open it, drag the app to Applications, and open it: no Gatekeeper warning should appear. Confirm `https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg` redirects to the new file, and that the size the website states (about 3 MB) is still right.

@@ -11,12 +11,12 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 
 ## Download
 
-**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest)** (macOS 15 or later, Apple silicon and Intel, signed and notarized).
+**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg)** (macOS 15 or later, Apple silicon and Intel, signed and notarized, about 3 MB). The [release page](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) lists the other files. Free and open source under the MIT license.
 
 Open the disk image, drag the app to Applications, and open it. Then:
 
 1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. You can also select the `.drp` in Finder and use **Open With → ATEM ISO to FCPXML**.
-2. Check the cameras you used (the ones you switched to live are already checked), pick the WAV for the soundtrack, and add the mic inputs as extra angles if you want them.
+2. Check the cameras you used (the ones you switched to live are already checked), pick the WAV for the soundtrack, and add the mic inputs as extra angles if you want them. The window shows where the file will be saved.
 3. Click **Create FCPXML**, then **Open in Final Cut Pro**.
 
 Final Cut creates an event named after the recording folder containing the multicam clip, the Live Edit project, and every source file. Trim, fix a switch in the Angle Viewer, add titles, and export.
@@ -54,7 +54,7 @@ Each WAV carries a Broadcast Wave time reference that matches the ATEM's master 
 
 - The app needs macOS 15 or later. Final Cut Pro 10.6 or newer reads the XML (FCPXML 1.10); verified on Final Cut Pro 12.4.
 - The recording folder as the ATEM wrote it: `<name>.drp`, `<name>.mp4`, `Video ISO Files/`, `Audio Source Files/`. You can rename the folder and move it to another drive; media is found relative to the `.drp`. Keep the files inside it as they are.
-- One session per conversion. If the ATEM appended a second session to the same `.drp`, use the command line with `--session`.
+- One session per conversion. If the ATEM appended a second session to the same `.drp`, the app tells you so and does not open it; use the command line with `--session`. Multi-session logs have only been tested with invented recordings.
 - Keys are not rebuilt as Final Cut effects; the program recording stands in for them. Media Player graphics swapped during the recording are not reconstructed.
 - The XML references the media where it is. Keep the SSD mounted while Final Cut imports (and copies, if your import settings copy media), or copy the recording folder to your edit drive first.
 - Final Cut imports into the event named in the file, not the event you have selected. Move the items afterward if you want them elsewhere.
@@ -63,7 +63,7 @@ Tested on two real ATEM Mini Pro ISO recordings (1080p60, 46 and 95 minutes, wit
 
 ### Updating
 
-Open the [latest release](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest), quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy; the Quick Action will use it automatically. Updates are manual.
+Open the [latest release](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) (**Latest Release on GitHub…** in the app menu opens it), quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy. Updates are manual: the app makes no network requests and does not check for new versions. If you also installed the optional Finder Quick Action, install the newer one over it, because it carries its own copy of the converter.
 
 ## Command Line and Automation
 
@@ -116,6 +116,6 @@ make app
 
 `make app` assembles the universal, ad-hoc signed app in `build/`. [docs/releasing.md](docs/releasing.md) covers signing, notarization, and the release workflow; [docs/app.md](docs/app.md) covers the app's structure. The maintainer notes start at [docs/vendor-reference.md](docs/vendor-reference.md).
 
-Please never attach real recordings, `.drp` logs, generated `.fcpxml` files, or Final Cut libraries to an issue; they contain personal paths and often people. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Bug reports, synthetic reproductions, and focused fixes are welcome; [CONTRIBUTING.md](CONTRIBUTING.md) explains how to build, test, and propose a change. Please never attach real recordings, `.drp` logs, generated `.fcpxml` files, or Final Cut libraries to an issue; they contain personal paths and often people.
 
 MIT licensed. Not affiliated with Blackmagic Design or Apple; ATEM, Final Cut Pro, and DaVinci Resolve are their trademarks.
