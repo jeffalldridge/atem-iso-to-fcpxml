@@ -80,3 +80,9 @@ Live Show/                        ← record folder, named after the record pale
 ```
 
 The WAV with the same stem as an ISO MP4 is that camera's audio. WAVs without a matching MP4 are the switcher's own audio inputs.
+
+## Audio Mixer History
+
+The converter does not interpret audio-follow-video (AFV), audio input on/off, levels, or processing as an automation timeline. The two real recordings inspected on 2026-10-21 contain top-level switcher/video state, source descriptions, and timecodes, with no separate audio mixer state or automation block. That is an observation about those logs, not a promise about every ATEM model or firmware.
+
+A picture cut is insufficient evidence of an audio change: an input may be permanently on, off, or following video, and several inputs may contribute at once. Do not infer the original mixer settings from the video switch list. The recorded program mix preserves their audible result; the isolated WAVs support a new mix. Recreating editable ATEM mixer automation would require independently established metadata and validation.

@@ -1056,6 +1056,9 @@ def build_fcpxml(plan: Plan) -> bytes:
     multicam_id = res.next_id()
     media = ET.SubElement(resources_el, "media", id=multicam_id, name=f"{plan.name} Multicam")
     multicam = ET.SubElement(media, "multicam", format=format_id, tcStart=fmt_time(t0), tcFormat=tc_format)
+    compounds: List[Tuple[str, str, Fraction]] = []
+    # Angle offsets are relative to the multicam origin; tcStart supplies its displayed clock.
+    # Using t0 again hides the clips in the Angle Editor and inflates the browser duration.
     for angle in plan.angles:
         mc_angle = ET.SubElement(multicam, "mc-angle", name=angle.name, angleID=angle.id)
         if angle.kind in ("camera", "program"):
@@ -1065,7 +1068,9 @@ def build_fcpxml(plan: Plan) -> bytes:
                 # Final Cut accepts a connected audio clip inside a multicam angle only through a compound clip
                 # (media/sequence). A plain clip or sync-clip in an angle silently drops its connected items.
                 compound_id = res.next_id()
-                compound = ET.SubElement(resources_el, "media", id=compound_id, name=angle.name)
+                compound_name = f"{angle.name} - ISO + WAV"
+                compounds.append((compound_id, compound_name, clip_length))
+                compound = ET.SubElement(resources_el, "media", id=compound_id, name=compound_name)
                 sequence = ET.SubElement(compound, "sequence", format=format_id, duration=fmt_time(clip_length), tcStart="0s",
                                          tcFormat=tc_format, audioLayout="stereo", audioRate="48k")
                 spine = ET.SubElement(sequence, "spine")
@@ -1075,23 +1080,35 @@ def build_fcpxml(plan: Plan) -> bytes:
                 audio_id, audio_start, audio_length = audio_asset(angle.audio)
                 ET.SubElement(clip, "asset-clip", ref=audio_id, lane="-1", offset="0s", name=angle.audio.stem,
                               start=fmt_time(audio_start), duration=fmt_time(min(clip_length, audio_length)), audioRole="dialogue")
-                ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=angle.name, offset=fmt_time(t0), start="0s",
+                ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=compound_name, offset="0s", start="0s",
                               duration=fmt_time(clip_length))
+            elif angle.kind == "camera":
+                # Without a separate WAV, a native asset-clip keeps the MP4 audio without
+                # the unsupported connected audio that Final Cut drops inside an angle.
+                ET.SubElement(mc_angle, "asset-clip", ref=video_id, name=angle.name, offset="0s",
+                              start=fmt_time(video_start), duration=fmt_time(clip_length), audioRole="dialogue")
             else:
-                clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset=fmt_time(t0), start="0s",
+                clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset="0s", start="0s",
                                      duration=fmt_time(clip_length), format=format_id, tcFormat=tc_format)
                 ET.SubElement(clip, "video", ref=video_id, offset="0s", start=fmt_time(video_start), duration=fmt_time(clip_length))
-                if angle.kind == "camera":
-                    ET.SubElement(clip, "audio", ref=video_id, lane="-1", offset="0s", start=fmt_time(video_start),
-                                  duration=fmt_time(clip_length), role="dialogue")
         elif angle.kind == "still":
             still_id, _, _ = video_asset(angle.video, None, still=True)
-            clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset=fmt_time(t0), start="0s", duration=fmt_time(duration),
+            compound_id = res.next_id()
+            compound_name = f"{angle.name} - Still"
+            compounds.append((compound_id, compound_name, duration))
+            compound = ET.SubElement(resources_el, "media", id=compound_id, name=compound_name)
+            sequence = ET.SubElement(compound, "sequence", format=format_id, duration=fmt_time(duration), tcStart="0s",
+                                     tcFormat=tc_format, audioLayout="stereo", audioRate="48k")
+            spine = ET.SubElement(sequence, "spine")
+            # Keep the rate-undefined still's clip/video shape inside a shared, editable compound.
+            clip = ET.SubElement(spine, "clip", name=angle.video.stem, offset="0s", start="0s", duration=fmt_time(duration),
                                  format=format_id, tcFormat=tc_format)
             ET.SubElement(clip, "video", ref=still_id, offset="0s", start="0s", duration=fmt_time(duration))
+            ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=compound_name, offset="0s", start="0s",
+                          duration=fmt_time(duration))
         else:
             audio_id, audio_start, audio_length = audio_asset(angle.audio)
-            ET.SubElement(mc_angle, "asset-clip", ref=audio_id, name=angle.name, offset=fmt_time(t0), start=fmt_time(audio_start),
+            ET.SubElement(mc_angle, "asset-clip", ref=audio_id, name=angle.name, offset="0s", start=fmt_time(audio_start),
                           duration=fmt_time(min(duration, audio_length)), audioRole="dialogue")
 
     container = root
@@ -1107,14 +1124,26 @@ def build_fcpxml(plan: Plan) -> bytes:
             ET.SubElement(parent, "mc-source", angleID=video_angle, srcEnable="video")
             ET.SubElement(parent, "mc-source", angleID=plan.main_audio_angle, srcEnable="audio")
 
-    # Browser clips: the multicam and every source file.
+    # Browser compounds share the angle resources, so edits propagate into the live edit.
+    # Let Final Cut assign UIDs and present its native matching-name import dialog.
+    # Browser clips: one multicam, shared camera/still compounds, and every selected source.
     browser = ET.SubElement(container, "mc-clip", ref=multicam_id, name=f"{plan.name} Multicam", start=fmt_time(t0), duration=fmt_time(duration))
     mc_sources(browser, first_camera)
+    for compound_id, compound_name, clip_length in compounds:
+        ET.SubElement(container, "ref-clip", ref=compound_id, name=compound_name, start="0s", duration=fmt_time(clip_length))
+    browser_assets = set()
     for angle in plan.angles:
         for path in (angle.video, angle.audio):
-            if path is None or angle.kind == "still":
+            if path is None or path in browser_assets:
                 continue
+            browser_assets.add(path)
             asset_id = res.assets[path]
+            if angle.kind == "still":
+                # A still has no finite source duration; give its browser clip the recording range.
+                clip = ET.SubElement(container, "clip", name=path.stem, start="0s", duration=fmt_time(duration),
+                                     format=format_id, tcFormat=tc_format)
+                ET.SubElement(clip, "video", ref=asset_id, offset="0s", start="0s", duration=fmt_time(duration))
+                continue
             start, length = asset_times[path]
             attrs = dict(ref=asset_id, name=path.stem, start=fmt_time(start), duration=fmt_time(length))
             if path == angle.video:

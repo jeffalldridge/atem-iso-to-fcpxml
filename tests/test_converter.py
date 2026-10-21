@@ -475,8 +475,10 @@ class PlanTests(unittest.TestCase):
         self.assertIsNone(plan.angles[1].audio)
         self.assertTrue(any("no WAV" in w for w in rec.warnings))
         xml = ET.fromstring(c.build_fcpxml(plan))
-        angle = xml.find(".//mc-angle[@angleID='input-2']/clip")
-        self.assertIsNotNone(angle.find("audio"))
+        angle = xml.find(".//mc-angle[@angleID='input-2']/asset-clip")
+        self.assertEqual(angle.get("start"), "36000s")
+        self.assertEqual(angle.get("audioRole"), "dialogue")
+        self.assertIsNone(angle.find("audio"))
 
     def test_program_angle_only_when_needed(self):
         rec = c.open_recording(self.rec_dir.drp)
@@ -513,13 +515,64 @@ class XmlTests(unittest.TestCase):
         self.assertTrue(self.xml.find(f"./resources/asset[@id='{wav.get('ref')}']").get("name").endswith("CAM 1.wav"))
         self.assertIsNone(compound.find("audio"))
         # Stills get a rate-undefined format and a zero-length asset, program is video only, mics are audio only.
-        still = angles[2].find("clip/video")
+        still_ref = angles[2].find("ref-clip")
+        still = self.xml.find(f"./resources/media[@id='{still_ref.get('ref')}']/sequence/spine/clip/video")
         still_asset = self.xml.find(f"./resources/asset[@id='{still.get('ref')}']")
         self.assertEqual(still_asset.get("duration"), "0s")
         self.assertEqual(self.xml.find(f"./resources/format[@id='{still_asset.get('format')}']").get("name"), "FFVideoFormatRateUndefined")
         self.assertIsNotNone(angles[3].find("clip/video"))
         self.assertIsNone(angles[3].find("clip/asset-clip"))
         self.assertEqual(angles[4].find("asset-clip").get("audioRole"), "dialogue")
+
+    def test_browser_compounds_share_the_multicam_resources(self):
+        compounds = self.xml.findall("./event/ref-clip")
+        self.assertEqual([el.get("name") for el in compounds], ["Camera 1 - ISO + WAV", "Camera 2 - ISO + WAV", "Media Player 1 - Still"])
+        for browser in compounds:
+            media = self.xml.find(f"./resources/media[@id='{browser.get('ref')}']")
+            self.assertEqual(media.get("name"), browser.get("name"))
+            angle = self.xml.find(f"./resources/media/multicam/mc-angle/ref-clip[@ref='{browser.get('ref')}']")
+            self.assertIsNotNone(angle)
+            self.assertEqual((browser.get("start"), browser.get("duration")), ("0s", media.find("sequence").get("duration")))
+            self.assertEqual(angle.get("name"), browser.get("name"))
+        self.assertTrue(all(el.get("uid") is None for el in [self.xml.find("event"), *self.xml.findall("./resources/media")]))
+
+    def test_angle_offsets_are_relative_to_multicam_origin(self):
+        # Nonzero source timecode must not become hours of empty angle-editor space.
+        for angle in self.xml.findall("./resources/media/multicam/mc-angle"):
+            self.assertEqual(angle[0].get("offset"), "0s")
+        self.assertEqual(self.xml.find("./event/mc-clip").get("start"), "36000s")
+
+    def test_browser_compounds_without_event_and_missing_wav(self):
+        (self.rec_dir.root / "Audio Source Files" / "Show CAM 2.wav").unlink()
+        plan = c.make_plan(c.open_recording(self.rec_dir.drp), event="")
+        xml = ET.fromstring(c.build_fcpxml(plan))
+        self.assertEqual([el.get("name") for el in xml.findall("./ref-clip")], ["Camera 1 - ISO + WAV", "Media Player 1 - Still"])
+        angle = xml.find("./resources/media/multicam/mc-angle[@angleID='input-2']/asset-clip")
+        self.assertEqual(angle.get("offset"), "0s")
+        self.assertEqual(angle.get("start"), "36000s")
+        self.assertEqual(angle.get("audioRole"), "dialogue")
+        self.assertIsNone(angle.find("audio"))
+
+    def test_still_source_is_visible_and_shared(self):
+        still = self.xml.find("./event/clip[@name='logo']")
+        video = still.find("video")
+        asset = self.xml.find(f"./resources/asset[@id='{video.get('ref')}']")
+        self.assertEqual(asset.get("duration"), "0s")
+        self.assertEqual(still.get("duration"), "20s")
+        compound = self.xml.find("./event/ref-clip[@name='Media Player 1 - Still']")
+        nested = self.xml.find(f"./resources/media[@id='{compound.get('ref')}']/sequence/spine/clip/video")
+        self.assertEqual(nested.get("ref"), video.get("ref"))
+        # Every selected asset, including the image, has exactly one browser representation.
+        refs = [el.get("ref") for el in self.xml.findall("./event/asset-clip")]
+        refs += [el.get("ref") for el in self.xml.findall("./event/clip/video")]
+        self.assertCountEqual(refs, [el.get("id") for el in self.xml.findall("./resources/asset")])
+
+    def test_one_event_one_project_one_multicam(self):
+        self.assertEqual(len(self.xml.findall("event")), 1)
+        self.assertEqual(len(self.xml.findall(".//project")), 1)
+        self.assertEqual(len(self.xml.findall("./event/mc-clip")), 1)
+        self.assertEqual(len(self.xml.findall("./resources/media/multicam")), 1)
+        self.assertEqual(self.xml.find("./event/project").get("name"), "Live & Show Live Edit")
 
     def test_urls_are_escaped(self):
         text = self.payload.decode()
