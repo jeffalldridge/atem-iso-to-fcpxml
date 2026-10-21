@@ -65,7 +65,13 @@ if (( $# == 0 )); then
   exit 1
 fi
 # Prefer the installed native app; the standalone workflow remains a fallback.
-for app in "$HOME/Applications/ATEM ISO to FCPXML.app" "/Applications/ATEM ISO to FCPXML.app"; do
+preferred=$(/usr/bin/defaults read com.tentstudios.atem-iso-to-fcpxml PreferredAppPath 2&gt;/dev/null || true)
+# Use the installed copy most recently opened, including migration from the preview.
+case "$preferred" in
+  "$HOME/Applications/ATEM ISO to FCPXML.app"|"/Applications/ATEM ISO to FCPXML.app") ;;
+  *) preferred="" ;;
+esac
+for app in "$preferred" "/Applications/ATEM ISO to FCPXML.app" "$HOME/Applications/ATEM ISO to FCPXML.app"; do
   if [[ -d "$app" ]]; then
     exec /usr/bin/open -a "$app" "$@"
   fi

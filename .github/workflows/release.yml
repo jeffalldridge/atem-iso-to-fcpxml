@@ -1,38 +1,108 @@
 name: Release
-# Push a tag like v1.0.0 to build the Quick Action zip and attach it to a GitHub Release.
 on:
   push:
     tags: ["v*.*.*"]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  release:
-    runs-on: macos-latest
-    timeout-minutes: 10
+  mac-app:
+    name: Signed app (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            arch: Apple-Silicon
+          - os: macos-15-intel
+            arch: Intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    environment: release
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      DEVELOPER_ID_CERTIFICATE: ${{ secrets.DEVELOPER_ID_CERTIFICATE }}
+      CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+      SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
+      NOTARY_PRIVATE_KEY: ${{ secrets.NOTARY_PRIVATE_KEY }}
+      NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+      NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
-      - run: python -m unittest discover -s tests
-      - name: Check the tag matches the converter version
+          python-version: '3.13'
+      - name: Require signing credentials and matching version
+        shell: bash
         run: |
-          tag="${GITHUB_REF_NAME#v}"
-          version=$(python -c "import atem_iso_to_fcpxml as m; print(m.__version__)")
-          [ "$tag" = "$version" ] || { echo "::error::tag $tag != __version__ $version"; exit 1; }
+          for name in DEVELOPER_ID_CERTIFICATE CERTIFICATE_PASSWORD SIGNING_IDENTITY NOTARY_PRIVATE_KEY NOTARY_KEY_ID NOTARY_ISSUER_ID; do
+            if [ -z "${!name}" ]; then echo "::error::Missing release secret: $name (see docs/releases.md)"; exit 1; fi
+          done
+          version=$(python -c 'import atem_iso_to_fcpxml as m; print(m.__version__)')
+          test "${GITHUB_REF_NAME#v}" = "$version"
+      - run: python -m unittest discover -s tests -v
       - run: python scripts/build_quick_action.py --check
+      - run: python -m pip install -r scripts/requirements-macos-build.txt
+      - name: Import Developer ID into a temporary keychain
+        shell: bash
+        run: |
+          keychain="$RUNNER_TEMP/atem-signing.keychain-db"
+          password=$(openssl rand -hex 32)
+          echo "::add-mask::$password"
+          export CERT_PATH="$RUNNER_TEMP/developer-id.p12"
+          python -c 'import os,base64,pathlib; pathlib.Path(os.environ["CERT_PATH"]).write_bytes(base64.b64decode(os.environ["DEVELOPER_ID_CERTIFICATE"], validate=True))'
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security import "$CERT_PATH" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain"
+          security list-keychains -d user -s "$keychain"
+          rm "$CERT_PATH"
+      - name: Build self-contained signed app
+        run: python scripts/build_macos_app.py --bundle-python --sign-identity "$SIGNING_IDENTITY"
+      - name: Test the bundled engine without system Python
+        run: ATEM_TEST_ENGINE="$PWD/build/ATEM ISO to FCPXML.app/Contents/Resources/atem-engine/atem-engine" python -m unittest discover -s tests -p test_macos_bridge.py -v
+      - name: Notarize app and disk image
+        run: python scripts/notarize_macos.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-${{ matrix.arch }}
+          path: dist/*.dmg
+          if-no-files-found: error
+      - name: Remove signing material
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/atem-signing.keychain-db" || true
+          rm -f "$RUNNER_TEMP/developer-id.p12"
+  publish:
+    needs: mac-app
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mac-*
+          path: dist
+          merge-multiple: true
       - run: python scripts/build_quick_action.py --zip dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
       - name: Prepare standalone converter and checksums
         run: |
           cp atem_iso_to_fcpxml.py dist/
           cd dist
-          shasum -a 256 ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt
+          shasum -a 256 ./*.dmg ./*.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt
           shasum -a 256 -c SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
+          draft: true
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
+            dist/*.dmg
             dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
             dist/SHA256SUMS.txt
             dist/atem_iso_to_fcpxml.py

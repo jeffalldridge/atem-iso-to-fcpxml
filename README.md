@@ -35,6 +35,8 @@ python3 scripts/build_macos_app.py --install
 
 This installs **ATEM ISO to FCPXML.app** in your user Applications folder and updates the Finder Quick Action to open it. You can also launch the app and choose a recording. The Python converter remains usable on its own.
 
+GitHub now builds self-contained app previews for Apple silicon and Intel, with Python included. A signed, notarized public download is not available yet; [release setup](docs/releases.md) tracks the remaining signing and acceptance steps.
+
 This is a local preview, not a notarized app release. See [native app development](docs/native-app.md) for build and validation details. The published 1.0.0 ZIP still contains the older dialog workflow and its known error.
 
 ## Install

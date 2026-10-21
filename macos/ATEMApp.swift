@@ -11,12 +11,22 @@ struct AppError: LocalizedError { let message: String; var errorDescription: Str
 // Drain one combined pipe before waiting: a long warning report must not deadlock.
 func callEngine(_ request: Request) throws -> Reply {
     guard let resources = Bundle.main.resourceURL else { throw AppError(message: "The app’s converter is missing. Reinstall the app.") }
-    let candidates = ["/usr/bin/python3", "/opt/homebrew/bin/python3", "/usr/local/bin/python3"]
-    guard let python = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
-        throw AppError(message: "Python 3.9 or newer is required. Install Python from python.org, then reopen the app.")
+    let task = Process()
+    let engine = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/atem-engine/atem-engine")
+    if FileManager.default.isExecutableFile(atPath: engine.path) {
+        task.executableURL = engine
+    } else {
+        if Bundle.main.object(forInfoDictionaryKey: "ATEMBundledEngine") as? Bool == true {
+            throw AppError(message: "The app’s converter is missing. Reinstall the app.")
+        }
+        // Source builds can use an installed Python; release builds carry their own.
+        let candidates = ["/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]
+        guard let python = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else {
+            throw AppError(message: "This source build needs Python 3.9 or newer. Install Python from python.org, then reopen the app.")
+        }
+        task.executableURL = URL(fileURLWithPath: python)
+        task.arguments = [resources.appendingPathComponent("bridge.py").path]
     }
-    let task = Process(); task.executableURL = URL(fileURLWithPath: python)
-    task.arguments = [resources.appendingPathComponent("bridge.py").path]
     let input = Pipe(), output = Pipe()
     task.standardInput = input; task.standardOutput = output; task.standardError = output
     try task.run()
@@ -96,6 +106,13 @@ func callEngine(_ request: Request) throws -> Reply {
                 output = URL(fileURLWithPath: path); report = reply.report ?? ""
             } catch { self.error = error.localizedDescription }
             busy = false; status = ""
+        }
+    }
+    func installQuickAction() {
+        guard let workflow = Bundle.main.resourceURL?.appendingPathComponent("ATEM ISO to FCPXML.workflow"),
+              NSWorkspace.shared.open(workflow) else {
+            error = "The Finder Quick Action could not be opened. Reinstall the app and try again."
+            return
         }
     }
     func openFinalCut() {
@@ -260,6 +277,11 @@ struct ContentView: View {
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let model = Model()
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let installedPaths = ["/Applications/ATEM ISO to FCPXML.app",
+                              NSHomeDirectory() + "/Applications/ATEM ISO to FCPXML.app"]
+        if installedPaths.contains(Bundle.main.bundlePath) {
+            UserDefaults.standard.set(Bundle.main.bundlePath, forKey: "PreferredAppPath")
+        }
         NSApp.windows.first?.delegate = self
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -280,6 +302,9 @@ struct ContentView: View {
         Window("ATEM ISO to FCPXML", id: "converter") { ContentView(model: delegate.model) }
             .windowResizability(.contentSize)
             .commands {
+                CommandGroup(after: .appInfo) {
+                    Button("Install Finder Quick Action…") { delegate.model.installQuickAction() }.disabled(delegate.model.busy)
+                }
                 CommandGroup(replacing: .newItem) {
                     Button("Open Recording…") { delegate.model.openPanel() }.keyboardShortcut("o").disabled(delegate.model.busy)
                 }

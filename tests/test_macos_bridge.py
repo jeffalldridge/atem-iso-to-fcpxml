@@ -1,5 +1,6 @@
 """Exercise the native app's real JSON boundary with synthetic recordings."""
 import json
+import os
 import subprocess
 import sys
 import unittest
@@ -16,7 +17,11 @@ class BridgeTests(unittest.TestCase):
         self.path = self.fixture.write()
 
     def call(self, action, **options):
-        result = subprocess.run([sys.executable, str(BRIDGE)], input=json.dumps(dict(action=action, path=str(self.path), **options)), capture_output=True, text=True, check=True)
+        command = [os.environ['ATEM_TEST_ENGINE']] if os.environ.get('ATEM_TEST_ENGINE') else [sys.executable, str(BRIDGE)]
+        environment = dict(os.environ, PYTHONHOME='', PYTHONPATH='')
+        if os.environ.get('ATEM_TEST_ENGINE'):
+            environment.update(PATH='', PYTHONHOME='/atem-test-no-system-python')
+        result = subprocess.run(command, env=environment, input=json.dumps(dict(action=action, path=str(self.path), **options)), capture_output=True, text=True, check=True)
         return json.loads(result.stdout)
 
     def test_inspect_convert_and_replace(self):
