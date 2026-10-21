@@ -38,7 +38,11 @@ One resizable window. System appearance, accent, toolbar, radio buttons, checkbo
 - **Transitions**: visible choices for dissolves, cuts, and program video; optional program angle beneath.
 - **Action bar**: Create FCPXML (Return or ⌘S), then Details, Show in Finder, and Open in Final Cut Pro. Changing a choice requires a fresh conversion and confirms replacement of an existing file.
 
-The window grows in both dimensions; camera, soundtrack, and extra-audio panes scroll independently. ⌘O opens a native file sheet, and Cancel leaves the current recording alone. A failed open preserves an already saved result. Drop, Finder Open With, and the Quick Action accept one recording at a time instead of silently discarding additional selections.
+The window grows in both dimensions; camera, soundtrack, and extra-audio panes scroll independently. ⌘O opens a native file sheet, and Cancel leaves the current recording alone. A failed open preserves an already saved result. Reassigning an unchanged choice also preserves that result. While the Open sheet is presented, additional Open commands and drops are disabled. Drop, Finder Open With, and the Quick Action accept one recording at a time instead of silently discarding additional selections.
+
+## Closing during work
+
+Quit is deferred while loading or converting. The operation finishes before AppKit receives the reply, so quitting cannot interrupt output publication. Success completes the quit; failure cancels it and requests the main window again so the error can be read. Closing the last window uses the same application termination policy. The policy and operation notifications have regression tests; an actual slow-disk Close/Quit/failure sequence still needs native acceptance testing.
 
 ## Updates and the Quick Action
 

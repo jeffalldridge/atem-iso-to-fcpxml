@@ -46,7 +46,7 @@ struct ActionBar: View {
             Button("Choose Recording…") { model.chooseRecording() }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(model.isBusy)
+                .disabled(!model.canOpenRecording)
         case .ready, .converting:
             Button("Create FCPXML") { model.convert() }
                 .buttonStyle(.borderedProminent)

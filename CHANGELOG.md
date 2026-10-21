@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Defer quitting until the current operation finishes; cancel quitting and restore the window on failure. Prevent overlapping Open sheets and preserve completed results when choices are unchanged.
+
 - Reject malformed Swift CLI arguments, out-of-range media values, and invalid XML text without writing output; match Python's zero-delta timing fallback and no-extra-audio option precedence.
 - Allow opening/converting when an unused microphone WAV is damaged; validate it only when selected.
 - Stage Quick Action upgrades with rollback; require complete release credentials and consistent version declarations.

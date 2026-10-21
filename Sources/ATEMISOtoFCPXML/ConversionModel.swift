@@ -68,6 +68,12 @@ enum TransitionStyle: String, CaseIterable, Identifiable {
 final class ConversionModel {
     enum Phase { case empty, loading, ready, converting, done }
 
+    /// AppKit defers Quit until the current operation has finished publishing its result.
+    var operationFinished: ((Bool) -> Void)?
+    var reopenWindow: (() -> Void)?
+    private(set) var isChoosingRecording = false
+    var canOpenRecording: Bool { !isBusy && !isChoosingRecording }
+
     private let recordsRecentDocuments: Bool
 
     init(recordsRecentDocuments: Bool = true) {
@@ -77,13 +83,13 @@ final class ConversionModel {
 
     private(set) var phase: Phase = .empty
     private(set) var loaded: LoadedRecording?
-    var selectedCameras: Set<Int> = [] { didSet { reconcileAudio(); choiceChanged(); refreshTimeline() } }
-    var soundtrack: String = "" { didSet { reconcileAudio(); choiceChanged() } }
-    var extraAudio: Set<String> = [] { didSet { choiceChanged() } }
+    var selectedCameras: Set<Int> = [] { didSet { if selectedCameras != oldValue { reconcileAudio(); choiceChanged(); refreshTimeline() } } }
+    var soundtrack: String = "" { didSet { if soundtrack != oldValue { reconcileAudio(); choiceChanged() } } }
+    var extraAudio: Set<String> = [] { didSet { if extraAudio != oldValue { choiceChanged() } } }
     var transitions: TransitionStyle = TransitionStyle(rawValue: UserDefaults.standard.string(forKey: "transitions") ?? "") ?? .dissolve {
-        didSet { UserDefaults.standard.set(transitions.rawValue, forKey: "transitions"); choiceChanged(); refreshTimeline() }
+        didSet { if transitions != oldValue { UserDefaults.standard.set(transitions.rawValue, forKey: "transitions"); choiceChanged(); refreshTimeline() } }
     }
-    var includeProgramAngle = false { didSet { choiceChanged() } }
+    var includeProgramAngle = false { didSet { if includeProgramAngle != oldValue { choiceChanged() } } }
     private(set) var output: URL?
     private(set) var summary: [String] = []
     var errorMessage: String?
@@ -129,7 +135,8 @@ final class ConversionModel {
     }
 
     func chooseRecording() {
-        guard !isBusy else { return }
+        guard canOpenRecording else { return }
+        isChoosingRecording = true
         let panel = NSOpenPanel()
         panel.title = "Choose an ATEM Recording"
         panel.message = "Choose the recording folder your ATEM wrote, or the .drp file inside it."
@@ -140,10 +147,12 @@ final class ConversionModel {
         panel.allowedContentTypes = [.folder, .atemLog]
         if let window = NSApp.keyWindow {
             panel.beginSheetModal(for: window) { response in
+                self.isChoosingRecording = false
                 if response == .OK, let url = panel.url { self.open(url) }
             }
         } else {
             panel.begin { response in
+                self.isChoosingRecording = false
                 if response == .OK, let url = panel.url { self.open(url) }
             }
         }
@@ -203,6 +212,7 @@ final class ConversionModel {
             NSDocumentController.shared.noteNewRecentDocumentURL(item.log)
             recentRecordings = NSDocumentController.shared.recentDocumentURLs
         }
+        operationFinished?(true)
     }
 
     /// Recompute the live-switch strip for the current camera selection (cheap: the log is tiny).
@@ -222,6 +232,7 @@ final class ConversionModel {
     private func fail(_ error: Error) {
         errorMessage = (error as? ConversionError)?.message ?? error.localizedDescription
         phase = loaded == nil ? .empty : (output == nil ? .ready : .done)
+        operationFinished?(false)
     }
 
     func convert(replace: Bool = false) {
@@ -254,6 +265,7 @@ final class ConversionModel {
                     self.output = destination
                     self.summary = lines
                     self.phase = .done
+                    self.operationFinished?(true)
                 }
             } catch {
                 await MainActor.run { self.fail(error) }

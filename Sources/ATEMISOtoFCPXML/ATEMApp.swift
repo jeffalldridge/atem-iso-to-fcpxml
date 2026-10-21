@@ -21,7 +21,7 @@ struct ATEMApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("Open Recording…") { delegate.model.chooseRecording() }
                     .keyboardShortcut("o")
-                    .disabled(delegate.model.isBusy)
+                    .disabled(!delegate.model.canOpenRecording)
                 Menu("Open Recent") {
                     ForEach(delegate.model.recentRecordings, id: \.self) { url in
                         Button(url.deletingPathExtension().lastPathComponent) { delegate.model.open(url) }
@@ -31,7 +31,7 @@ struct ATEMApp: App {
                         Button("Clear Menu") { delegate.model.clearRecentRecordings() }
                     }
                 }
-                .disabled(delegate.model.isBusy)
+                .disabled(!delegate.model.canOpenRecording)
             }
             CommandGroup(after: .appInfo) {
                 Link("Download Updates…", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest")!)
@@ -52,6 +52,19 @@ struct ATEMApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = ConversionModel()
+    let termination = DeferredTermination()
+
+    override init() {
+        super.init()
+        model.operationFinished = { [weak self] succeeded in
+            guard let self, let shouldQuit = self.termination.finish(succeeded: succeeded) else { return }
+            NSApp.reply(toApplicationShouldTerminate: shouldQuit)
+            if !shouldQuit {
+                self.model.reopenWindow?()
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.activate(ignoringOtherApps: true)
@@ -69,6 +82,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        model.isBusy ? .terminateCancel : .terminateNow
+        termination.request(isBusy: model.isBusy) ? .terminateLater : .terminateNow
+    }
+}
+
+/// Separate the quit policy from AppKit so completion and failure can be regression-tested.
+@MainActor
+final class DeferredTermination {
+    private(set) var pending = false
+
+    func request(isBusy: Bool) -> Bool {
+        pending = isBusy
+        return pending
+    }
+
+    func finish(succeeded: Bool) -> Bool? {
+        guard pending else { return nil }
+        pending = false
+        return succeeded
     }
 }

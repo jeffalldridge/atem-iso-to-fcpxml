@@ -4,6 +4,7 @@ import ATEMConverter
 
 /// One recording workspace; the choice panes grow with the window.
 struct ContentView: View {
+    @Environment(\.openWindow) private var openWindow
     @Bindable var model: ConversionModel
 
     var body: some View {
@@ -12,7 +13,7 @@ struct ContentView: View {
                 RecordingHeader(model: model, loaded: loaded)
                 Divider()
                 ChoiceColumns(model: model, loaded: loaded)
-                    .disabled(model.isBusy)
+                    .disabled(!model.canOpenRecording)
             } else {
                 EmptyStateView(model: model)
             }
@@ -24,12 +25,13 @@ struct ContentView: View {
             ToolbarItem(placement: .navigation) {
                 Button { model.chooseRecording() } label: { Label("Open Recording…", systemImage: "folder") }
                     .help("Open an ATEM recording folder or .drp file (⌘O)")
-                    .disabled(model.isBusy)
+                    .disabled(!model.canOpenRecording)
             }
         }
+        .onAppear { model.reopenWindow = { [openWindow] in openWindow(id: "converter") } }
         .navigationTitle("ATEM ISO to FCPXML")
         .dropDestination(for: URL.self) { urls, _ in
-            guard urls.count == 1, let url = urls.first, url.isFileURL, !model.isBusy else { return false }
+            guard urls.count == 1, let url = urls.first, url.isFileURL, model.canOpenRecording else { return false }
             model.open(url)
             return true
         } isTargeted: { model.isTargeted = $0 }

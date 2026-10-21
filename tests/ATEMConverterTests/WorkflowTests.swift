@@ -70,6 +70,45 @@ final class WorkflowTests: XCTestCase {
         XCTAssertNotNil(model.errorMessage)
     }
 
+    func testUnchangedChoicesKeepTheSavedResult() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        var completions: [Bool] = []
+        model.operationFinished = { completions.append($0) }
+        model.open(try fixture.write())
+        try await settle(model)
+        model.convert()
+        try await settle(model)
+        let saved = model.output
+        let cameras = model.selectedCameras, audio = model.soundtrack, extras = model.extraAudio
+        let transitions = model.transitions, program = model.includeProgramAngle
+        model.selectedCameras = cameras
+        model.soundtrack = audio
+        model.extraAudio = extras
+        model.transitions = transitions
+        model.includeProgramAngle = program
+        XCTAssertEqual(model.phase, .done)
+        XCTAssertEqual(model.output, saved)
+        XCTAssertEqual(completions, [true, true])
+        model.open(fixture.root.appendingPathComponent("missing.drp"))
+        try await settle(model)
+        XCTAssertEqual(completions, [true, true, false])
+    }
+
+    func testQuitWaitsForCompletionAndCancelsOnFailure() {
+        let termination = DeferredTermination()
+        XCTAssertFalse(termination.request(isBusy: false))
+        XCTAssertNil(termination.finish(succeeded: true))
+        XCTAssertTrue(termination.request(isBusy: true))
+        XCTAssertEqual(termination.finish(succeeded: true), true)
+        XCTAssertFalse(termination.pending)
+        XCTAssertNil(termination.finish(succeeded: true))
+        XCTAssertTrue(termination.request(isBusy: true))
+        XCTAssertEqual(termination.finish(succeeded: false), false)
+        XCTAssertFalse(termination.pending)
+    }
+
     func testChangingChoicesRequiresExplicitReplacement() async throws {
         let fixture = try Fixtures.RecordingDir()
         defer { fixture.cleanup() }

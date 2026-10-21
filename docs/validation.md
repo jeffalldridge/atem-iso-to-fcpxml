@@ -4,6 +4,15 @@ What has actually been checked, on what, and what has not. Dates are absolute.
 
 Current architecture: SwiftUI app and Swift engine, with the Python file as the reference. Entries about PyInstaller, a bundled Python interpreter, the macOS 13 preview, and its JSON bridge are historical experiments, not descriptions of the shipping app. For current packaging and release requirements use [app.md](app.md) and [releasing.md](releasing.md).
 
+## 2026-10-21: Second audit pass (local, unreleased)
+
+- 24 Swift tests and 73 Python/site/release-tool tests pass; generated Quick Action consistency and whitespace checks pass.
+- Added tests for unchanged choice assignments preserving a saved result, success/failure completion notifications, and deferred termination with failure canceling the quit request.
+- Open commands and drops are disabled while the native picker is presented, preventing duplicate sheets.
+- The termination policy now waits for the active operation, allows quit on success, and requests the main window on failure. The policy is unit-tested; actual AppKit Close/Quit under slow I/O and SwiftUI window restoration have not been exercised in this pass.
+- Built the universal app for review. No installed app replacement, release, deployment, or push was performed. Manual update and duplicate-installation limitations remain unchanged.
+
+
 ## 2026-10-21: Repository audit (local, unreleased)
 
 - 22 Swift tests pass, including engine parity, malformed metadata/XML rejection, CLI subprocess argument handling, safe forced output, and the unused-damaged-microphone workflow.
