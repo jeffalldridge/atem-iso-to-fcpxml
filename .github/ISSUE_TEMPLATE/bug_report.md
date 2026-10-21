@@ -1,16 +1,22 @@
 ---
-name: Conversion problem
-about: Report a reproducible conversion or import problem
+name: Bug report
+about: Something converted wrongly or not at all
 ---
 
-ATEM model / firmware:
-macOS / Python / ffprobe / Final Cut versions:
-Converter version:
-Video mode:
+**Setup**
+- ATEM model and firmware:
+- Video standard (e.g. 1080p60):
+- Final Cut Pro version:
+- Converter version (`python3 atem_iso_to_fcpxml.py --version`):
+- Quick Action or command line:
 
-Expected behavior:
-Observed behavior:
+**What happened**
 
-Synthetic reproduction or redacted error text:
+**What you expected**
 
-Do not attach real recordings, source DRPs, generated XML, private graphics, or reports with identifying names/paths. Check all pasted text before posting.
+**Dry-run output** (`python3 atem_iso_to_fcpxml.py "<recording>" --dry-run`; remove anything you do not want public)
+
+```
+```
+
+Please do not attach recordings, `.drp` files, generated `.fcpxml` files or libraries. A `.drp` excerpt with the `file`, `projectPath` and `volume` values replaced is welcome.

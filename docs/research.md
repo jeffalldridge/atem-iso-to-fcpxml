@@ -1,23 +1,32 @@
-# Research and prior work
+# Research notes
 
-Checked October 21, 2026. These are original vendor/project sources, not an exhaustive market survey. No source code from these projects was copied into this implementation.
+Checked 2026-10-21. Links are to primary sources where they exist.
 
-## Existing solutions
+## Blackmagic ATEM ISO recording
 
-[ATEM TO FCP](https://www.marcobucci.eu/atem-to-fcpxml.html), by Marco Bucci, directly addresses native ATEM DRP conversion. Its official page describes multicam and flattened timelines, WAV audio choices, transitions, keys, effects, replacement camera media, and other advanced workflows. It is the closest existing product found. The page links to a Mac App Store listing. Its advertised feature coverage is broader than this utility; those claims were read, not independently tested. Price and regional availability were not verified.
+- Models that record ISO: ATEM Mini Pro ISO, Mini Extreme ISO (and G2), SDI Pro ISO, SDI Extreme ISO, Television Studio HD8 ISO. All record at the switcher standard, which is 1080p only (23.98–60); none record 4K or interlaced ISO files. Sources: [ATEM Mini tech specs](https://www.blackmagicdesign.com/products/atemmini/techspecs/W-ABP-03), [ATEM SDI tech specs](https://www.blackmagicdesign.com/products/atemsdi/techspecs), [ATEM Television Studio tech specs](https://www.blackmagicdesign.com/products/atemtelevisionstudio/techspecs).
+- The manual's "Recording ISO files" section describes the folder (`Video ISO Files`, `Audio Source Files`, `Media Files`), that ISO MP4s carry program audio, that the WAVs "exclude any processing or EQ from the built in audio mixer", that the timecode generator runs time of day by default, and that re-recording under the same name appends to the `.drp`.
+- No official description of the `.drp` contents exists. Community work: [otio-drp-adapter](https://github.com/gilou/otio-drp-adapter) (cuts only), [a Go writer that mirrors the format](https://github.com/McHauge/Spout-Multi-Recorder/blob/main/internal/resolve/resolve.go), forum threads about `transitionActive` on the Extreme and `fadeToBlack` breaking Resolve imports. [docs/drp-format.md](drp-format.md) is our own description from real logs.
 
-[ATEM Exporter usage documentation](https://github.com/latenitefilms/ATEMExporter/blob/main/docs/how-to-use.md), by LateNite Films, describes connecting to the switcher over Ethernet and logging camera changes during production. It exports program-cut or multicam FCPXML. The public repository is its documentation site; its MIT license does not establish that the app's complete conversion engine is open source. Its documented workflow differs from converting a DRP already recorded on an SSD.
+## Existing converters
 
-The focused search did not establish a maintained, complete open-source drop-in implementation of this exact SSD/DRP-to-Final-Cut workflow. That is a search limitation, not a claim none exists. A small open-source utility remains useful for people who want a transparent local script and can accept the narrower scope.
+| Tool | Reads the `.drp` | WAV audio | Transitions | Licence |
+| --- | --- | --- | --- | --- |
+| [ATEM TO FCP](https://www.marcobucci.eu/atem-to-fcpxml.html) (Marco Bucci) | Yes | Syncs external WAV/BWF by LTC | Rebuilds program, keys, T-bar | Commercial, Mac App Store |
+| [ATEM Exporter](https://atemexporter.fcp.cafe/) (LateNite Films) | No, logs the switcher live over Ethernet | No | Not stated | Commercial |
+| [drp-trimmer](https://github.com/faithncode/drp-trimmer) | Yes | Picks a camera ISO as primary audio | Dissolves | MIT, needs FFmpeg |
+| [otio-drp-adapter](https://github.com/gilou/otio-drp-adapter) | Yes | No | No | Open source |
+| This project | Yes | Every camera's WAV by default, mics as angles | Dissolves, program fallback | MIT, no dependencies |
 
-## Format authorities
+## Apple FCPXML
 
-[Apple's FCPXML Document Type Definition](https://developer.apple.com/documentation/professional-video-applications/document-type-definition) publishes the FCPXML 1.10 schema used by this utility. Local schema validation uses the DTD bundled with the installed Final Cut app; it is not redistributed here. Later Final Cut versions have newer XML revisions, but 1.10 provides the structures needed for this first version.
+- [FCPXML reference](https://developer.apple.com/documentation/professional-video-applications/fcpxml-reference) and the DTDs bundled inside Final Cut Pro (`Final Cut Pro.app/Contents/Frameworks/Interchange.framework/Resources/FCPXMLv1_*.dtd`). The converter writes 1.10 (Final Cut 10.6, 2021). Final Cut 11 writes 1.13 and Final Cut 12 writes 1.14.
+- [Multicam media](https://developer.apple.com/documentation/professional-video-applications/multicam-media): `mc-source` with `srcEnable` of `audio`, `video` or `all` lets one `mc-clip` take picture and sound from different angles.
+- [Transition](https://developer.apple.com/documentation/professional-video-applications/transition): the DTD comment describes overlap, but Final Cut's own exports butt-join the clips and centre the transition on the cut, which is what we write.
+- [Describing Final Cut Pro items in FCPXML](https://developer.apple.com/documentation/professional-video-applications/describing-final-cut-pro-items-in-fcpxml): items with no `event` element are imported into a new event named after the date.
+- Final Cut Pro User Guide, [Fade audio in and out](https://support.apple.com/guide/final-cut-pro/ver66d503b23/mac): "+3 dB" is the default fade, which prompted the measurement in [validation.md](validation.md); the result was gain-neutral.
+- [EBU Tech 3285](https://tech.ebu.ch/docs/tech/tech3285.pdf): the Broadcast Wave `bext` chunk and its 64-bit `TimeReference` in samples since midnight.
 
-[EBU Tech 3285: Broadcast Wave Format](https://tech.ebu.ch/docs/tech/tech3285.pdf) specifies the BEXT sample-count time reference. Preserving it proved necessary during native Final Cut import: zero-based WAV in-points caused rejected nested audio edits, while correct BWF source origins imported successfully.
+## macOS Quick Actions
 
-## Implementation evidence
-
-The supplied ATEM recordings contained JSON event logs under the `.drp` extension, including a header with source files and video mode, followed by sparse timed state updates. This is an observed input format, not a guarantee about every switcher or firmware. Real source DRPs and media remain local; public tests use invented metadata.
-
-The simple approach is direct event-log translation with ffprobe metadata inspection, WAV-aware camera compounds, and native multicam output. Reusing rendered program picture for difficult effect intervals keeps the first version bounded while preserving their appearance. It does not provide editable native effect parameters.
+A `.workflow` bundle double-clicked in Finder opens Automator's installer sheet (Open in Automator / Install) and lands in `~/Library/Services`. `/usr/bin/python3` on a fresh Mac is a shim that offers to install the Command Line Tools the first time it runs, which is why the Quick Action checks for Python and explains what to install.

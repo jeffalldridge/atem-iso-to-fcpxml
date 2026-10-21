@@ -1,0 +1,31 @@
+name: Release
+# Push a tag like v1.0.0 to build the Quick Action zip and attach it to a GitHub Release.
+on:
+  push:
+    tags: ["v*.*.*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s tests
+      - name: Check the tag matches the converter version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(python -c "import atem_iso_to_fcpxml as m; print(m.__version__)")
+          [ "$tag" = "$version" ] || { echo "::error::tag $tag != __version__ $version"; exit 1; }
+      - run: python scripts/build_quick_action.py --check
+      - run: python scripts/build_quick_action.py --zip dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
+      - run: cd dist && shasum -a 256 * > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
+            dist/SHA256SUMS.txt

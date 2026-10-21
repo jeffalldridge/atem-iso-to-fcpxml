@@ -1,25 +1,19 @@
 # Architecture
 
-The runtime is one standard-library Python module plus ffprobe. The macOS installer only copies it and generates a Finder Quick Action; the conversion engine has no dependency on Finder, Resolve, or an AI service.
+One file, five stages, no dependencies.
 
-## Conversion pipeline
+```
+.drp + recording folder
+   │
+   ├─ load_drp / open_recording ─── read the log, find the media, read MP4 and WAV headers
+   ├─ build_edit_list ───────────── replay the log onto the frame grid: cuts, dissolves, program fallbacks
+   ├─ make_plan ─────────────────── which angles, which soundtrack, names (defaults or dialogs)
+   ├─ build_fcpxml ──────────────── the XML shapes Final Cut accepts (docs/fcpxml-structure.md)
+   └─ main ──────────────────────── command line, Finder dialogs, write exactly one file
+```
 
-1. Read a size-limited, version-1 ATEM newline-delimited JSON DRP. Reject Resolve archives and multi-session/source-change logs.
-2. Resolve source files relative to the selected DRP. The recorded volume and projectPath are historical metadata. Check canonical paths, including symlink targets, stay within the recording folder.
-3. Inspect program and selected ISO/WAV media with ffprobe. Use exact stream durations, rates, and dimensions. The program stream establishes the recording's frame count.
-4. Merge sparse `_index_` event patches without dropping unchanged nested state. Normalize midnight and drop-frame labels. Emit contiguous picture intervals with integer frame boundaries.
-5. For straight camera/still sections, use the ISO or still. For transitions, keys, fades, and color generators, use the program picture over the corresponding interval and record the reason. Stop on missing required media instead of quietly substituting it.
-6. Parse Broadcast WAV `bext` TimeReference directly as a 64-bit sample count. Final Cut honors this origin even when ffprobe omits the tag because other BEXT fields are empty. Resource starts and every WAV clip in-point must preserve that value. Recording-local offset zero and source timecode zero are different concepts.
-7. Serialize FCPXML 1.10 with exact rational seconds and encoded file URLs. Finish conversion before writing anything. Create outputs exclusively and never overwrite an existing path or symlink.
-
-## Final Cut structure
-
-Each camera is a reusable media/sequence compound. Its primary clip contains an explicit `video` component referring to the ISO MP4 and a connected `asset-clip` referring to the matching WAV. Explicit video components prevent Final Cut from reintroducing embedded AAC when it discovers the MP4's actual streams during import.
-
-The multicam references those compounds. Optional microphones are audio-only angles. The browser clip defaults to the selected main WAV's audio angle. The live timeline uses video-only multicam segments and a separate continuous main WAV connected to the first picture segment; camera changes therefore leave the main soundtrack alone. Program fallback segments contain explicit video components, so their embedded audio is excluded too.
-
-Individual WAV browser clips make source audio available for editing. The generated report describes fallback ranges and selection; it is private because filenames can identify a recording.
-
-## Verification boundaries
-
-Unit tests verify synthetic parsing, rational timing, WAV origins, media selection, path safety, and output protection. Apple DTD validation verifies XML grammar. Native Final Cut import and re-export verify that the application retains the intended component structure. None of these alone establishes lip sync, perceived audio quality, full visual equivalence, or export performance.
+- **Timing** is kept as `fractions.Fraction` everywhere and only formatted as `N/Ds` at the end, so 59.94 fps recordings stay exact.
+- **Media inspection** reads ISO BMFF boxes (`moov` → `trak` → `mdhd`, `hdlr`, `stsd`, `stts`, `stco`) to get size, rate, frame count and the first timecode sample, and RIFF/RF64 chunks (`fmt `, `bext`, `data`) for WAVs. Media payloads are never read, so a 40 GB file is inspected in milliseconds.
+- **State** from the log is merged sparsely: arrays are keyed by `_index_` and patches only touch the keys they name.
+- **Safety**: media paths from the log must resolve inside the recording folder; the log is size-limited; outputs are never silently overwritten; nothing is written until the whole document is built and parsed back.
+- **The Quick Action** is generated from the converter by `scripts/build_quick_action.py`, which embeds it in a zsh heredoc inside an Automator "Run Shell Script" action. CI checks the committed bundle is current.

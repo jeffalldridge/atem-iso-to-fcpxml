@@ -1,4 +1,5 @@
 # Private inputs and generated files must never be published.
+# quick-action/*.workflow is the one bundle that is meant to be committed.
 /local/
 /work/
 /outputs/
@@ -17,7 +18,6 @@
 *.dmg
 *.pkg
 *.app/
-*.workflow/
 # Secrets, workstation preferences and developer artifacts
 .env
 .env.*

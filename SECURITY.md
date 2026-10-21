@@ -1,7 +1,7 @@
-# Security and private data
+# Security and privacy
 
-The converter runs locally and makes no network requests. ffprobe reads only the selected recording's media, with a per-file timeout. Relative media paths and symlink targets must remain beneath the recording directory. Input event logs have a size limit. Existing outputs are never overwritten.
+The converter runs entirely on your Mac. It makes no network requests, reads only files inside the selected recording folder (paths in the `.drp` that point outside it are refused), never modifies the recording, and writes one `.fcpxml` next to the `.drp`. The `.drp` is parsed with the standard JSON module with a 16 MiB size limit; MP4 and WAV parsing reads headers only.
 
-If you find a security issue, use GitHub's private vulnerability reporting if available, or contact the maintainer through their public profile to arrange a private report. Do not include recordings, credentials, or personal filesystem paths in a public issue.
+Generated `.fcpxml` files contain absolute paths to your media. Treat them as private.
 
-Only the latest development version is maintained during alpha. Review contributions and dependencies before running them on private recordings.
+To report a vulnerability, use GitHub's private vulnerability reporting on this repository. Please do not include recordings or personal paths in a public issue.
