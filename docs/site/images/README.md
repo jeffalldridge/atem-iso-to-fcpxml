@@ -1,11 +1,13 @@
 # Website Images
 
-The four JPEGs are direct window captures of the local SwiftUI app on October 21, 2026. They use a synthetic “Sunday Service” fixture at `/tmp/ATEM Demo/`, with generated media headers and no real footage. No personal names, recording paths, edits to the captured interface, or simulated Final Cut timeline are present. The site identifies the app as a source-build preview.
+The four screenshot PNGs contain real alpha channels. They show the local SwiftUI app on October 21, 2026 using a synthetic “Sunday Service” fixture with generated media headers and no real footage.
 
-1. `01-open.jpg`: choose a recording.
-2. `02-cameras.jpg`: camera defaults and available audio.
-3. `03-audio.jpg`: MIC 1 soundtrack, MIC 2 optional; selected-camera WAVs remain visibly included.
-4. `04-ready.jpg`: completed demo XML.
+1. `01-open.png`: choose a recording.
+2. `02-cameras.png`: camera defaults and available audio.
+3. `03-audio.png`: MIC 1 soundtrack, MIC 2 optional; selected-camera WAVs remain visibly included.
+4. `04-ready.png`: completed demo XML.
+
+The capture provider flattened the original windows to JPEG. `scripts/prepare_screenshot.py` converted them to RGBA PNG and masked only the outside corner matte; it did not redraw or resize the interface. The original lossy encoding cannot be recovered by conversion. Source JPEGs stay under ignored `local/`; the public site contains no JPEG copies or SVG screenshot wrappers. Prefer lossless captures with native transparency for future replacements. Do not add CSS rounding or a second card around the windows.
 
 The PNG icons were extracted from the installed application resources and resized to 128 pixels with `sips`:
 

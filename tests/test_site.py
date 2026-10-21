@@ -108,9 +108,11 @@ class SiteTests(unittest.TestCase):
             self.assertIn("alt", attrs)
             self.assertGreater(int(attrs["width"]), 0)
             self.assertGreater(int(attrs["height"]), 0)
-            if path.suffix == ".jpg":
+            if path.parent.name == "images" and path.stem[:2].isdigit():
                 screenshots.append(path)
-                self.assertEqual(path.read_bytes()[:2], b"\xff\xd8")
+                self.assertEqual(path.suffix, ".png")
+                self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(path.read_bytes()[25], 6, "Screenshot must be RGBA")
                 self.assertTrue(attrs["alt"])
         self.assertEqual(len(screenshots), 4)
 
