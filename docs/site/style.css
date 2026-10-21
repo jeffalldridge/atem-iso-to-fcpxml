@@ -50,7 +50,6 @@ p code { color:#ffd7c2; overflow-wrap:anywhere; }
 .audio-track span { white-space:nowrap; }
 .wave { height:18px; flex:1; background:repeating-linear-gradient(90deg,transparent 0 3px,#769986 3px 5px,transparent 5px 7px); clip-path:polygon(0 40%,5% 15%,10% 30%,18% 0,25% 35%,35% 15%,43% 30%,53% 5%,62% 35%,70% 20%,80% 40%,90% 0,100% 30%,100% 70%,90% 100%,80% 60%,70% 80%,62% 65%,53% 95%,43% 70%,35% 85%,25% 65%,18% 100%,10% 70%,5% 85%,0 60%); }
 figcaption { color:var(--text); font-size:14px; text-align:center; }
-figcaption span { display:block; font-size:11px; color:var(--muted); margin-top:4px; }
 .section { padding-block:100px; }
 .section-heading { margin-bottom:48px; }
 .steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:50px; list-style:none; padding:0; margin:0; counter-reset:step; }

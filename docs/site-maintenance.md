@@ -4,7 +4,7 @@ Reviewed 2026-10-21. The website remains static HTML and CSS on GitHub Pages: no
 
 ## Design and content
 
-Keep the dark charcoal/orange palette, system typography, clear spacing and a single primary download action. The timeline is explicitly labeled as an illustration, not an application screenshot. Keep answers and command-line instructions visible by default, using headings and dividers rather than dropdowns or accordions. This follows the owner’s preference to avoid extra steps just to read information. Use balanced heading wraps, readable paragraph measures and a consistent type scale. Keep “Final Cut” together in the hero. Preserve keyboard focus styles, table headings and the skip link. Long filenames and command blocks must not widen mobile layouts.
+Keep the dark charcoal/orange palette, system typography, clear spacing and a single primary download action. Keep captions focused on what the tool does; avoid unnecessary explanatory disclaimers. Keep answers and command-line instructions visible by default, using headings and dividers rather than dropdowns or accordions. This follows the owner’s preference to avoid extra steps just to read information. Use balanced heading wraps, readable paragraph measures and a consistent type scale. Keep “Final Cut” together in the hero. Preserve keyboard focus styles, table headings and the skip link. Long filenames and command blocks must not widen mobile layouts.
 
 The compatibility statement is deliberately narrower than hardware marketing: real-media verification is Mini Pro ISO, 1080p60, Final Cut Pro 12.4. Do not turn synthetic coverage into a claim of verified hardware support. The download links target the latest release page; no unreleased version is advertised in metadata.
 
