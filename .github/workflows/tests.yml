@@ -34,13 +34,14 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Select Xcode 26 (the macOS 26 SDK, for the Liquid Glass code paths)
+      - name: Verify the runner's Xcode toolchain
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.6.app || \
-            sudo xcode-select -s /Applications/Xcode_26.5.app || \
-            sudo xcode-select -s /Applications/Xcode_26.4.1.app
-          swift --version
+          set -euo pipefail
           xcodebuild -version
+          swift --version
+          major=$(xcodebuild -version | awk '/^Xcode / {split($2, v, "."); print v[1]}')
+          [[ "$major" -ge 26 ]] || { echo "::error::Xcode 26 or newer is required for Icon Composer assets"; exit 1; }
+
       - name: Swift tests (includes byte-for-byte parity with the Python converter)
         run: swift test
       - name: Assemble the universal app (ad-hoc signed)

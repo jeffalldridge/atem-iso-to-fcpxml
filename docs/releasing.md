@@ -21,13 +21,17 @@ The workflow uses the same secret names as macSubtitleOCR-gui, so the same value
 | `NOTARY_KEY_ID` | The key's 10-character ID |
 | `NOTARY_ISSUER_ID` | The issuer UUID |
 
+A manual workflow dispatch must also select a `vX.Y.Z` tag. Branch dispatches are rejected. Missing credentials fail the job; a green run must not mean that publishing was silently skipped. The job removes its temporary signing keychain and key files even after a failure.
+
+The runner-selected Xcode must be version 26 or newer for Icon Composer assets. The workflow checks the installed toolchain instead of guessing version-specific application paths.
+
 ## Before tagging
 
-1. Set the new version in `Resources/Info.plist` (both version keys), `Sources/ATEMConverter/FCPXML.swift`, `atem_iso_to_fcpxml.py`, and `pyproject.toml`. Move the Unreleased changelog notes under that version and date.
+1. Run `python3 scripts/check_release.py vX.Y.Z` to verify all declarations after setting the new version in `Resources/Info.plist` (both version keys), `Sources/ATEMConverter/FCPXML.swift`, `atem_iso_to_fcpxml.py`, and `pyproject.toml`. Move the Unreleased changelog notes under that version and date.
 2. Run `python3 scripts/build_quick_action.py` and commit the regenerated bundle.
 3. Run `swift test`, `python3 -m unittest discover -s tests`, and `make app`, and open the app once with a real recording.
 4. For any change to the XML shapes, do a Final Cut round trip and record it in [validation.md](validation.md).
-5. Tag and push: `git tag -a v1.1.0 -m "v1.1.0" && git push origin v1.1.0`.
+5. Tag and push: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z` (substitute the new version; never move an existing release tag).
 
 ## Releasing from a Mac instead
 

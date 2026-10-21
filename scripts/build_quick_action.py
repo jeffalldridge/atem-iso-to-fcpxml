@@ -144,6 +144,31 @@ def write_zip(bundle: Path, destination: Path) -> None:
             archive.writestr(item, path.read_bytes())
 
 
+def install_bundle(source: Path, target: Path) -> None:
+    """Stage the replacement before moving the working workflow out of the way."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".atem-install-", dir=target.parent))
+    fresh, backup = staging / "new.workflow", staging / "previous.workflow"
+    try:
+        shutil.copytree(source, fresh)
+        if target.exists() or target.is_symlink():
+            target.rename(backup)
+        try:
+            fresh.rename(target)
+        except OSError:
+            if backup.exists() or backup.is_symlink():
+                backup.rename(target)
+            raise
+        if backup.is_symlink() or backup.is_file():
+            backup.unlink()
+        elif backup.exists():
+            shutil.rmtree(backup)
+    finally:
+        # If rollback itself failed, preserve the backup for recovery.
+        if not backup.exists() and not backup.is_symlink():
+            shutil.rmtree(staging)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="verify the committed bundle matches the converter")
@@ -172,11 +197,7 @@ def main() -> int:
         services = Path.home() / "Library" / "Services"
         services.mkdir(parents=True, exist_ok=True)
         target = services / BUNDLE.name
-        if target.is_symlink() or target.is_file():
-            target.unlink()
-        elif target.is_dir():
-            shutil.rmtree(target)
-        shutil.copytree(BUNDLE, target)
+        install_bundle(BUNDLE, target)
         subprocess.run(["/System/Library/CoreServices/pbs", "-update"], check=False)
         print(f"Installed {target}\nFinder → right-click the .drp or its folder → Quick Actions → {NAME}")
     return 0

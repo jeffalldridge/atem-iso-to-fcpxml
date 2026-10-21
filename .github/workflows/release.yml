@@ -33,24 +33,19 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Select Xcode 26 (the macOS 26 SDK, for the Liquid Glass code paths)
+      - name: Verify the runner's Xcode toolchain
         run: |
-          sudo xcode-select -s /Applications/Xcode_26.6.app || \
-            sudo xcode-select -s /Applications/Xcode_26.5.app || \
-            sudo xcode-select -s /Applications/Xcode_26.4.1.app
-          swift --version
+          set -euo pipefail
           xcodebuild -version
+          swift --version
+          major=$(xcodebuild -version | awk '/^Xcode / {split($2, v, "."); print v[1]}')
+          [[ "$major" -ge 26 ]] || { echo "::error::Xcode 26 or newer is required for Icon Composer assets"; exit 1; }
 
       - name: Check the tag matches the version everywhere
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME#v}"
-          plist=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" Resources/Info.plist)
-          python=$(python -c 'import atem_iso_to_fcpxml as m; print(m.__version__)')
-          swift=$(grep -o 'converterVersion = "[^"]*"' Sources/ATEMConverter/FCPXML.swift | cut -d'"' -f2)
-          for v in "$plist" "$python" "$swift"; do
-            [[ "$v" == "$tag" ]] || { echo "::error::Tag v$tag does not match version $v" >&2; exit 1; }
-          done
+          [[ "$GITHUB_REF" == refs/tags/* ]] || { echo "::error::Select a version tag for a release"; exit 1; }
+          python scripts/check_release.py "$GITHUB_REF_NAME"
 
       - name: Tests
         run: |
@@ -58,21 +53,22 @@ jobs:
           python scripts/build_quick_action.py --check
           swift test
 
-      - name: Check for signing secrets
-        id: secrets
+      - name: Require signing and notarization credentials
         env:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          DEV_ID: ${{ secrets.DEV_ID }}
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
         run: |
-          if [[ -n "$MACOS_CERT_P12" && -n "$NOTARY_KEY" ]]; then
-            echo "signing=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "signing=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Signing secrets are not configured; nothing was published. Add the secrets listed at the top of release.yml, or publish a locally notarized build with gh release create."
-          fi
+          set -euo pipefail
+          for name in MACOS_CERT_P12 MACOS_CERT_PASSWORD KEYCHAIN_PASSWORD DEV_ID NOTARY_KEY NOTARY_KEY_ID NOTARY_ISSUER_ID; do
+            [[ -n "${!name}" ]] || { echo "::error::Missing release secret: $name"; exit 1; }
+          done
 
       - name: Import Developer ID certificate
-        if: steps.secrets.outputs.signing == 'true'
         env:
           MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
           MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
@@ -91,7 +87,6 @@ jobs:
           rm -f "$CERT_PATH"
 
       - name: Save notarytool credentials
-        if: steps.secrets.outputs.signing == 'true'
         env:
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
@@ -104,13 +99,11 @@ jobs:
           rm -f "$KEY_PATH"
 
       - name: Build, sign, notarize, package, notarize the dmg
-        if: steps.secrets.outputs.signing == 'true'
         env:
           DEV_ID: ${{ secrets.DEV_ID }}
         run: make release
 
       - name: Quick Action and checksums
-        if: steps.secrets.outputs.signing == 'true'
         run: |
           set -euo pipefail
           python scripts/build_quick_action.py --zip build/ATEM-ISO-to-FCPXML-Quick-Action.zip
@@ -120,7 +113,6 @@ jobs:
           shasum -a 256 -c SHA256SUMS.txt
 
       - uses: softprops/action-gh-release@v2
-        if: steps.secrets.outputs.signing == 'true'
         with:
           generate_release_notes: true
           fail_on_unmatched_files: true
@@ -130,3 +122,11 @@ jobs:
             build/ATEM-ISO-to-FCPXML-Quick-Action.zip
             build/atem_iso_to_fcpxml.py
             build/SHA256SUMS.txt
+
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/AuthKey.p8"
+          if [[ -f "$RUNNER_TEMP/build.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/build.keychain-db"
+          fi
