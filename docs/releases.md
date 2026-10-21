@@ -6,7 +6,7 @@ Two DMGs are built: Apple silicon and Intel. Each contains the app, an Applicati
 
 ## Current status
 
-The build and release workflows are implemented. A public notarized Mac app has **not** been released. Do not describe an unsigned CI artifact as a finished download. The older 1.0.0 release contains the broken dialog workflow.
+The build and release workflows are implemented, and both architecture builds pass on GitHub. The Developer ID certificate, export password, and signing identity are configured in the repository’s `release` environment. The three notarization secrets still need configuration. A public notarized Mac app has **not** been released. Do not describe an unsigned CI artifact as a finished download. The older 1.0.0 release contains the broken dialog workflow.
 
 ## One-time signing setup
 
