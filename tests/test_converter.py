@@ -5,6 +5,8 @@ No real footage, DRP, or personal path is needed or allowed here.
 from __future__ import annotations
 
 import json
+import io
+import zipfile
 import os
 import shutil
 import struct
@@ -12,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import xml.etree.ElementTree as ET
 from fractions import Fraction as F
 from pathlib import Path
@@ -348,7 +351,7 @@ class EditListTests(unittest.TestCase):
                 dict(masterTimecode="10:00:04:00", downstreamKeys=[dict(_index_=0, onAir=False)]),
                 me("10:00:06:00", fadeToBlack="Active"), me("10:00:08:00", fadeToBlack="Inactive"),
                 me("10:00:10:00", source=5), me("10:00:12:00", source=1),
-                me("10:00:14:00", mixEffectBlocks=None) if False else dict(masterTimecode="10:00:14:00", mixEffectBlocks=[dict(_index_=0, upstreamKeys=[dict(_index_=0, onAir=True)])]),
+                dict(masterTimecode="10:00:14:00", mixEffectBlocks=[dict(_index_=0, upstreamKeys=[dict(_index_=0, onAir=True)])]),
                 dict(masterTimecode="10:00:16:00", mixEffectBlocks=[dict(_index_=0, upstreamKeys=[dict(_index_=0, onAir=False)])])]
         _, edit = self.segments(rows)
         kinds = [(x.start, x.end, x.picture.kind, x.picture.reason) for x in edit.cuts]
@@ -395,6 +398,7 @@ class EditListTests(unittest.TestCase):
     def test_midnight_wrap_and_order(self):
         self.rec_dir.cleanup()
         self.rec_dir = RecordingDir(tc="23:59:55:00", frames=1200)
+        self.addCleanup(self.rec_dir.cleanup)
         rows = [header("23:59:55:00"), me("00:00:05:00", source=2), me("00:00:15:00", onAir=False)]
         _, edit = self.segments(rows)
         self.assertEqual([(x.start, x.end, x.picture.key) for x in edit.cuts], [(0, 600, "input-1"), (600, 1200, "input-2")])
@@ -521,6 +525,7 @@ class XmlTests(unittest.TestCase):
     def test_drop_frame_and_fractional_rates(self):
         self.rec_dir.cleanup()
         self.rec_dir = RecordingDir(tc="10:00:00;00", frames=1800, mode="1080p5994", tc_fps=60, drop=True)
+        self.addCleanup(self.rec_dir.cleanup)
         self.rec_dir.write([header("10:00:00;00", "1080p5994"), me("10:00:10;00", source=2), me("10:00:30;02", onAir=False)])
         plan = c.make_plan(c.open_recording(self.rec_dir.drp))
         xml = ET.fromstring(c.build_fcpxml(plan))
@@ -595,6 +600,269 @@ class CliTests(unittest.TestCase):
         xml = ET.parse(target).getroot()
         self.assertEqual(xml.find("./event").get("name"), "Demo")
         self.assertEqual(len(xml.findall(".//mc-angle")), 2)
+
+
+class RegressionTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = RecordingDir(frames=600)
+        self.addCleanup(self.fixture.cleanup)
+        self.fixture.write()
+
+    def test_output_links_never_modify_media(self):
+        media = self.fixture.root / "Show.mp4"
+        original = media.read_bytes()
+        output = self.fixture.root / "Show.fcpxml"
+        output.symlink_to(media)
+        with self.assertRaisesRegex(c.ConversionError, "symbolic link"):
+            c.write_output(output, b"XML", True)
+        self.assertEqual(media.read_bytes(), original)
+        output.unlink()
+        os.link(media, output)
+        c.write_output(output, b"XML", True)
+        self.assertEqual(media.read_bytes(), original)
+        self.assertEqual(output.read_bytes(), b"XML")
+        self.assertFalse(list(self.fixture.root.glob(".atem-*")))
+
+    def test_output_refuses_existing_and_preserves_failed_replacement(self):
+        output = self.fixture.root / "Show.fcpxml"
+        output.write_bytes(b"original")
+        with self.assertRaisesRegex(c.ConversionError, "already exists"):
+            c.write_output(output, b"new")
+        with patch.object(c.os, "replace", side_effect=OSError("disk error")):
+            with self.assertRaises(OSError):
+                c.write_output(output, b"new", True)
+        self.assertEqual(output.read_bytes(), b"original")
+        self.assertFalse(list(self.fixture.root.glob(".atem-*")))
+
+    def test_output_creation_needs_no_hard_link_support(self):
+        output = self.fixture.root / "Show.fcpxml"
+        with patch.object(c.os, "link", side_effect=OSError("exFAT")):
+            c.write_output(output, b"XML")
+        self.assertEqual(output.read_bytes(), b"XML")
+
+    def test_external_audio_symlink_is_refused(self):
+        with tempfile.TemporaryDirectory() as other:
+            wav = Path(other) / "outside.wav"
+            make_wav(wav, 48000)
+            (self.fixture.root / c.AUDIO_DIR / "outside.wav").symlink_to(wav)
+            with self.assertRaisesRegex(c.ConversionError, "outside"):
+                c.open_recording(self.fixture.drp)
+
+    def test_external_program_symlink_is_refused(self):
+        program = self.fixture.root / "Show.mp4"
+        program.unlink()
+        with tempfile.TemporaryDirectory() as other:
+            outside = Path(other) / "program.mp4"
+            make_mp4(outside, 600)
+            program.symlink_to(outside)
+            with self.assertRaisesRegex(c.ConversionError, "outside"):
+                c.open_recording(self.fixture.drp)
+
+    def test_zero_session_and_empty_cameras(self):
+        with self.assertRaisesRegex(c.ConversionError, "session"):
+            c.load_drp(self.fixture.drp, 0)
+        with self.assertRaisesRegex(c.ConversionError, "at least one"):
+            c.make_plan(c.open_recording(self.fixture.drp), cameras=[])
+
+    def test_drop_frame_midnight(self):
+        for fps, mode, nominal in ((F(30000, 1001), "1080p2997", 30), (F(60000, 1001), "1080p5994", 60)):
+            with self.subTest(fps=fps):
+                day = nominal * 86400 - (2 if nominal == 30 else 4) * 1296
+                self.assertEqual(c.Timecode.label(day, fps, True), "00:00:00;00")
+                self.assertEqual(c.Timecode.parse(c.Timecode.label(day - 1, fps, True), fps).frames, day - 1)
+                recdir = RecordingDir(tc="23:59:55;00", frames=nominal * 20, mode=mode, tc_fps=nominal, drop=True)
+                self.addCleanup(recdir.cleanup)
+                recdir.write([header("23:59:55;00", mode), me("00:00:05;00", source=2), me("00:00:15;00", onAir=False)])
+                rec = c.open_recording(recdir.drp)
+                edit = c.build_edit_list(rec, [1, 2])
+                self.assertEqual(edit.cuts[1].start, nominal * 10)
+                self.assertFalse(rec.warnings)
+
+    def test_integer_rate_is_not_drop_frame(self):
+        for fps in (F(30), F(60)):
+            with self.assertRaises(c.ConversionError):
+                c.Timecode.parse("10:00:00;00", fps)
+
+    def test_custom_names_and_colliding_audio_ids(self):
+        rows = header()
+        rows["sources"][1]["name"] = 'Stage & Lectern'
+        old = self.fixture.root / "Video ISO Files" / "Show CAM 1.mp4"
+        new = old.with_name("Custom angle.mp4")
+        old.rename(new)
+        rows["sources"][1]["file"] = "Video ISO Files/Custom angle.mp4"
+        audio = self.fixture.root / c.AUDIO_DIR
+        (audio / "Show CAM 1.wav").rename(audio / "Custom angle.wav")
+        for name in ("Choir-A", "Choir A", "音声"):
+            make_wav(audio / (name + ".wav"), self.fixture.samples, self.fixture.time_reference)
+        self.fixture.write([rows])
+        plan = c.make_plan(c.open_recording(self.fixture.drp))
+        self.assertEqual(plan.angles[0].name, 'Stage & Lectern')
+        self.assertEqual(plan.angles[0].audio.name, "Custom angle.wav")
+        ids = [a.id for a in plan.angles]
+        self.assertEqual(len(ids), len(set(ids)))
+        ET.fromstring(c.build_fcpxml(plan))
+
+    def test_sync_and_short_audio_warnings(self):
+        audio = self.fixture.root / c.AUDIO_DIR / "Show CAM 1.wav"
+        make_wav(audio, 48000, self.fixture.time_reference + 96000)
+        rec = c.open_recording(self.fixture.drp)
+        c.make_plan(rec)
+        self.assertTrue(any("offset correction" in w for w in rec.warnings))
+        self.assertTrue(any("audio ends" in w for w in rec.warnings))
+
+    def test_truncated_mp4_and_zero_rate_wav(self):
+        path = self.fixture.root / "bad.mp4"
+        path.write_bytes(struct.pack(">I4s", 1, b"moov"))
+        with self.assertRaises(c.ConversionError):
+            c.probe_mp4(path)
+        wav = self.fixture.root / "bad.wav"
+        make_wav(wav, 48000, rate=0)
+        with self.assertRaisesRegex(c.ConversionError, "invalid WAV"):
+            c.probe_wav(wav)
+
+    def test_dialog_returns_indices_and_allows_no_extras(self):
+        with patch.object(c, "_osascript", return_value="2") as run:
+            self.assertEqual(c.choose_from_list("Prompt", ["a", "line\nbreak"], [], True), ["line\nbreak"])
+            self.assertIn("without empty selection allowed", run.call_args.args[0])
+        with patch.object(c, "_osascript", return_value="") as run:
+            self.assertEqual(c.choose_from_list("Prompt", ["a"], [], True, allow_empty=True), [])
+            self.assertIn("with empty selection allowed", run.call_args.args[0])
+
+    def test_uppercase_drp_in_folder(self):
+        renamed = self.fixture.drp.with_suffix(".DRP")
+        self.fixture.drp.rename(renamed)
+        self.assertEqual(c.locate_drp(self.fixture.root), renamed.resolve())
+
+
+class HardeningTests(unittest.TestCase):
+    def test_output_cannot_replace_a_media_file_with_xml_extension(self):
+        fixture = RecordingDir(frames=600)
+        self.addCleanup(fixture.cleanup)
+        source = fixture.root / "Video ISO Files" / "Show CAM 1.mp4"
+        renamed = source.with_suffix(".fcpxml")
+        source.rename(renamed)
+        original = renamed.read_bytes()
+        row = header()
+        row["sources"][1]["file"] = "Video ISO Files/Show CAM 1.fcpxml"
+        fixture.write([row])
+        result = subprocess.run([sys.executable, str(Path(c.__file__)), str(fixture.drp),
+                                 "--output", str(renamed), "--force"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("recording media", result.stderr)
+        self.assertEqual(renamed.read_bytes(), original)
+
+    def test_invalid_log_containers_fail_cleanly(self):
+        fixture = RecordingDir(frames=600)
+        self.addCleanup(fixture.cleanup)
+        for field, value in (("sources", None), ("sources", [None]),
+                             ("sources", [{"_index_": []}]), ("masterTimecode", 123),
+                             ("mixEffectBlocks", [{"_index_": 0, "upstreamKeys": False}])):
+            with self.subTest(field=field, value=value):
+                row = header()
+                row[field] = value
+                fixture.write([row])
+                with self.assertRaises(c.ConversionError):
+                    c.load_drp(fixture.drp)
+
+    def test_sparse_update_inside_dissolve(self):
+        fixture = RecordingDir(frames=1200)
+        self.addCleanup(fixture.cleanup)
+        fixture.write([header(), me("10:00:05:00", transitionActive=True),
+                       dict(masterTimecode="10:00:05:15", sources=[dict(_index_=1, name="Lectern")]),
+                       me("10:00:05:30", transitionActive=False, source=2)])
+        edit = c.build_edit_list(c.open_recording(fixture.drp), [1, 2])
+        self.assertEqual([(cut.start, cut.end) for cut in edit.cuts], [(0, 315), (315, 1200)])
+        self.assertEqual((edit.cuts[1].transition_in.start, edit.cuts[1].transition_in.end), (300, 330))
+
+    def test_dip_is_marked_as_approximation(self):
+        fixture = RecordingDir(frames=1200)
+        self.addCleanup(fixture.cleanup)
+        fixture.write([header(transition_type="Dip"), me("10:00:05:00", transitionActive=True),
+                       me("10:00:06:00", transitionActive=False, source=2)])
+        plan = c.make_plan(c.open_recording(fixture.drp))
+        xml = ET.fromstring(c.build_fcpxml(plan))
+        self.assertTrue(any("Dip" in m.get("value", "") for m in xml.findall(".//marker")))
+
+    def test_bwf_after_audio_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "after.wav"
+            make_wav(path, 4)
+            data = path.read_bytes()
+            bext = bytes(338) + struct.pack("<Q", 123456789)
+            data += box_le(b"bext", bext)
+            data = data[:4] + struct.pack("<I", len(data) - 8) + data[8:]
+            path.write_bytes(data)
+            info = c.probe_wav(path)
+            self.assertEqual((info.sample_frames, info.time_reference), (4, 123456789))
+
+    def test_rf64_large_sparse_audio(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "long.wav"
+            data_size = 4294967298  # More than RIFF's 32-bit size; whole stereo 24-bit samples.
+            fmt = box_le(b"fmt ", struct.pack("<HHIIHH", 1, 2, 48000, 288000, 6, 24))
+            ds64 = box_le(b"ds64", struct.pack("<QQQI", 72 + data_size, data_size, data_size // 6, 0))
+            prefix = b"RF64" + bytes([255]) * 4 + b"WAVE" + ds64 + fmt + b"data" + bytes([255]) * 4
+            with path.open("wb") as fh:
+                fh.write(prefix)
+                fh.truncate(len(prefix) + data_size)
+            self.assertEqual(c.probe_wav(path).sample_frames, data_size // 6)
+
+    def test_truncated_audio_is_not_silently_accepted(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "short.wav"
+            make_wav(path, 100)
+            with path.open("r+b") as fh:
+                fh.truncate(path.stat().st_size - 1)
+            with self.assertRaisesRegex(c.ConversionError, "truncated WAV audio"):
+                c.probe_wav(path)
+
+    def test_metadata_read_bounds(self):
+        with self.assertRaises(c.ConversionError):
+            c._read(io.BytesIO(b"1234"), 0, c.MAX_METADATA_BYTES + 1)
+        with self.assertRaises(c.ConversionError):
+            c._read(io.BytesIO(b"12345678"), 0, 8, end=4)
+        # The count must not borrow a sibling box's bytes.
+        bad = box(b"stts", bytes(4)) + box(b"free", bytes(32))
+        with self.assertRaises(c.ConversionError):
+            c._read_stbl(io.BytesIO(bad), 0, len(bad), {})
+
+    def test_invalid_jpeg_segment_returns_unknown(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bad.jpg"
+            path.write_bytes(b"\xff\xd8\xff\xe0\x00\x00")
+            self.assertIsNone(c.probe_image_size(path))
+
+    def test_cli_subprocess_and_no_input_mutations(self):
+        fixture = RecordingDir(frames=600)
+        self.addCleanup(fixture.cleanup)
+        fixture.write()
+        files = {p: (p.stat().st_size, p.stat().st_mtime_ns) for p in fixture.root.rglob("*") if p.is_file()}
+        result = subprocess.run([sys.executable, str(Path(c.__file__)), str(fixture.drp), "--dry-run"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Would write", result.stdout)
+        self.assertEqual(files, {p: (p.stat().st_size, p.stat().st_mtime_ns) for p in fixture.root.rglob("*") if p.is_file()})
+        # Invalid XML text must fail cleanly without a traceback or output file.
+        result = subprocess.run([sys.executable, str(Path(c.__file__)), str(fixture.drp), "--name", "bad\x01name"], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertFalse(fixture.drp.with_suffix(".fcpxml").exists())
+
+    def test_reproducible_quick_action_and_incomplete_bundle(self):
+        from scripts import build_quick_action as builder
+        with tempfile.TemporaryDirectory() as tmp:
+            bundle = Path(tmp) / "ATEM ISO to FCPXML.workflow"
+            builder.build(bundle)
+            first, second = Path(tmp) / "one.zip", Path(tmp) / "two.zip"
+            builder.write_zip(bundle, first)
+            # Finder artifacts must never enter a release archive.
+            (bundle / ".DS_Store").write_bytes(b"private")
+            builder.write_zip(bundle, second)
+            self.assertEqual(first.read_bytes(), second.read_bytes())
+            with zipfile.ZipFile(first) as archive:
+                self.assertEqual(len(archive.namelist()), 2)
+                self.assertIsNone(archive.testzip())
+            (bundle / "Contents" / "Info.plist").unlink()
+            self.assertFalse(builder.same_bundle(bundle, bundle))
 
 
 if __name__ == "__main__":

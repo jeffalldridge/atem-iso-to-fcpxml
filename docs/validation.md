@@ -2,6 +2,18 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21 — unreleased review fixes
+
+- 61 synthetic tests pass under Apple's Python 3.9.6, including validation against the installed Apple FCPXML 1.10 DTD. Added regressions cover output links and failed replacement, exFAT-compatible creation without hard links, media containment, drop-frame midnight at 29.97 and 59.94, custom labels and audio ID collisions, dialog selection mapping, malformed headers, and invalid options.
+- The second review pass adds regressions for sparse updates inside a dissolve, dip approximation markers, BWF metadata after audio, a sparse RF64 file over 4 GiB, truncated WAV rejection, bounded MP4 reads, malformed log containers, CLI subprocess behavior, input-file preservation, and deterministic release ZIPs. Source files with an unusual `.fcpxml` extension are also protected from output replacement.
+- Rebuilt the Quick Action from the converter; `python3 scripts/build_quick_action.py --check` passes. Its generated zsh script passes `zsh -n`.
+- Both list-dialog AppleScript variants compile with `osacompile`. Dialog return handling is unit-tested with mocked responses; Finder interaction was not exercised in this review.
+- `git diff --check` passes. No real recordings or generated XML were added to Git.
+- Existing compound, still, multicam and transition XML shapes were retained. This review did **not** perform another Final Cut import/export or audible sync check; earlier round-trip evidence below remains scoped to those earlier outputs.
+- Physical exFAT media was not tested. The regression confirms that fresh output creation does not require hard-link support. Forced replacement uses a transient same-directory file, removed on success or handled failure; no report or other sidecar is retained. Abrupt process or power loss can leave a partial new file or temporary replacement file.
+
+Remaining behavior limits: mismatched source starts are reported but not automatically corrected; short media can end before the project. Missing program video produces gaps, which also interrupt the soundtrack in those intervals. Media Player assets changed during a recording are not fully reconstructed from later source patches. These need focused synthetic fixtures and a new Final Cut round trip before broader support is claimed.
+
 ## 2026-10-21 — version 1.0.0, Final Cut Pro 12.4 on macOS 27.0
 
 Two real ATEM Mini Pro ISO recordings, both 1080p60, two cameras used of four, two mic inputs, one Media Player still:

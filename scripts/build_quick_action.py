@@ -118,9 +118,24 @@ def build(destination: Path) -> None:
 
 def same_bundle(a: Path, b: Path) -> bool:
     for name in ("document.wflow", "Info.plist"):
+        if not (a / "Contents" / name).is_file() or not (b / "Contents" / name).is_file():
+            return False
         if (a / "Contents" / name).read_bytes() != (b / "Contents" / name).read_bytes():
             return False
     return True
+
+
+def write_zip(bundle: Path, destination: Path) -> None:
+    """Archive only generated bundle files, with stable metadata for reproducible releases."""
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(destination, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name in ("Info.plist", "document.wflow"):
+            path = bundle / "Contents" / name
+            item = zipfile.ZipInfo(f"{bundle.name}/Contents/{name}", date_time=(2020, 1, 1, 0, 0, 0))
+            item.create_system = 3
+            item.external_attr = 0o100644 << 16
+            item.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(item, path.read_bytes())
 
 
 def main() -> int:
@@ -143,11 +158,7 @@ def main() -> int:
     build(BUNDLE)
     print(f"Built {BUNDLE.relative_to(ROOT)}")
     if args.zip:
-        args.zip.parent.mkdir(parents=True, exist_ok=True)
-        with zipfile.ZipFile(args.zip, "w", zipfile.ZIP_DEFLATED) as archive:
-            for path in sorted(BUNDLE.rglob("*")):
-                if path.is_file():
-                    archive.write(path, path.relative_to(BUNDLE.parent))
+        write_zip(BUNDLE, args.zip)
         print(f"Wrote {args.zip}")
     if args.install:
         if sys.platform != "darwin":

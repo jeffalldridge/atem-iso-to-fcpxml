@@ -22,10 +22,17 @@ jobs:
           [ "$tag" = "$version" ] || { echo "::error::tag $tag != __version__ $version"; exit 1; }
       - run: python scripts/build_quick_action.py --check
       - run: python scripts/build_quick_action.py --zip dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
-      - run: cd dist && shasum -a 256 * > SHA256SUMS.txt
+      - name: Prepare standalone converter and checksums
+        run: |
+          cp atem_iso_to_fcpxml.py dist/
+          cd dist
+          shasum -a 256 ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt
+          shasum -a 256 -c SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: |
             dist/ATEM-ISO-to-FCPXML-Quick-Action.zip
             dist/SHA256SUMS.txt
+            dist/atem_iso_to_fcpxml.py

@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Preserve dissolves across unrelated sparse log updates; label dip-to-dissolve conversions as approximations.
+- Read Broadcast Wave metadata after the audio chunk, validate RF64 sizes, and reject truncated audio instead of silently shortening it.
+- Bound metadata reads, validate known log containers, and report XML-incompatible labels without a traceback.
+- Generate reproducible Quick Action ZIPs with an explicit file allowlist; release the standalone Python file and verify checksums before upload.
+
+- Protect output writes against symbolic links, hard links, concurrent creation, and failed replacement; retain exFAT-compatible exclusive creation.
+- Correct 29.97/59.94 drop-frame midnight wrap and reject drop-frame labels at integer rates.
+- Allow no extra audio in Finder dialogs, preserve multiline choices, reject empty camera lists and session zero, and discover uppercase DRP extensions.
+- Enforce recording-folder containment for WAVs and program video; keep custom audio angle IDs unique.
+- Warn about source-start mismatches and short media, reject mixed video formats, and handle malformed media headers more clearly.
+- Add a vendor reference for maintainers and assistants; correct audio, import, and sync claims in public docs.
+
 ## 1.0.0 — 2026-10-21
 
 A rewrite of the 0.1.0 alpha.

@@ -14,10 +14,12 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import re
 import struct
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
@@ -29,6 +31,7 @@ __version__ = "1.0.0"
 FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
 MAX_DRP_BYTES = 16 * 1024 * 1024
+MAX_METADATA_BYTES = 16 * 1024 * 1024
 VIDEO_ISO_DIR = "Video ISO Files"
 AUDIO_DIR = "Audio Source Files"
 NTSC_RATES = {"2398": (24000, 1001), "23.98": (24000, 1001), "23.976": (24000, 1001),
@@ -56,6 +59,8 @@ def parse_video_mode(mode: str) -> Tuple[Optional[int], bool, Fraction]:
 
     ``lines`` is only informational; the real frame size comes from the media.
     """
+    if not isinstance(mode, str):
+        raise ConversionError("The log videoMode must be text.")
     match = re.fullmatch(r"\s*(\d{3,4})([pi])(\d{2,4}(?:\.\d+)?)\s*", mode or "", re.IGNORECASE)
     if not match:
         raise ConversionError(f"Unrecognised ATEM videoMode {mode!r}.")
@@ -80,6 +85,8 @@ class Timecode:
 
     @classmethod
     def parse(cls, label: str, fps: Fraction) -> "Timecode":
+        if not isinstance(label, str):
+            raise ConversionError("The log timecode must be text.")
         match = re.fullmatch(r"(\d{1,2}):(\d{2}):(\d{2})([:;.,])(\d{1,3})", (label or "").strip())
         if not match:
             raise ConversionError(f"Invalid timecode {label!r}.")
@@ -90,7 +97,7 @@ class Timecode:
             raise ConversionError(f"Timecode {label!r} is out of range for {float(fps):g} fps.")
         frames = ((h * 60 + m) * 60 + s) * nominal + f
         if drop:
-            if nominal % 30:
+            if fps not in (Fraction(30000, 1001), Fraction(60000, 1001)):
                 raise ConversionError("Drop-frame timecode requires a 29.97 or 59.94 fps mode.")
             dropped = 2 * (nominal // 30)
             if m % 10 and s == 0 and f < dropped:
@@ -100,9 +107,14 @@ class Timecode:
         return cls(frames, drop)
 
     @staticmethod
+    def frames_per_day(fps: Fraction, drop: bool) -> int:
+        nominal = round(fps)
+        return nominal * 86400 - (2 * (nominal // 30) * 1296 if drop else 0)
+
+    @staticmethod
     def label(frames: int, fps: Fraction, drop: bool) -> str:
         nominal = round(fps)
-        frames = frames % (nominal * 86400)
+        frames = frames % Timecode.frames_per_day(fps, drop)
         if drop and nominal % 30 == 0:
             dropped = 2 * (nominal // 30)  # frame numbers skipped at the start of each non-tenth minute
             per_minute = nominal * 60 - dropped
@@ -148,23 +160,52 @@ class Drp:
         return {s["_index_"]: s for s in self.header.get("sources", []) if isinstance(s, dict) and "_index_" in s}
 
 
+def _validate_state_shape(row: dict) -> None:
+    """Validate containers we replay, leaving unknown firmware fields untouched."""
+    for key in ("masterTimecode", "videoMode"):
+        if key in row and not isinstance(row[key], str):
+            raise ConversionError(f"The log field {key} must be text.")
+    for key in ("sources", "mixEffectBlocks", "downstreamKeys", "upstreamKeys"):
+        if key not in row:
+            continue
+        items = row[key]
+        if not isinstance(items, list):
+            raise ConversionError(f"The log field {key} must be an array.")
+        indices = set()
+        for item in items:
+            if not isinstance(item, dict) or type(item.get("_index_")) is not int:
+                raise ConversionError(f"Each {key} entry must have an integer _index_.")
+            if item["_index_"] in indices:
+                raise ConversionError(f"Duplicate _index_ in log field {key}.")
+            indices.add(item["_index_"])
+            for field_name in ("file", "name", "type"):
+                if field_name in item and not isinstance(item[field_name], str):
+                    raise ConversionError(f"The log field {key}.{field_name} must be text.")
+            if key == "mixEffectBlocks":
+                _validate_state_shape(item)
+
+
 def load_drp(path: Path, session: Optional[int] = None) -> Drp:
     """Read the ATEM log. A log can hold several sessions if the same name was recorded twice."""
     if path.stat().st_size > MAX_DRP_BYTES:
         raise ConversionError("The .drp is larger than 16 MiB; that is not an ATEM switcher log.")
-    raw = path.read_bytes()
+    with path.open("rb") as fh:
+        raw = fh.read(MAX_DRP_BYTES + 1)
+    if len(raw) > MAX_DRP_BYTES:
+        raise ConversionError("The .drp exceeds the 16 MiB limit.")
     if raw[:2] == b"PK":
         raise ConversionError("This .drp is a DaVinci Resolve project archive, not the ATEM switcher log. "
                               "Use the .drp the ATEM wrote next to its recording.")
     try:
         text = raw.decode("utf-8-sig")
         rows = [json.loads(line) for line in text.splitlines() if line.strip()]
-    except (UnicodeDecodeError, ValueError) as exc:
+    except (UnicodeDecodeError, ValueError, RecursionError) as exc:
         raise ConversionError("The .drp is not an ATEM newline-delimited JSON log.") from exc
     if not rows or not all(isinstance(r, dict) for r in rows):
         raise ConversionError("The .drp contains no JSON objects.")
     sessions: List[List[dict]] = []
     for row in rows:
+        _validate_state_shape(row)
         if "sources" in row and "videoMode" in row:
             sessions.append([row])
         elif sessions:
@@ -174,7 +215,8 @@ def load_drp(path: Path, session: Optional[int] = None) -> Drp:
     if len(sessions) > 1 and session is None:
         raise ConversionError(f"This .drp holds {len(sessions)} recording sessions. Pick one with --session 1"
                               f" to --session {len(sessions)}, then check that the ISO file names match that session.")
-    chosen = sessions[(session or 1) - 1] if 1 <= (session or 1) <= len(sessions) else None
+    selected = 1 if session is None else session
+    chosen = sessions[selected - 1] if 1 <= selected <= len(sessions) else None
     if chosen is None:
         raise ConversionError(f"--session must be between 1 and {len(sessions)}.")
     header = chosen[0]
@@ -223,17 +265,21 @@ def _boxes(fh, start: int, end: int):
         size, kind = struct.unpack(">I4s", head)
         header = 8
         if size == 1:
-            size = struct.unpack(">Q", fh.read(8))[0]
+            size = struct.unpack(">Q", _read(fh, pos + 8, 8))[0]
             header = 16
         elif size == 0:
             size = end - pos
-        if size < header:
-            return
-        yield kind, pos + header, min(pos + size, end)
+        if size < header or pos + size > end:
+            raise ConversionError("Invalid or truncated MP4 box.")
+        yield kind, pos + header, pos + size
         pos += size
 
 
-def _read(fh, pos: int, size: int) -> bytes:
+def _read(fh, pos: int, size: int, end: Optional[int] = None) -> bytes:
+    # Lengths in media headers are untrusted. A tiny corrupt file must not cause
+    # a multi-gigabyte allocation, or borrow bytes from the next sibling box.
+    if size < 0 or size > MAX_METADATA_BYTES or (end is not None and pos + size > end):
+        raise ConversionError("Invalid or oversized media metadata field.")
     fh.seek(pos)
     data = fh.read(size)
     if len(data) != size:
@@ -255,26 +301,27 @@ def probe_mp4(path: Path) -> Mp4Info:
             track: dict = {}
             for k2, s2, e2 in _boxes(fh, s, e):
                 if k2 == b"tkhd":
-                    body = _read(fh, s2, e2 - s2)
-                    w, h = struct.unpack(">II", body[-8:])
+                    version = _read(fh, s2, 1, e2)[0]
+                    dimensions = s2 + (88 if version == 1 else 76)
+                    w, h = struct.unpack(">II", _read(fh, dimensions, 8, e2))
                     track["width"], track["height"] = w >> 16, h >> 16
                 elif k2 == b"mdia":
                     for k3, s3, e3 in _boxes(fh, s2, e2):
                         if k3 == b"mdhd":
-                            version = _read(fh, s3, 1)[0]
+                            version = _read(fh, s3, 1, e3)[0]
                             if version == 1:
-                                track["timescale"], track["duration"] = struct.unpack(">IQ", _read(fh, s3 + 20, 12))
+                                track["timescale"], track["duration"] = struct.unpack(">IQ", _read(fh, s3 + 20, 12, e3))
                             else:
-                                track["timescale"], track["duration"] = struct.unpack(">II", _read(fh, s3 + 12, 8))
+                                track["timescale"], track["duration"] = struct.unpack(">II", _read(fh, s3 + 12, 8, e3))
                         elif k3 == b"hdlr":
-                            track["handler"] = _read(fh, s3 + 8, 4)
+                            track["handler"] = _read(fh, s3 + 8, 4, e3)
                         elif k3 == b"minf":
                             for k4, s4, e4 in _boxes(fh, s3, e3):
                                 if k4 == b"stbl":
                                     _read_stbl(fh, s4, e4, track)
             tracks.append(track)
         video = next((t for t in tracks if t.get("handler") == b"vide"), None)
-        if not video or not video.get("timescale") or not video.get("samples"):
+        if not video or not video.get("timescale") or not video.get("samples") or not video.get("duration"):
             raise ConversionError(f"{path.name} has no video track.")
         frames = video["samples"]
         if video.get("stts_uniform"):
@@ -295,27 +342,31 @@ def probe_mp4(path: Path) -> Mp4Info:
 def _read_stbl(fh, start: int, end: int, track: dict) -> None:
     for kind, s, e in _boxes(fh, start, end):
         if kind == b"stsd":
-            count = struct.unpack(">I", _read(fh, s + 4, 4))[0]
+            count = struct.unpack(">I", _read(fh, s + 4, 4, e))[0]
             if count:
-                entry_size, entry_type = struct.unpack(">I4s", _read(fh, s + 8, 8))
+                entry_size, entry_type = struct.unpack(">I4s", _read(fh, s + 8, 8, e))
+                if entry_size < 8 or s + 8 + entry_size > e:
+                    raise ConversionError("Invalid MP4 sample description length.")
                 track["codec"] = entry_type.decode("latin-1")
                 if entry_type == b"tmcd" and entry_size >= 34:
-                    body = _read(fh, s + 16, entry_size - 8)
+                    body = _read(fh, s + 16, 25, e)
                     flags, timescale, frame_duration, number_of_frames = struct.unpack(">IIIB", body[12:25])
                     track["tc"] = dict(flags=flags, timescale=timescale, frame_duration=frame_duration,
                                        number_of_frames=number_of_frames)
         elif kind == b"stts":
-            count = struct.unpack(">I", _read(fh, s + 4, 4))[0]
-            data = _read(fh, s + 8, count * 8)
+            count = struct.unpack(">I", _read(fh, s + 4, 4, e))[0]
+            if count > (e - s - 8) // 8:
+                raise ConversionError("Truncated MP4 sample timing table.")
+            data = _read(fh, s + 8, count * 8, e)
             entries = [struct.unpack(">II", data[i * 8:i * 8 + 8]) for i in range(count)]
             track["samples"] = sum(n for n, _ in entries)
             if len(entries) == 1 or (len(entries) == 2 and entries[1][0] == 1):
                 track["stts_uniform"] = entries[0][1]
         elif kind in (b"stco", b"co64"):
-            count = struct.unpack(">I", _read(fh, s + 4, 4))[0]
+            count = struct.unpack(">I", _read(fh, s + 4, 4, e))[0]
             if count:
                 fmt, width = (">I", 4) if kind == b"stco" else (">Q", 8)
-                track["first_chunk"] = struct.unpack(fmt, _read(fh, s + 8, width))[0]
+                track["first_chunk"] = struct.unpack(fmt, _read(fh, s + 8, width, e))[0]
 
 
 def probe_wav(path: Path) -> WavInfo:
@@ -331,6 +382,8 @@ def probe_wav(path: Path) -> WavInfo:
             fh.seek(pos)
             tag, chunk_size = struct.unpack("<4sI", fh.read(8))
             body = pos + 8
+            if tag != b"data" and body + chunk_size > size:
+                raise ConversionError(f"{path.name} has a truncated WAV chunk.")
             if tag == b"ds64" and chunk_size >= 16:
                 _, data_size = struct.unpack("<QQ", fh.read(16))
                 info["ds64_data"] = data_size
@@ -349,11 +402,18 @@ def probe_wav(path: Path) -> WavInfo:
                 data_size = chunk_size
                 if chunk_size == 0xFFFFFFFF and "ds64_data" in info:
                     data_size = info["ds64_data"]
-                info["data_size"] = min(data_size, size - body)
-                break
+                if data_size > size - body:
+                    raise ConversionError(f"{path.name} has truncated WAV audio data; finish recording or restore the file first.")
+                info["data_size"] = data_size
+                chunk_size = data_size  # RF64 uses ds64, not the 32-bit sentinel.
+                # BWF metadata may follow data. Seek over samples, never read them.
+            if body + chunk_size > size:
+                raise ConversionError(f"{path.name} has a truncated WAV chunk.")
             pos = body + chunk_size + (chunk_size & 1)
     if "rate" not in info or "data_size" not in info:
         raise ConversionError(f"{path.name} is missing its fmt or data chunk.")
+    if not all(info[k] > 0 for k in ("channels", "rate", "bits", "align")):
+        raise ConversionError(f"{path.name} has invalid WAV format values.")
     return WavInfo(info["channels"], info["rate"], info["bits"], info["data_size"] // info["align"],
                    info.get("time_reference"))
 
@@ -376,6 +436,8 @@ def probe_image_size(path: Path) -> Optional[Tuple[int, int]]:
                         height, width = struct.unpack(">HH", fh.read(4))
                         return width, height
                     size = struct.unpack(">H", fh.read(2))[0]
+                    if size < 2:
+                        return None  # Require forward progress through JPEG segments.
                     fh.seek(size - 2, 1)
     except (OSError, struct.error):
         return None
@@ -441,7 +503,7 @@ def list_wavs(root: Path) -> Dict[str, Path]:
     folder = root / AUDIO_DIR
     if not folder.is_dir():
         return {}
-    return {p.stem: p for p in sorted(folder.iterdir())
+    return {p.stem: contained_path(root, str(p.relative_to(root))) for p in sorted(folder.iterdir())
             if p.suffix.lower() == ".wav" and not p.name.startswith("._") and p.is_file()}
 
 
@@ -456,9 +518,9 @@ def open_recording(drp_path: Path, session: Optional[int] = None) -> Recording:
     program_mp4: Optional[Path] = None
     program_info = None
     iso_stems = [Path(s["file"]).stem for s in drp.sources.values() if s.get("type") == "Video" and s.get("file")]
-    prefixes = [re.sub(r" CAM \d+$", "", stem) for stem in iso_stems]
+    prefixes = [re.sub(r" CAM \d+$", "", stem) for stem in iso_stems if re.search(r" CAM \d+$", stem)]
     for candidate in [drp_path.stem] + prefixes:
-        path = root / f"{candidate}.mp4"
+        path = contained_path(root, f"{candidate}.mp4")
         if path.is_file():
             program_mp4, program_info = path, probe_mp4(path)
             break
@@ -493,6 +555,7 @@ def open_recording(drp_path: Path, session: Optional[int] = None) -> Recording:
     if reference.frame_rate != frame_rate:
         warnings.append(f"videoMode says {float(frame_rate):g} fps but the recording is {float(reference.frame_rate):g} fps; using the recording.")
         frame_rate = reference.frame_rate
+    master = Timecode.parse(header["masterTimecode"], frame_rate)
     frame_duration = 1 / frame_rate
     drop = master.drop or reference.drop_frame
     start_frames = master.frames
@@ -505,7 +568,7 @@ def open_recording(drp_path: Path, session: Optional[int] = None) -> Recording:
         end = Timecode.parse(end_event["masterTimecode"], frame_rate).frames
         log_frames = end - start_frames
         if log_frames < 0:
-            log_frames += round(frame_rate) * 86400
+            log_frames += Timecode.frames_per_day(frame_rate, master.drop)
         if abs(log_frames - total_frames) > 2:
             warnings.append(f"The log says the recording is {log_frames} frames but the media has {total_frames}; using the media.")
     return Recording(drp, root, drp_path.stem, frame_rate, frame_duration, interlaced, reference.width, reference.height,
@@ -593,7 +656,7 @@ def _picture_for(state: dict, selected: set, allow_program: bool) -> Picture:
 def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "dissolve") -> EditList:
     """Turn the ATEM event log into cuts and transitions on a frame grid."""
     fps = rec.frame_rate
-    day = round(fps) * 86400
+    day = Timecode.frames_per_day(fps, rec.drop_frame)
     state = copy.deepcopy(rec.drp.header)
     sources = rec.drp.sources
     selected = {f"input-{i}" for i in cameras}
@@ -637,6 +700,20 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
         classified.append((start, end, _picture_for(snap, selected, allow_program), bool(block.get("transitionActive")),
                            str(block.get("transitionType") or "Mix")))
 
+    # Unrelated sparse updates (e.g. an input label) can split an active mix.
+    # Treat a contiguous run with unchanged picture/type as one transition,
+    # otherwise the next active interval is mistaken for the finished picture.
+    joined: List[Tuple[int, int, Picture, bool, str]] = []
+    for interval in classified:
+        if (joined and interval[3] and joined[-1][3] and joined[-1][1] == interval[0]
+                and joined[-1][2] == interval[2] and joined[-1][2].reason == interval[2].reason
+                and joined[-1][4] == interval[4]):
+            previous = joined[-1]
+            joined[-1] = (previous[0], interval[1], previous[2], True, previous[4])
+        else:
+            joined.append(interval)
+    classified = joined
+
     # 3. Resolve transition intervals against their neighbours and merge equal pictures.
     cuts: List[Cut] = []
 
@@ -674,7 +751,7 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
                 append(cut_point, end, after)
             else:
                 cuts[-1].end = cut_point
-                approximated = kind.lower() not in ("mix", "dip")
+                approximated = kind.lower() != "mix"
                 append(cut_point, end, after, Transition(cut_point - half, cut_point + half, kind, approximated))
 
     cuts = [c for c in cuts if c.end > c.start]
@@ -762,6 +839,8 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
         probe = build_edit_list(rec, cameras_available, "cut")
         cameras = [i for i in cameras_available if f"input-{i}" in probe.angles_used] or cameras_available[:1]
     cameras = list(dict.fromkeys(int(c) for c in cameras))
+    if not cameras:
+        raise ConversionError("Choose at least one camera input.")
     missing = [c for c in cameras if c not in cameras_available]
     if missing:
         raise ConversionError("These inputs have no ISO recording: " + ", ".join(map(str, missing))
@@ -803,12 +882,39 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
         prefix = rec.name + " "
         if label.startswith(prefix) and len(label) > len(prefix):
             label = label[len(prefix):]
-        angles.append(Angle(f"audio-{re.sub(r'[^A-Za-z0-9]+', '-', path.stem).strip('-').lower()}", label, "audio", None, path))
+        base_id = "audio-" + re.sub(r"[^A-Za-z0-9]+", "-", path.stem).strip("-").lower()
+        unique_id = base_id
+        suffix = 2
+        while any(a.id == unique_id for a in angles):
+            unique_id = f"{base_id}-{suffix}"
+            suffix += 1
+        angles.append(Angle(unique_id, label, "audio", None, path))
 
-    main_angle = next((a.id for a in angles if a.audio == main_path), None)
+    main_angle = next((a.id for a in angles if main_path is not None and a.audio == main_path), None)
     if main_angle is None:
         main_angle = next((a.id for a in angles if a.kind == "camera"), angles[0].id)
         rec.warnings.append("No WAV files found; the main soundtrack is the first camera's MP4 audio.")
+    # Asset start describes a source's own clock; it does NOT align two files
+    # placed at the same offset. Native ATEM files should share the start.
+    # Keep the round-tripped XML shape; flag mismatches for manual sync instead
+    # of claiming that merely copying BWF/timecode metadata corrected them.
+    for angle in angles:
+        if angle.audio:
+            info = probe_wav(angle.audio)
+            if info.time_reference is None:
+                rec.warnings.append(f"{angle.audio.name}: no Broadcast Wave time reference; assuming a common recording start. Check sync.")
+            elif abs(Fraction(info.time_reference, info.sample_rate) - rec.start_time) > rec.frame_duration:
+                rec.warnings.append(f"{angle.audio.name}: start time differs from the log; automatic offset correction is not supported. Check sync in Final Cut.")
+            if info.duration + rec.frame_duration < rec.duration:
+                rec.warnings.append(f"{angle.audio.name}: audio ends before the project; check the tail for silence.")
+        if angle.video and angle.kind != "still":
+            info = probe_mp4(angle.video)
+            if info.frame_rate != rec.frame_rate or (info.width, info.height) != (rec.width, rec.height):
+                raise ConversionError(f"{angle.video.name}: video format differs from the recording. Mixed formats are not supported.")
+            if info.timecode_frames is not None and info.timecode_frames != rec.start_frames:
+                rec.warnings.append(f"{angle.video.name}: start time differs from the log; automatic offset correction is not supported. Check sync in Final Cut.")
+            if info.frames < rec.total_frames:
+                rec.warnings.append(f"{angle.video.name}: video ends before the project; check the tail for missing picture.")
     base = name or rec.root.name
     return Plan(rec, edit, angles, main_angle, base, base if event is None else event, transitions)
 
@@ -1036,27 +1142,29 @@ def _osascript(script: str, *args: str) -> str:
     return result.stdout.rstrip("\n")
 
 
-def choose_from_list(prompt: str, items: Sequence[str], defaults: Sequence[str], multiple: bool) -> List[str]:
+def choose_from_list(prompt: str, items: Sequence[str], defaults: Sequence[str], multiple: bool, allow_empty: bool = False) -> List[str]:
     script = f'''on run argv
-set n to (item 1 of argv) as integer
+set promptText to item 1 of argv
+set n to (item 2 of argv) as integer
 set theDefaults to {{}}
-if n > 0 then set theDefaults to items 2 thru (n + 1) of argv
-set theItems to items (n + 2) thru -1 of argv
-set answer to choose from list theItems with title "ATEM ISO to FCPXML" with prompt (item 1 of my promptText) default items theDefaults {"with multiple selections allowed" if multiple else "without multiple selections allowed"} without empty selection allowed
+if n > 0 then set theDefaults to items 3 thru (n + 2) of argv
+set theItems to items (n + 3) thru -1 of argv
+set answer to choose from list theItems with title "ATEM ISO to FCPXML" with prompt promptText default items theDefaults {"with multiple selections allowed" if multiple else "without multiple selections allowed"} {"with" if allow_empty else "without"} empty selection allowed
 if answer is false then error number -128
-set AppleScript's text item delimiters to linefeed
-return answer as text
-end run
-on promptText()
-return {{{json.dumps(prompt)}}}
-end promptText'''
+set indices to {{}}
+repeat with i from 1 to count theItems
+if item i of theItems is in answer then set end of indices to i
+end repeat
+set AppleScript's text item delimiters to ","
+return indices as text
+end run'''
     try:
-        out = _osascript(script, str(len(defaults)), *defaults, *items)
+        out = _osascript(script, prompt, str(len(defaults)), *defaults, *items)
     except ConversionError as exc:
         if "-128" in str(exc) or "User canceled" in str(exc):
             raise ConversionError("Cancelled.") from None
         raise
-    return [line for line in out.split("\n") if line]
+    return [items[int(index) - 1] for index in out.split(",") if index]
 
 
 def ask_buttons(message: str, buttons: Sequence[str], default: str, title: str = "ATEM ISO to FCPXML") -> str:
@@ -1105,7 +1213,7 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
     if candidates:
         suggested = [w.name for w in candidates if w.stem not in camera_stems or w.name == main]
         extras = choose_from_list("Add these WAVs as extra audio-only angles?\n\nThey stay separate; nothing is mixed together.",
-                                  [w.name for w in candidates], suggested, True)
+                                  [w.name for w in candidates], suggested, True, allow_empty=True)
     return selected, main, extras
 
 
@@ -1114,7 +1222,7 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
 def locate_drp(target: Path) -> Path:
     target = target.expanduser()
     if target.is_dir():
-        candidates = [p for p in sorted(target.glob("*.drp")) if not p.name.startswith("._")]
+        candidates = [p for p in sorted(target.iterdir()) if p.suffix.lower() == ".drp" and p.is_file() and not p.name.startswith("._")]
         if len(candidates) != 1:
             raise ConversionError(f"Expected exactly one .drp in {target.name}; found {len(candidates)}.")
         return candidates[0].resolve()
@@ -1132,6 +1240,42 @@ def parse_cameras(text: Optional[str]) -> Optional[List[int]]:
         return [int(part) for part in re.split(r"[\s,]+", text.strip()) if part]
     except ValueError as exc:
         raise ConversionError("--cameras expects input numbers such as 1,2") from exc
+
+
+def write_output(output: Path, payload: bytes, replace: bool = False) -> None:
+    """Publish complete XML without following output links or truncating existing files."""
+    if output.is_symlink():
+        raise ConversionError("Refusing a symbolic link as the output file; choose a new .fcpxml name.")
+    if not replace:
+        # Exclusive creation works on exFAT ATEM disks too (hard links do not).
+        # It also closes the race between the earlier existence check and writing.
+        try:
+            fh = output.open("xb")
+        except FileExistsError:
+            raise ConversionError(f"{output} already exists. Use --force to replace it.") from None
+        try:
+            with fh:
+                fh.write(payload)
+                fh.flush()
+                os.fsync(fh.fileno())
+        except OSError:
+            output.unlink(missing_ok=True)
+            raise
+        return
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=output.parent, prefix=".atem-", suffix=".tmp", delete=False) as fh:
+            temporary = Path(fh.name)
+            fh.write(payload)
+            fh.flush()
+            os.fsync(fh.fileno())
+        # Replace the directory entry, never truncate its inode: even a hard link
+        # to a recording cannot damage that recording. Same-directory rename
+        # also preserves the old XML if preparing the replacement fails.
+        os.replace(temporary, output)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
@@ -1168,7 +1312,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             extra = chosen
         plan = make_plan(rec, cameras, audio, extra, args.transitions, args.name, "" if args.no_event else args.event, args.program_angle)
         payload = build_fcpxml(plan)
-        ET.fromstring(payload)  # the XML must at least be well formed
+        try:
+            ET.fromstring(payload)  # Reject control characters before touching output.
+        except ET.ParseError as exc:
+            raise ConversionError("A recording name or log label contains characters that XML cannot represent. Rename it or correct the label.") from exc
 
         output = (args.output.expanduser() if args.output else drp_path.with_suffix(".fcpxml")).absolute()
         if output.suffix.lower() != ".fcpxml":
@@ -1177,16 +1324,23 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print("\n".join(plan.summary()))
             print(f"Would write {output}")
             return 0
-        if output.exists() and not args.force:
+        replace = args.force
+        if output.exists() and not replace:
             if interactive:
                 answer = ask_buttons(f"{output.name} already exists in this folder. Replace it?", ["Cancel", "Replace"], "Replace")
                 if answer != "Replace":
                     raise ConversionError("Cancelled.")
+                replace = True
             else:
                 raise ConversionError(f"{output} already exists. Use --force to replace it or --output for a new name.")
-        if output.resolve() == drp_path.resolve():
-            raise ConversionError("Refusing to overwrite the .drp itself.")
-        output.write_bytes(payload)
+        protected = {drp_path.resolve()}
+        protected.update(p.resolve() for p in rec.audio_files.values())
+        protected.update(source.mp4.resolve() for source in rec.sources.values() if source.mp4)
+        if rec.program_mp4:
+            protected.add(rec.program_mp4.resolve())
+        if output.resolve() in protected:
+            raise ConversionError("Refusing to overwrite the .drp or recording media.")
+        write_output(output, payload, replace)
 
         summary = plan.summary()
         print(f"Wrote {output}")
