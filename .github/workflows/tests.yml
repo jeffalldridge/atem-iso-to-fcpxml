@@ -34,4 +34,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
+      - name: Check audio inclusion combinations
+        run: |
+          xcrun swiftc macos/AudioSelection.swift macos/AudioSelectionTests.swift -o /tmp/atem-audio-tests
+          /tmp/atem-audio-tests
       - run: python scripts/build_macos_app.py

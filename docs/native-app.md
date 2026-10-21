@@ -15,6 +15,10 @@ The app is installed into the user's Applications folder. The builder regenerate
 - `scripts/build_macos_app.py`: compile, bundle the Python files, generate the icon, ad-hoc sign, and optionally install.
 - `macos/MakeIcon.swift`: vector icon matching the project's favicon palette and shapes.
 
+Audio inclusion is defined in `macos/AudioSelection.swift`: the soundtrack takes priority, selected-camera WAVs are already included with their camera, and only other sources may be extra audio-only angles. Included sources remain visible with a reason. Changing cameras or soundtrack clears extras that are no longer optional; changing back does not silently reselect them. `AudioSelectionTests.swift` checks all 128 combinations of three cameras and four soundtrack sources.
+
+The app uses a compact 520-point-wide window, with a shorter opening/completion state and a scrollable selection state.
+
 The app runs the engine off the main thread. It drains process output before waiting so long warning reports cannot fill a pipe and freeze conversion. It prevents closing or replacing the active recording during a write. Cancel before conversion produces no file; stopping a write midway is deliberately not offered. Canceling a replacement sheet preserves the current selections and existing file.
 
 One recording is accepted at a time. Multi-session logs currently show the engine's error and require the CLI's `--session` option. Conversion does not modify the recording. The existing engine protects media paths and handles exclusive creation and replacement.

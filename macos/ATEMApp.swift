@@ -1,12 +1,6 @@
 import SwiftUI
 import AppKit
 
-struct Camera: Decodable, Identifiable { let id: Int; let name: String; let used: Bool; let wav: String? }
-struct Audio: Decodable, Identifiable { let id: String; let name: String }
-struct Recording: Decodable {
-    let path: String; let name: String; let output: String
-    let cameras: [Camera]; let audio: [Audio]; let soundtrack: String; let warnings: [String]
-}
 struct Reply: Decodable { let ok: Bool; let error: String?; let recording: Recording?; let output: String?; let report: String? }
 struct Request: Encodable, Sendable {
     let action: String; let path: String
@@ -51,8 +45,10 @@ func callEngine(_ request: Request) throws -> Reply {
 
     var optionalAudio: [Audio] {
         guard let r = recording else { return [] }
-        let included = Set(r.cameras.filter { cameras.contains($0.id) }.compactMap(\.wav))
-        return r.audio.filter { $0.id != soundtrack && !included.contains($0.id) }
+        return r.audio.filter { inclusionReason($0.id, cameras: r.cameras, selected: cameras, soundtrack: soundtrack) == nil }
+    }
+    func reconcileAudio() {
+        extras.formIntersection(Set(optionalAudio.map(\.id)))
     }
     func openPanel() {
         guard !busy else { return }
@@ -153,12 +149,24 @@ struct ContentView: View {
                                 }.pickerStyle(.radioGroup).labelsHidden()
                             }
                         }
-                        section("Extra audio", note: "Optional angles for later editing. Leave unchecked to add none.") {
-                            if model.optionalAudio.isEmpty { Text("All available audio is already included.").foregroundStyle(.secondary) }
-                            ForEach(model.optionalAudio) { audio in
-                                Toggle(audio.name, isOn: Binding(get: { model.extras.contains(audio.id) }, set: { value in
-                                    if value { model.extras.insert(audio.id) } else { model.extras.remove(audio.id) }
-                                })).toggleStyle(.checkbox).help(audio.id)
+                        if !rec.audio.isEmpty {
+                            section("Extra audio", note: "Optional angles, not mixed into the soundtrack.") {
+                                ForEach(rec.audio) { audio in
+                                    let reason = inclusionReason(audio.id, cameras: rec.cameras, selected: model.cameras, soundtrack: model.soundtrack)
+                                    if let reason {
+                                        HStack {
+                                            Image(systemName: "checkmark").frame(width: 14)
+                                            Text(audio.name)
+                                            Spacer()
+                                            Text(reason).font(.caption)
+                                        }.foregroundStyle(.secondary)
+                                            .accessibilityElement(children: .combine)
+                                    } else {
+                                        Toggle(audio.name, isOn: Binding(get: { model.extras.contains(audio.id) }, set: { value in
+                                            if value { model.extras.insert(audio.id) } else { model.extras.remove(audio.id) }
+                                        })).toggleStyle(.checkbox).help(audio.id)
+                                    }
+                                }
                             }
                         }
                         if !rec.warnings.isEmpty {
@@ -203,7 +211,9 @@ struct ContentView: View {
                 }
             }.padding(16).frame(height: 62)
         }
-        .frame(minWidth: 560, idealWidth: 620, minHeight: 480, idealHeight: 760)
+        .frame(width: 520, height: model.recording == nil || model.output != nil ? 360 : 720)
+        .onChange(of: model.cameras) { _ in model.reconcileAudio() }
+        .onChange(of: model.soundtrack) { _ in model.reconcileAudio() }
         .alert("Replace existing XML?", isPresented: $model.confirmReplace) {
             Button("Cancel", role: .cancel) {}
             Button("Replace", role: .destructive) { model.create(replace: true) }
@@ -241,7 +251,7 @@ struct ContentView: View {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
         Window("ATEM ISO to FCPXML", id: "converter") { ContentView(model: delegate.model) }
-            .defaultSize(width: 620, height: 760)
+            .windowResizability(.contentSize)
             .commands {
                 CommandGroup(replacing: .newItem) {
                     Button("Open Recording…") { delegate.model.openPanel() }.keyboardShortcut("o").disabled(delegate.model.busy)

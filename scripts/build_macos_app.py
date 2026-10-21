@@ -29,7 +29,7 @@ def main():
     resources.mkdir(parents=True, exist_ok=True)
     subprocess.run(['xcrun', 'swiftc', '-parse-as-library', '-O', '-target',
                     ('arm64' if platform.machine() == 'arm64' else 'x86_64') + '-apple-macosx13.0',
-                    str(ROOT / 'macos/ATEMApp.swift'), '-o', str(executable)], check=True)
+                    str(ROOT / 'macos/AudioSelection.swift'), str(ROOT / 'macos/ATEMApp.swift'), '-o', str(executable)], check=True)
     for source in (ROOT / 'atem_iso_to_fcpxml.py', ROOT / 'macos/bridge.py'):
         shutil.copy2(source, resources / source.name)
     iconset = ROOT / 'build' / 'AppIcon.iconset'
