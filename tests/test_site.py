@@ -22,6 +22,7 @@ class Page(HTMLParser):
         self.part = None
         self.question = self.answer = ""
         self.in_article = False
+        self.title, self.in_title = "", False
 
     def handle_starttag(self, tag, attrs):
         a = dict(attrs)
@@ -39,6 +40,8 @@ class Page(HTMLParser):
             self.images.append(a)
         if tag == "h1":
             self.headings.append(tag)
+        if tag == "title":
+            self.in_title = True
         if tag == "script":
             self.in_schema = a.get("type") == "application/ld+json"
         if tag == "article":
@@ -48,6 +51,8 @@ class Page(HTMLParser):
             self.part = tag
 
     def handle_endtag(self, tag):
+        if tag == "title":
+            self.in_title = False
         if tag == "script":
             self.in_schema = False
         if tag in ("h3", "p"):
@@ -57,6 +62,8 @@ class Page(HTMLParser):
             self.in_article = False
 
     def handle_data(self, data):
+        if self.in_title:
+            self.title += data
         if self.in_schema:
             self.schema += data
         else:
@@ -85,7 +92,11 @@ class SiteTests(unittest.TestCase):
         raw = image.read_bytes()
         self.assertEqual(raw[:8], b"\x89PNG\r\n\x1a\n")
         self.assertEqual(struct.unpack(">II", raw[16:24]), (1200, 630))
+        self.assertEqual((int(p.metas["og:image:width"]), int(p.metas["og:image:height"])), (1200, 630))
         self.assertLess(len(raw), 500000)
+        # Search results truncate near these lengths; keep the point in the first words.
+        self.assertLessEqual(len(p.metas["description"]), 160)
+        self.assertLessEqual(len(self.page.title), 70)
 
     def test_local_links_and_accessible_references(self):
         self.assertEqual(len(self.page.ids), len(set(self.page.ids)))
@@ -113,8 +124,34 @@ class SiteTests(unittest.TestCase):
                 self.assertEqual(path.suffix, ".png")
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
                 self.assertEqual(path.read_bytes()[25], 6, "Screenshot must be RGBA")
+                # Declared dimensions are the file's own, so the page never reflows or distorts a screenshot.
+                self.assertEqual((int(attrs["width"]), int(attrs["height"])), struct.unpack(">II", path.read_bytes()[16:24]))
                 self.assertTrue(attrs["alt"])
         self.assertEqual(len(screenshots), 3)
+
+    def test_download_button_points_at_the_installer_asset(self):
+        direct = "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg"
+        self.assertIn(direct, self.page.refs)
+        app = next(node for node in self.graph if node["@type"] == "SoftwareApplication")
+        self.assertEqual(app["downloadUrl"], direct)
+        # The release workflow publishes exactly this file name; see docs/releasing.md.
+        self.assertIn("ATEM-ISO-to-FCPXML.dmg", (Path(__file__).resolve().parents[1] / "docs" / "releasing.md").read_text())
+
+    def test_screenshots_have_real_transparent_window_corners(self):
+        import zlib
+        for name in ("01-open.png", "02-choices.png", "03-done.png"):
+            raw = (SITE / "images" / name).read_bytes()
+            width, height, depth, color = struct.unpack(">IIBB", raw[16:26])
+            self.assertEqual((depth, color), (8, 6), name)
+            pixels, pos = b"", 8
+            while pos < len(raw):
+                size, kind = struct.unpack(">I4s", raw[pos:pos + 8])
+                if kind == b"IDAT":
+                    pixels += raw[pos + 8:pos + 8 + size]
+                pos += 12 + size
+            # The first pixel of the first row is stored literally under every PNG filter: red, green, blue, alpha.
+            first_alpha = zlib.decompress(pixels)[4]
+            self.assertEqual(first_alpha, 0, f"{name}: the window corner must be transparent, not flattened")
 
     def test_native_window_edges_are_not_restyled(self):
         css = (SITE / "style.css").read_text()

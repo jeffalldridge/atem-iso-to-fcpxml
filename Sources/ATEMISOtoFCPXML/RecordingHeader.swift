@@ -45,9 +45,10 @@ struct TimelineLanes: View {
                     let width = max(1, (segment.end - segment.start) * size.width)
                     layer.fill(Path(CGRect(x: x, y: 0, width: width, height: video.height)), with: .color(model.color(for: segment.angleID)))
                     layer.fill(Path(CGRect(x: x, y: 0, width: 1, height: video.height)), with: .color(.black.opacity(0.35)))
-                    if width > 72 {
-                        layer.draw(Text(model.angleName(segment.angleID)).font(.caption).foregroundStyle(.white.opacity(0.95)),
-                                   at: CGPoint(x: x + 8, y: video.midY), anchor: .leading)
+                    // Label a segment only when its name fits whole; a clipped name would misname the angle.
+                    let label = layer.resolve(Text(model.angleName(segment.angleID)).font(.caption).foregroundStyle(.white.opacity(0.95)))
+                    if label.measure(in: CGSize(width: size.width, height: video.height)).width + 16 <= width {
+                        layer.draw(label, at: CGPoint(x: x + 8, y: video.midY), anchor: .leading)
                     }
                 }
                 for segment in model.timeline where segment.dissolveIn {

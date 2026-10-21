@@ -10,7 +10,7 @@ The native SwiftUI app requires macOS 15 or later and includes a Swift conversio
 
 - [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation, and compatibility.
 - [README](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/README.md): command-line options and limitations.
-- [Download for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest): signed, notarized app for macOS 15 or later; the release page also carries the Python converter and a Finder Quick Action.
+- [Download for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg): the signed, notarized disk image for macOS 15 or later. The [release page](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) also carries the Python converter and an optional Finder Quick Action.
 - [Source](https://github.com/jeffalldridge/atem-iso-to-fcpxml): Swift app and engine in Sources/, the Python reference converter atem_iso_to_fcpxml.py; the two are tested to produce identical XML.
 
 ## Implementation and Evidence
@@ -19,8 +19,8 @@ The native SwiftUI app requires macOS 15 or later and includes a Swift conversio
 - [DRP observations](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/drp-format.md): observed native switcher log, not a general Resolve project archive parser.
 - [FCPXML structure](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/fcpxml-structure.md): compound camera angles and verified import shapes.
 - [Validation](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/validation.md): distinguish synthetic coverage, DTD checks, and real Final Cut round trips.
-- [Contributor instructions](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/AGENTS.md): project boundaries.
+- [Contributing](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/CONTRIBUTING.md): setup, tests, and what needs a Final Cut round trip. [AGENTS.md](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/AGENTS.md) holds the same rules for coding assistants.
 
 ## Important Limits
 
-Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.
+Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. A .drp that holds several recording sessions is not opened by the app; the command-line version can choose one with --session. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.

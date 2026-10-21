@@ -20,7 +20,7 @@ func png(_ pixels: Int) -> Data {
     return bitmap.representation(using: .png, properties: [:])!
 }
 
-for (name, size) in [("app-icon-1024.png", 1024), ("app-icon-512.png", 512), ("favicon-192.png", 192), ("apple-touch-icon.png", 180), ("favicon-32.png", 32)] {
+for (name, size) in [("app-icon-1024.png", 1024), ("favicon-192.png", 192), ("apple-touch-icon.png", 180), ("favicon-32.png", 32)] {
     try png(size).write(to: out.appendingPathComponent(name))
 }
 print("Rendered app icons into \(out.path)")
