@@ -1301,6 +1301,8 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
 
 def locate_drp(target: Path) -> Path:
     target = target.expanduser()
+    if not target.exists():
+        raise ConversionError(f"Cannot find {target}. If the recording is on an external drive, check that the drive is connected.")
     if target.is_dir():
         candidates = [p for p in sorted(target.iterdir()) if p.suffix.lower() == ".drp" and p.is_file() and not p.name.startswith("._")]
         if len(candidates) != 1:

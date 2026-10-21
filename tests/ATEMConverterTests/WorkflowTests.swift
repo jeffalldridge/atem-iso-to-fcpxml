@@ -109,6 +109,43 @@ final class WorkflowTests: XCTestCase {
         XCTAssertFalse(termination.pending)
     }
 
+    /// The window's choices, the summary line and the written XML must describe the same audio: every WAV the
+    /// choices imply appears exactly once, and nothing else does.
+    func testWrittenAudioMatchesTheVisibleChoices() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        try await settle(model)
+        let all = ["Show CAM 1.wav", "Show CAM 2.wav", "Show CAM 3.wav", "Show CAM 4.wav", "Show MIC 1.wav", "Show MIC 2.wav"]
+        let cases: [(cameras: Set<Int>, soundtrack: String, extras: [String])] = [
+            ([1], "Show CAM 1.wav", []),
+            ([1, 2], "Show MIC 1.wav", ["Show MIC 2.wav"]),
+            ([2], "Show CAM 3.wav", ["Show CAM 4.wav", "Show MIC 1.wav"]),   // soundtrack from an unselected camera
+            ([1, 2, 3], "Show CAM 2.wav", all),                              // extras that are already included must be ignored
+        ]
+        for (index, test) in cases.enumerated() {
+            model.selectedCameras = test.cameras
+            model.soundtrack = test.soundtrack
+            model.extraAudio = Set(test.extras)
+            // What the window offers as extras never repeats a camera WAV or the soundtrack.
+            let offered = Set(model.optionalAudio.map(\.id))
+            XCTAssertTrue(offered.isDisjoint(with: Set(test.cameras.map { "Show CAM \($0).wav" } + [test.soundtrack])), "case \(index)")
+            let expected = Set(test.cameras.map { "Show CAM \($0).wav" } + [test.soundtrack] + model.extraAudio)
+            model.convert(replace: true)
+            try await settle(model)
+            XCTAssertEqual(model.phase, .done, model.problem?.message ?? "case \(index)")
+            let xml = try String(contentsOf: fixture.root.appendingPathComponent("Show.fcpxml"), encoding: .utf8)
+            let written = xml.components(separatedBy: "<asset ").dropFirst().compactMap { chunk -> String? in
+                guard let start = chunk.range(of: "name=\"")?.upperBound, let end = chunk[start...].firstIndex(of: "\"") else { return nil }
+                let name = String(chunk[start..<end])
+                return name.hasSuffix(".wav") ? name : nil
+            }
+            XCTAssertEqual(written.count, Set(written).count, "a WAV was written twice in case \(index)")
+            XCTAssertEqual(Set(written), expected, "case \(index)")
+        }
+    }
+
     func testMultipleSessionsExplainTheCommandLineOption() async throws {
         let fixture = try Fixtures.RecordingDir()
         defer { fixture.cleanup() }
