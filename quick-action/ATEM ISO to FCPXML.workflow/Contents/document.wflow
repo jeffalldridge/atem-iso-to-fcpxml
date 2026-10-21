@@ -64,14 +64,8 @@ if (( $# == 0 )); then
   /usr/bin/osascript -e 'display alert "ATEM ISO to FCPXML" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'
   exit 1
 fi
-# Prefer the installed native app; the standalone workflow remains a fallback.
-preferred=$(/usr/bin/defaults read com.tentstudios.atem-iso-to-fcpxml PreferredAppPath 2&gt;/dev/null || true)
-# Use the installed copy most recently opened, including migration from the preview.
-case "$preferred" in
-  "$HOME/Applications/ATEM ISO to FCPXML.app"|"/Applications/ATEM ISO to FCPXML.app") ;;
-  *) preferred="" ;;
-esac
-for app in "$preferred" "/Applications/ATEM ISO to FCPXML.app" "$HOME/Applications/ATEM ISO to FCPXML.app"; do
+# When the Mac app is installed, hand the recording to it; the embedded converter is the fallback.
+for app in "/Applications/ATEM ISO to FCPXML.app" "$HOME/Applications/ATEM ISO to FCPXML.app"; do
   if [[ -d "$app" ]]; then
     exec /usr/bin/open -a "$app" "$@"
   fi
@@ -111,7 +105,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 
 FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"

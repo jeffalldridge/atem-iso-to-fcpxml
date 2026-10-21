@@ -1,6 +1,6 @@
 # ATEM ISO to FCPXML
 
-> Free, MIT-licensed local Python utility that converts a native Blackmagic ATEM ISO switcher log and its recording folder into Final Cut Pro XML.
+> Free, MIT-licensed Mac app (and one-file Python converter) that turns a native Blackmagic ATEM ISO recording into a Final Cut Pro multicam project with the live switch and WAV audio.
 
 This is a concise navigation aid for assistants, not a crawler policy or a promise of search visibility. The linked documentation is authoritative for current behavior.
 
@@ -10,8 +10,8 @@ The native SwiftUI app is a source-build preview requiring macOS 13+. See the RE
 
 - [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation, and compatibility.
 - [README](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/README.md): command-line options and limitations.
-- [Releases](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest): Finder Quick Action download.
-- [Source](https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/atem_iso_to_fcpxml.py): one Python 3.9+ standard-library file.
+- [Download for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg): signed, notarized app for macOS 15 or later; the release page also carries the Python converter and a Finder Quick Action.
+- [Source](https://github.com/jeffalldridge/atem-iso-to-fcpxml): Swift app and engine in Sources/, the Python reference converter atem_iso_to_fcpxml.py; the two are tested to produce identical XML.
 
 ## Implementation and Evidence
 
@@ -23,4 +23,4 @@ The native SwiftUI app is a source-build preview requiring macOS 13+. See the RE
 
 ## Important Limits
 
-Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; missing WAVs can fall back to AAC. Start-time mismatches are warned about, not automatically corrected. Keys use program footage when available; otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.
+Real imports were verified with ATEM Mini Pro ISO, 1080p60, and Final Cut Pro 12.4. Other models and frame rates need real-media validation. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.

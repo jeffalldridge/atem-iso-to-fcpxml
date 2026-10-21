@@ -44,3 +44,4 @@ dist/
 .idea/
 .vscode/
 .claude/settings.local.json
+.build/

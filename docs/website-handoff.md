@@ -1,36 +1,28 @@
 # Tent Studios Website Handoff
 
-Checked October 21, 2026. Recheck release state before publishing version claims.
+Checked October 21, 2026. Recheck the release page before publishing version claims.
 
 ## Product Copy
 
-**ATEM ISO to FCPXML** converts a Blackmagic ATEM ISO recording into a Final Cut Pro multicam clip and live-edit project, using matching WAV audio when available.
+**ATEM ISO to FCPXML** turns a Blackmagic ATEM Mini ISO recording into a Final Cut Pro multicam project: the live switch rebuilt as a timeline, with each camera's uncompressed WAV audio in place of the MP4 audio.
 
 - Free and open source under MIT.
-- Finder Quick Action: macOS and Python 3.9 or later.
-- No third-party Python packages; Python itself is required. Prefer this wording over “no dependencies.”
-- Conversion runs locally and writes an XML beside the recording. It does not upload or transcode footage.
-- Import creates an event containing the multicam, project, and selected footage; it does not target the selected event.
-- Tested with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. Do not imply every ATEM ISO model or frame rate has been tested.
+- A native Mac app: macOS 15 or later, Apple silicon and Intel, signed and notarized, about 2 MB, no dependencies (no Python, no Homebrew, no Resolve). Drag to Applications.
+- Conversion runs locally and writes one `.fcpxml` beside the recording. It never changes or uploads footage.
+- Importing the XML creates an event named after the recording folder containing the multicam clip, the Live Edit project, and the selected footage; it does not target the currently selected event.
+- Verified with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. Do not imply every ATEM ISO model or frame rate has been tested.
+- A command-line version (one Python file) and a Finder Quick Action exist for people who want them; they are secondary.
 
-## Links and Release State
+Search phrases the page should answer: "ATEM ISO to Final Cut Pro," "open ATEM recording in Final Cut," "DRP to FCPXML," "ATEM Mini ISO multicam Final Cut," "convert DRP to Final Cut."
 
-- [Product site](https://jeffalldridge.github.io/atem-iso-to-fcpxml/)
-- [Releases](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest)
-- [Troubleshooting](troubleshooting.md)
-- [Validation](validation.md)
-- [Vendor references](vendor-reference.md)
+## Links
 
-The published download is **1.0.0**, which has a Finder dialog bug (`promptText`, error -1728). **1.0.1 is source-only**, including the fix. Do not advertise 1.0.1 as released or present the 1.0.0 ZIP as a working Finder install. The troubleshooting page provides the current source-install workaround. Update this note once the patch is published and its downloaded artifact is verified.
+- Product site: https://jeffalldridge.github.io/atem-iso-to-fcpxml/
+- Download (always the latest disk image): https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg
+- Release page: https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest
+- Source: https://github.com/jeffalldridge/atem-iso-to-fcpxml
+- Screenshots and the favicon: `docs/site/images/` and `docs/site/favicon.svg` in the repository (the screenshots show a synthetic "Live Show" recording, no real footage).
 
-## Useful Support Content
+## Release State
 
-One practical “ATEM ISO to Final Cut Pro” guide is enough: requirements, installation, camera/audio choices, XML import, and the event destination. Include the native ATEM DRP versus Resolve-exported DRP distinction and link to troubleshooting. Avoid separate near-duplicate pages for each search phrase.
-
-Keep implementation documentation in this repository and link to it. Use the product SVG as the icon source; preserve transparent corners when rasterizing. Leave ratings, reviews, and compatibility claims out of structured data unless supported by evidence.
-
-The paid-app manifest repairs and portfolio checks mentioned by the website agent were not audited in this repository. This handoff does not validate those changes.
-
-## Native App Preview and Visuals
-
-The current site shows four actual SwiftUI app screenshots using a synthetic Sunday Service recording, with vendor app/file icons. Assets and provenance are in `docs/site/images/`. The app is still a source-build preview (macOS 13+ and Python 3.9+), so link to the README native-app build instructions rather than advertising a released app download. Extra audio is optional and does not mix into the soundtrack; camera WAVs already included with selected cameras stay labeled as such.
+Version 1.1.0 is the first release with the Mac app. Until the `v1.1.0` release exists on GitHub with `ATEM-ISO-to-FCPXML.dmg` attached, the download link above returns 404; link to the release page instead and say "coming soon." The 1.0.0 release only has a Finder Quick Action ZIP with a known dialog bug; do not link to it.

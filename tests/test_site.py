@@ -114,7 +114,7 @@ class SiteTests(unittest.TestCase):
                 self.assertEqual(path.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
                 self.assertEqual(path.read_bytes()[25], 6, "Screenshot must be RGBA")
                 self.assertTrue(attrs["alt"])
-        self.assertEqual(len(screenshots), 4)
+        self.assertEqual(len(screenshots), 3)
 
     def test_schema_faq_matches_readable_content(self):
         faq = next(node for node in self.graph if node["@type"] == "FAQPage")

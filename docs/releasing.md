@@ -1,33 +1,44 @@
-# Releasing the Utility
+# Releasing
 
-The deliverables are a single Python converter and its generated Finder Quick Action. Keep changes reviewable and do not include a recording, downloaded vendor manual, generated FCPXML, or local test library in a release.
+A release is a git tag `vX.Y.Z` on `main`. The Release workflow builds the universal app, signs it with Developer ID, notarizes and staples the app and the disk image, and publishes a GitHub Release with four files:
 
-## Before Tagging
+- `ATEM-ISO-to-FCPXML.dmg` (the download the website links to; the name never changes so `releases/latest/download/` always works)
+- `ATEM-ISO-to-FCPXML-Quick-Action.zip`
+- `atem_iso_to_fcpxml.py`
+- `SHA256SUMS.txt`
 
-1. Review `git diff` and `git status`. Check that `AGENTS.md` and the documented Final Cut structures were respected.
-2. Set the same release version in `atem_iso_to_fcpxml.py` and `pyproject.toml`. The website intentionally omits a version field so its evergreen download page cannot advertise an unreleased version. Move the Unreleased changelog notes under that version and date.
-3. Run:
+## One-time setup: repository secrets
 
-   ```sh
-   python3 scripts/build_quick_action.py
-   python3 -m unittest discover -s tests -v
-   python3 scripts/build_quick_action.py --check
-   git diff --check
-   ```
+The workflow uses the same secret names as macSubtitleOCR-gui, so the same values work for both repositories (Settings → Secrets and variables → Actions):
 
-4. On a Mac with Final Cut, confirm the DTD test actually ran rather than skipped. Linux CI cannot establish Final Cut compatibility.
-5. Exercise the installed Quick Action: two camera inputs, a selected soundtrack, no extra audio, cancellation, existing-output refusal, and explicit replacement. Test a recording folder with spaces and a custom source label. Dialog compilation alone is not this check.
-6. For XML shape changes, import into a scratch Final Cut library, play picture and audio across edits, export XML, compare timings and angles, and record the result in `docs/validation.md`. Check the beginning and tail as well as transitions. Never report this as done based on a unit test.
-7. Commit the intended source, docs, tests, and regenerated bundle. Tag that reviewed commit with `v<version>` when ready to publish. Pushing the tag triggers the release workflow; pushing main can separately deploy website changes.
+| Secret | Value |
+| --- | --- |
+| `MACOS_CERT_P12` | Base64 of the Developer ID Application `.p12` export (certificate and private key) |
+| `MACOS_CERT_PASSWORD` | The password used for that export |
+| `KEYCHAIN_PASSWORD` | Any random string; it protects the temporary keychain on the runner |
+| `DEV_ID` | The identity name, for example `Developer ID Application: Tent Studios, LLC (TEAMID)` |
+| `NOTARY_KEY` | Base64 of the App Store Connect API key `.p8` |
+| `NOTARY_KEY_ID` | The key's 10-character ID |
+| `NOTARY_ISSUER_ID` | The issuer UUID |
 
-## What Automation Checks
+## Before tagging
 
-The release workflow runs the synthetic suite, checks that the tag matches the converter version, verifies the generated bundle, creates the ZIP, copies the standalone Python file, and generates and verifies SHA-256 checksums for those two explicitly named files. Missing release files fail the upload step.
+1. Set the new version in `Resources/Info.plist` (both version keys), `Sources/ATEMConverter/FCPXML.swift`, `atem_iso_to_fcpxml.py`, and `pyproject.toml`. Move the Unreleased changelog notes under that version and date.
+2. Run `python3 scripts/build_quick_action.py` and commit the regenerated bundle.
+3. Run `swift test`, `python3 -m unittest discover -s tests`, and `make app`, and open the app once with a real recording.
+4. For any change to the XML shapes, do a Final Cut round trip and record it in [validation.md](validation.md).
+5. Tag and push: `git tag -a v1.1.0 -m "v1.1.0" && git push origin v1.1.0`.
 
-The ZIP builder uses fixed member order, timestamps, and permissions, and includes only `Contents/Info.plist` and `Contents/document.wflow`. Repeated builds with the same source and Python/compression toolchain produce identical bytes. This is not a promise of identical compressed bytes across all zlib versions, nor a code-signing/notarization claim.
+## Releasing from a Mac instead
 
-## After Publishing
+With the Developer ID certificate in the login keychain and a notarytool profile stored once with `xcrun notarytool store-credentials atem-iso-to-fcpxml --key AuthKey.p8 --key-id ID --issuer UUID`:
 
-Download the release assets and verify them together with `shasum -a 256 -c SHA256SUMS.txt`. Install the downloaded ZIP on a clean user account if available; confirm the Quick Action is visible in Finder and gives an actionable message when a suitable Python interpreter is missing. Confirm the website's download button reaches the intended release.
+```bash
+DEV_ID="Developer ID Application: Tent Studios, LLC (TEAMID)" make release
+```
 
-A checksum confirms consistency with the published manifest, not publisher identity. Keep the validation ledger explicit about untested hardware, physical exFAT drives, older Final Cut versions, and actual Finder interaction.
+`build/ATEM-ISO-to-FCPXML.dmg` is then signed, notarized, and stapled, and can be attached to a release by hand with `gh release create`. Use `NOTARY_PROFILE=name` to pick a different stored profile.
+
+## After publishing
+
+Download the disk image from the release page on a Mac that has never seen the build, open it, drag the app to Applications, and open it: no Gatekeeper warning should appear. Confirm the website's download button resolves to the new file.

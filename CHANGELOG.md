@@ -1,26 +1,13 @@
 # Changelog
 
-## 1.0.1 (Unreleased)
+## 1.1.0 (Unreleased)
 
-- Clarify conditional audio inclusion, clear hidden extra selections, and narrow the native window. Add four synthetic-recording screenshots and application/file icons to the website.
-
-- Add a local SwiftUI app preview with one selection window, inline errors, overwrite confirmation, and completion actions. Installed Finder workflows prefer the app; the Python CLI remains independent.
-
-- Use native checkboxes for cameras and optional audio angles, with a No extra audio button. Cancel exits quietly instead of triggering an Automator error.
-
+- A native Mac app: one universal Swift binary (macOS 15+), signed and notarized, distributed as a disk image. Drop the recording folder, check cameras and soundtrack, create the XML, open it in Final Cut Pro. No Python or developer tools needed.
+- The Swift engine is a port of the Python converter and is tested to write byte-identical XML on synthetic scenarios and on real recordings; the Python script remains the reference and the command-line tool.
+- The Finder Quick Action hands off to the app when the app is installed and otherwise shows native checkbox dialogs; the 1.0.0 dialog error (-1728) is fixed.
 - When the program recording is missing, the first selected camera stands in for keyed and faded sections with a marker instead of a silent gap.
+- Hardened parsing: bounded media reads, version-aware MP4 headers, RF64 and trailing-BEXT WAVs, validated log containers, safer output writes, drop-frame midnight.
 - American English spelling and Chicago style throughout the documentation, website, and messages.
-- Preserve dissolves across unrelated sparse log updates; label dip-to-dissolve conversions as approximations.
-- Read Broadcast Wave metadata after the audio chunk, validate RF64 sizes, and reject truncated audio instead of silently shortening it.
-- Bound metadata reads, validate known log containers, and report XML-incompatible labels without a traceback.
-- Generate reproducible Quick Action ZIPs with an explicit file allowlist; release the standalone Python file and verify checksums before upload.
-
-- Protect output writes against symbolic links, hard links, concurrent creation, and failed replacement; retain exFAT-compatible exclusive creation.
-- Correct 29.97/59.94 drop-frame midnight wrap and reject drop-frame labels at integer rates.
-- Fix the Finder list-dialog `promptText` handler error (-1728). Allow no extra audio in Finder dialogs, preserve multiline choices, reject empty camera lists and session zero, and discover uppercase DRP extensions.
-- Enforce recording-folder containment for WAVs and program video; keep custom audio angle IDs unique.
-- Warn about source-start mismatches and short media, reject mixed video formats, and handle malformed media headers more clearly.
-- Add a vendor reference for maintainers and assistants; correct audio, import, and sync claims in public docs.
 
 ## 1.0.0 (2026-10-21)
 

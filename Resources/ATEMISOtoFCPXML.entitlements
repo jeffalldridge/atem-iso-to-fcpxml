@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!--
+        Not sandboxed: the app reads a recording folder the user chooses anywhere on disk
+        (usually an external SSD) and writes one .fcpxml next to it. These are ordinary
+        user file-system capabilities. The hardened runtime is enabled at signing time.
+    -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+</dict>
+</plist>

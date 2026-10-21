@@ -10,11 +10,13 @@ Please do not attach recordings, `.drp` logs, generated `.fcpxml` files, screens
 
 ## Development
 
-Python 3.9 or newer, standard library only, one file. Keep it that way: the Quick Action embeds `atem_iso_to_fcpxml.py` verbatim.
+The Python converter is one standard-library file and the specification; the Swift engine in `Sources/ATEMConverter` must match it byte for byte (see [docs/app.md](docs/app.md)). The Quick Action embeds `atem_iso_to_fcpxml.py` verbatim.
 
 ```sh
+swift test
 python3 -m unittest discover -s tests -v
 python3 scripts/build_quick_action.py --check
+make app
 ```
 
 Rebuild the committed Quick Action with `python3 scripts/build_quick_action.py` whenever the converter changes; CI fails otherwise.

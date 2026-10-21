@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  test:
+  python:
     name: Python ${{ matrix.python }} on ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,31 +25,24 @@ jobs:
       - name: Quick Action bundle matches the converter
         run: python scripts/build_quick_action.py --check
 
-  native-app:
-    name: Build native Mac app
-    strategy:
-      matrix:
-        os: [macos-15, macos-15-intel]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    env:
-      MACOSX_DEPLOYMENT_TARGET: '13.0'
+  mac-app:
+    name: Swift engine parity and app bundle
+    runs-on: macos-15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Check audio inclusion combinations
+      - name: Swift tests (includes byte-for-byte parity with the Python converter)
+        run: swift test
+      - name: Assemble the universal app (ad-hoc signed)
+        run: make app
+      - name: Verify the bundle
         run: |
-          xcrun swiftc macos/AudioSelection.swift macos/AudioSelectionTests.swift -o /tmp/atem-audio-tests
-          /tmp/atem-audio-tests
-      - run: python -m pip install -r scripts/requirements-macos-build.txt
-      - run: python scripts/build_macos_app.py --bundle-python
-      - name: Exercise bundled engine
-        run: ATEM_TEST_ENGINE="$PWD/build/ATEM ISO to FCPXML.app/Contents/Resources/atem-engine/atem-engine" python -m unittest discover -s tests -p test_macos_bridge.py -v
-      - run: python scripts/package_macos_app.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-preview-${{ matrix.os }}
-          path: dist/*.dmg
-          if-no-files-found: error
+          set -euo pipefail
+          APP="build/ATEM ISO to FCPXML.app"
+          codesign --verify --deep --strict --verbose=1 "$APP"
+          lipo -archs "$APP/Contents/MacOS/ATEMISOtoFCPXML" | grep -q arm64
+          lipo -archs "$APP/Contents/MacOS/ATEMISOtoFCPXML" | grep -q x86_64
+          test "$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")" = "$(python -c 'import atem_iso_to_fcpxml as m; print(m.__version__)')"

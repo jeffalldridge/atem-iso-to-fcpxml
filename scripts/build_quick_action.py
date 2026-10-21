@@ -21,11 +21,6 @@ import uuid
 import zipfile
 from pathlib import Path
 
-if __package__:
-    from .install_bundle import install_bundle
-else:
-    from install_bundle import install_bundle
-
 ROOT = Path(__file__).resolve().parents[1]
 CONVERTER = ROOT / "atem_iso_to_fcpxml.py"
 NAME = "ATEM ISO to FCPXML"
@@ -40,14 +35,8 @@ if (( $# == 0 )); then
   /usr/bin/osascript -e 'display alert "{NAME}" message "Select the ATEM .drp file or its recording folder, then run the Quick Action."'
   exit 1
 fi
-# Prefer the installed native app; the standalone workflow remains a fallback.
-preferred=$(/usr/bin/defaults read com.tentstudios.atem-iso-to-fcpxml PreferredAppPath 2>/dev/null || true)
-# Use the installed copy most recently opened, including migration from the preview.
-case "$preferred" in
-  "$HOME/Applications/ATEM ISO to FCPXML.app"|"/Applications/ATEM ISO to FCPXML.app") ;;
-  *) preferred="" ;;
-esac
-for app in "$preferred" "/Applications/ATEM ISO to FCPXML.app" "$HOME/Applications/ATEM ISO to FCPXML.app"; do
+# When the Mac app is installed, hand the recording to it; the embedded converter is the fallback.
+for app in "/Applications/{NAME}.app" "$HOME/Applications/{NAME}.app"; do
   if [[ -d "$app" ]]; then
     exec /usr/bin/open -a "$app" "$@"
   fi
@@ -183,7 +172,11 @@ def main() -> int:
         services = Path.home() / "Library" / "Services"
         services.mkdir(parents=True, exist_ok=True)
         target = services / BUNDLE.name
-        install_bundle(BUNDLE, target)
+        if target.is_symlink() or target.is_file():
+            target.unlink()
+        elif target.is_dir():
+            shutil.rmtree(target)
+        shutil.copytree(BUNDLE, target)
         subprocess.run(["/System/Library/CoreServices/pbs", "-update"], check=False)
         print(f"Installed {target}\nFinder → right-click the .drp or its folder → Quick Actions → {NAME}")
     return 0

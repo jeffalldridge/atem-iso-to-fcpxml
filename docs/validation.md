@@ -43,7 +43,13 @@ Remaining review follow-ups before public native distribution: verify interprete
 - 68 synthetic tests pass, including checkbox result mapping for empty, multiple, and unusual filenames, cancellation, and Apple DTD validation. The regenerated Quick Action passes its consistency check and was installed locally.
 - The native dialog process reached its modal wait in a smoke test, but the UI automation tool could not attach to the osascript process. Checkbox interaction, keyboard navigation, scrolling, and Finder integration remain to be checked manually; mocked return values do not verify those interactions.
 
-## 2026-10-21: Unreleased Review Fixes
+## 2026-10-21: Version 1.1.0, the Mac app
+
+- The Swift engine (`Sources/ATEMConverter`) writes byte-identical XML to `atem_iso_to_fcpxml.py` on both real recordings (compared with `cmp`) and on the five synthetic parity scenarios in `tests/ATEMConverterTests` (plain cuts; dissolves, a still, a downstream key, fade to black, and a color generator; wipes with explicit cameras, soundtrack, extras, name, no event, and the program angle in all three transition modes; a missing program recording and a missing WAV; drop-frame 59.94 across midnight with a custom input label). 12 Swift tests pass.
+- The app bundle assembled by `make app` is universal (arm64 and x86_64), 2 MB, passes `codesign --verify --deep --strict`, and launches to its empty state. Opening a synthetic recording folder through the system open route populated the choices form with the expected cameras, soundtrack, and 32 clips / 31 dissolves.
+- Not re-verified in this pass: a Final Cut import of XML written by the app (it is byte-identical to the Python output that was round-tripped for 1.0.0, so the earlier evidence applies), Gatekeeper on a clean Mac, and Intel hardware.
+
+## 2026-10-21: Review Fixes
 
 - 61 synthetic tests pass under Apple's Python 3.9.6, including validation against the installed Apple FCPXML 1.10 DTD. Added regressions cover output links and failed replacement, exFAT-compatible creation without hard links, media containment, drop-frame midnight at 29.97 and 59.94, custom labels and audio ID collisions, dialog selection mapping, malformed headers, and invalid options.
 - The second review pass adds regressions for sparse updates inside a dissolve, dip approximation markers, BWF metadata after audio, a sparse RF64 file over 4 GiB, truncated WAV rejection, bounded MP4 reads, malformed log containers, CLI subprocess behavior, input-file preservation, and deterministic release ZIPs. Source files with an unusual `.fcpxml` extension are also protected from output replacement.

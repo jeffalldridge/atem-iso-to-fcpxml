@@ -1,25 +1,25 @@
 # Troubleshooting
 
-## Finder reports a promptText error (-1728)
+## The app says it cannot find the ISO or program files
 
-The 1.0.0 Quick Action tries to read an AppleScript handler as a list. The error appears before camera selection: `Can't get item 1 of «handler promptText»`.
+Open the recording folder itself (the one containing the `.drp`, the `.mp4`, `Video ISO Files`, and `Audio Source Files`), not a parent folder or a copy that only has the `.drp`. The converter finds media relative to the `.drp`, so the subfolders must still be there. Renaming the folder is fine.
 
-The fix is in the 1.0.1 source. The workflow embeds the converter, so pulling source changes does not update an installed Quick Action. From an updated checkout, run:
+## "This .drp holds 2 recording sessions"
 
-```sh
-python3 scripts/build_quick_action.py --install
-```
+The ATEM appended a second session to the same log because the recording was stopped and started under the same name. Use the command line and pick one: `python3 atem_iso_to_fcpxml.py "<folder>" --session 2`.
 
-Dismiss the failed action and start a new one from Finder. Do not reinstall the 1.0.0 release ZIP; it contains the old code. Once a newer release is available, install its workflow and replace the existing copy.
+## Final Cut shows the clips as offline
 
-To inspect the installed version:
+The XML references the files on the drive they were on when converted. Mount that drive, or move the recording folder and use File → Relink Files in Final Cut. Converting again after moving the folder also works.
 
-```sh
-grep '__version__ =' "$HOME/Library/Services/ATEM ISO to FCPXML.workflow/Contents/document.wflow"
-```
+## A camera shows "MP4 audio"
 
-If the error persists with 1.0.1, check whether you opened an older downloaded workflow in Automator rather than the installed Finder action. Report the installed version and error text, without recordings or generated XML.
+No WAV named like that camera's ISO file was found in `Audio Source Files`, so that angle uses the compressed audio inside the MP4. Check that the WAV was not moved or renamed.
 
-## Validation scope
+## The Finder Quick Action shows "Can't get item 1 of «handler promptText»" (error -1728)
 
-The dialog's argument handling and returned selections have synthetic regression coverage. Compilation and unit tests do not establish that every Finder dialog path works. Before publishing the patch, exercise camera selection, soundtrack selection, no extra audio, cancellation, and output replacement through Finder. See [the release checklist](releasing.md).
+That is the 1.0.0 Quick Action. Install the current app instead; the Quick Action from a 1.1.0 or later release hands recordings to the app and has fixed dialogs.
+
+## Something else
+
+Run `python3 atem_iso_to_fcpxml.py "<folder>" --dry-run` and open an issue with the output after removing anything you do not want public. Never attach recordings, logs, generated XML, or libraries.
