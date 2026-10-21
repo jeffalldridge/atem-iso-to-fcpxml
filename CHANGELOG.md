@@ -2,6 +2,8 @@
 
 ## 1.0.1 (Unreleased)
 
+- Clarify conditional audio inclusion, clear hidden extra selections, and narrow the native window. Add four synthetic-recording screenshots and application/file icons to the website.
+
 - Add a local SwiftUI app preview with one selection window, inline errors, overwrite confirmation, and completion actions. Installed Finder workflows prefer the app; the Python CLI remains independent.
 
 - Use native checkboxes for cameras and optional audio angles, with a No extra audio button. Cancel exits quietly instead of triggering an Automator error.

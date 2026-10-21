@@ -6,7 +6,7 @@ Reviewed 2026-10-21. The website remains static HTML and CSS on GitHub Pages: no
 
 Keep the dark charcoal/orange palette, system typography, clear spacing, and a single primary download action. Keep captions focused on what the tool does; avoid unnecessary explanatory disclaimers. Keep answers visible, using headings and dividers rather than dropdowns or accordions. Link to command-line instructions in the README. Use direct section headings; cut repeated selling points and implementation details that do not help someone use the tool. This follows the owner’s preference to avoid extra steps just to read information. Use balanced heading wraps, readable paragraph measures, and a consistent type scale. Keep “Final Cut” together in the hero. Preserve keyboard focus styles, table headings, and the skip link. Long filenames and command blocks must not widen mobile layouts.
 
-The compatibility statement is deliberately narrower than hardware marketing: real-media verification is Mini Pro ISO, 1080p60, Final Cut Pro 12.4. Do not turn synthetic coverage into a claim of verified hardware support. The download links target the latest release page; no unreleased version is advertised in metadata.
+The compatibility statement is deliberately narrower than hardware marketing: real-media verification is Mini Pro ISO, 1080p60, Final Cut Pro 12.4. Do not turn synthetic coverage into a claim of verified hardware support. The site now shows the native app preview and links to its source-build instructions. The published 1.0.0 workflow has a dialog bug; do not route people to it as a working download. Switch to an app download only after a verified release exists.
 
 ## Search and Agents
 
@@ -26,3 +26,5 @@ The page includes a canonical URL, description, Open Graph, and large-image Twit
 - No Search Console indexing, ranking, Core Web Vitals, external rich-result validator, social-platform cache refresh, or post-deployment checks were performed. Do not report those as passed.
 
 Run `python3 -m unittest discover -s tests -p test_site.py -v` after website edits. Regenerate the social image with `swift scripts/build_social_card.swift` if its copy or styling changes. Keep its committed image synchronized with metadata. The Pages workflow deploys `docs/site/` on relevant pushes to main; source edits alone are not a deployment.
+
+Four native app screenshots use a synthetic recording and are documented in `site/images/README.md`, alongside vendor icon provenance. Screenshots link to their full-size image without JavaScript. Preserve the preview label until the app is released.

@@ -30,3 +30,7 @@ One practical “ATEM ISO to Final Cut Pro” guide is enough: requirements, ins
 Keep implementation documentation in this repository and link to it. Use the product SVG as the icon source; preserve transparent corners when rasterizing. Leave ratings, reviews, and compatibility claims out of structured data unless supported by evidence.
 
 The paid-app manifest repairs and portfolio checks mentioned by the website agent were not audited in this repository. This handoff does not validate those changes.
+
+## Native App Preview and Visuals
+
+The current site shows four actual SwiftUI app screenshots using a synthetic Sunday Service recording, with vendor app/file icons. Assets and provenance are in `docs/site/images/`. The app is still a source-build preview (macOS 13+ and Python 3.9+), so link to the README native-app build instructions rather than advertising a released app download. Extra audio is optional and does not mix into the soundtrack; camera WAVs already included with selected cameras stay labeled as such.

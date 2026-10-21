@@ -37,17 +37,6 @@ p code { color:#ffd7c2; overflow-wrap:anywhere; }
 .text-link { font-size:16px; text-decoration:none; }
 .text-link:hover { text-decoration:underline; }
 .requirements { color:var(--muted); font-size:12px; margin-top:18px; }
-.edit-diagram { margin-top:64px; border:1px solid var(--line); border-radius:16px; text-align:left; background:var(--surface); padding:28px 36px 24px; }
-.diagram-top { display:flex; justify-content:space-between; gap:16px; color:var(--muted); font-size:14px; padding-bottom:24px; border-bottom:1px solid var(--line); }
-.diagram-top span:last-child { color:var(--text); }
-.tracks { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:12px; margin-block:28px; }
-.track-label { font-size:10px; letter-spacing:.08em; color:var(--muted); }
-.video-track { display:grid; grid-template-columns:1.3fr .9fr 1.4fr 1fr; gap:3px; }
-.video-track span { padding:21px 14px; background:#704c39; color:#ffddca; font-size:12px; border-top:2px solid var(--accent); }
-.video-track span:nth-child(even) { background:#383845; border-color:#9292a4; color:var(--text); }
-.audio-track { display:flex; gap:20px; align-items:center; background:#263e35; color:#b4d5c5; padding:11px 14px; font-size:12px; min-width:0; }
-.audio-track span { white-space:nowrap; }
-.wave { height:18px; flex:1; background:repeating-linear-gradient(90deg,transparent 0 3px,#769986 3px 5px,transparent 5px 7px); clip-path:polygon(0 40%,5% 15%,10% 30%,18% 0,25% 35%,35% 15%,43% 30%,53% 5%,62% 35%,70% 20%,80% 40%,90% 0,100% 30%,100% 70%,90% 100%,80% 60%,70% 80%,62% 65%,53% 95%,43% 70%,35% 85%,25% 65%,18% 100%,10% 70%,5% 85%,0 60%); }
 figcaption { color:var(--text); font-size:14px; text-align:center; }
 .section { padding-block:100px; }
 .section-heading { margin-bottom:48px; }
@@ -92,9 +81,6 @@ td { color:var(--muted); }
  .section-intro { max-width:none; }
  .steps { gap:28px; }
  .steps h3 { font-size:20px; }
- .edit-diagram { padding:22px; }
- .tracks { grid-template-columns:minmax(0,1fr); gap:8px; }
- .track-label { margin-top:8px; }
 }
 @media(max-width:540px) {
  .nav-links { justify-content:space-between; width:100%; gap:12px; font-size:12px; }
@@ -102,12 +88,34 @@ td { color:var(--muted); }
  .eyebrow { font-size:12px; }
  .actions { gap:20px; }
  .requirements { max-width:250px; margin-inline:auto; }
- .edit-diagram { margin-top:40px; padding:18px 14px; }
- .diagram-top { font-size:11px; gap:8px; }
- .video-track span { font-size:10px; padding:18px 5px; }
  .steps { grid-template-columns:1fr; gap:32px; }
  .steps li::before { margin-bottom:12px; }
  .steps p { margin-top:12px; }
  .section-heading { margin-bottom:32px; }
  .section { padding-block:52px; }
 }
+
+.format-path { display:flex; align-items:center; justify-content:center; gap:24px; margin-top:56px; }
+.format-path > div { display:grid; justify-items:center; gap:12px; font-size:13px; }
+.format-path img { object-fit:contain; }
+.format-arrow { color:var(--muted); padding-bottom:30px; }
+.resolve-note { display:flex; align-items:center; justify-content:center; gap:10px; margin-top:28px; color:var(--muted); font-size:13px; }
+.resolve-note img { flex:none; }
+.screenshots { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:40px; align-items:start; }
+.screenshots figure { min-width:0; }
+.screenshots a { display:flex; align-items:center; justify-content:center; background:var(--surface); padding:20px; border-radius:16px; height:440px; }
+.screenshots img { display:block; width:auto; height:auto; max-width:100%; max-height:100%; border-radius:16px; }
+.screenshots figcaption { text-align:left; margin-top:20px; }
+.screenshots h3 { font-size:21px; }
+.screenshots p { margin-top:10px; color:var(--muted); font-size:16px; }
+@media(max-width:600px) {
+ .format-path { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; align-items:start; }
+ .format-arrow { display:none; }
+ .format-path > div { font-size:11px; max-width:100px; }
+ .format-path img { width:44px; height:44px; }
+ .resolve-note { text-align:left; }
+ .screenshots { grid-template-columns:1fr; gap:32px; }
+ .screenshots a { height:auto; padding:12px; }
+ .screenshots img { height:auto; }
+}
+.section-heading .section-intro { max-width:none; }

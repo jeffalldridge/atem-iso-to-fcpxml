@@ -4,6 +4,8 @@
 
 This is a concise navigation aid for assistants, not a crawler policy or a promise of search visibility. The linked documentation is authoritative for current behavior.
 
+The native SwiftUI app is a source-build preview requiring macOS 13+. See the README for build instructions; the published 1.0.0 workflow still has a dialog bug.
+
 ## Start Here
 
 - [Website](https://jeffalldridge.github.io/atem-iso-to-fcpxml/): workflow, installation, and compatibility.

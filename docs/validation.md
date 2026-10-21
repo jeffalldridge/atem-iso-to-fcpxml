@@ -2,6 +2,12 @@
 
 What has actually been checked, on what, and what has not. Dates are absolute.
 
+## 2026-10-21: Conditional Audio and Website Captures
+
+- The pure Swift inclusion rules pass 128 camera-subset/soundtrack combinations. The native UI was also exercised: select CAM 3 as extra, make CAM 3 the soundtrack, switch to MIC 1, and confirm CAM 3 returns unchecked. CAM 1 and CAM 2 remain labeled as included with their selected cameras. MIC 2 can be added separately.
+- Installed the compact 520-point-wide app locally. Captured four actual app screens with a synthetic Sunday Service recording for the website; no real recording or personal path appears in the public images.
+- 71 Python tests pass. Screenshot/icon presence and basic image metadata are checked alongside the existing schema, link, and FAQ checks. The Swift selection matrix now runs in Mac CI.
+
 ## 2026-10-21: Local SwiftUI App Preview
 
 - Built and ad-hoc signed the native arm64 app on this Mac, then installed it in the user's Applications folder. The installed Finder workflow's exact shell step opens that app and exits successfully.

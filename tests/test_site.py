@@ -17,6 +17,7 @@ class Page(HTMLParser):
         self.ids, self.refs, self.headings, self.metas, self.links = [], [], [], {}, {}
         self.schema, self.text = "", []
         self.in_schema = False
+        self.images = []
         self.faqs = []
         self.part = None
         self.question = self.answer = ""
@@ -34,6 +35,8 @@ class Page(HTMLParser):
             self.links[a.get("rel")] = a.get("href")
         if tag == "meta":
             self.metas[a.get("name", a.get("property"))] = a.get("content")
+        if tag == "img":
+            self.images.append(a)
         if tag == "h1":
             self.headings.append(tag)
         if tag == "script":
@@ -96,6 +99,20 @@ class SiteTests(unittest.TestCase):
                     self.assertTrue((SITE / parsed.path).is_file())
                 if parsed.fragment:
                     self.assertIn(parsed.fragment, self.page.ids)
+
+    def test_screenshots_and_icons_exist(self):
+        screenshots = []
+        for attrs in self.page.images:
+            path = SITE / attrs["src"]
+            self.assertTrue(path.is_file(), path)
+            self.assertIn("alt", attrs)
+            self.assertGreater(int(attrs["width"]), 0)
+            self.assertGreater(int(attrs["height"]), 0)
+            if path.suffix == ".jpg":
+                screenshots.append(path)
+                self.assertEqual(path.read_bytes()[:2], b"\xff\xd8")
+                self.assertTrue(attrs["alt"])
+        self.assertEqual(len(screenshots), 4)
 
     def test_schema_faq_matches_readable_content(self):
         faq = next(node for node in self.graph if node["@type"] == "FAQPage")
