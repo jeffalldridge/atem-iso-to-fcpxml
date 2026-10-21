@@ -2,6 +2,8 @@
 
 Read README.md, docs/fcpxml-structure.md and docs/validation.md before changing behaviour. GPT, Claude, Gemini and humans all follow this file; provider-specific files only point here.
 
+For vendor context and evidence boundaries, read [docs/vendor-reference.md](docs/vendor-reference.md). Keep comments focused on non-obvious compatibility and safety decisions; distinguish vendor specifications from observed DRP behavior and Final Cut round-trip evidence.
+
 ## Product boundary
 
 One standard-library Python file (`atem_iso_to_fcpxml.py`, Python 3.9+) that turns a native ATEM `.drp` log plus its recording folder into one `.fcpxml`. No ffmpeg, no server, no telemetry, no AI at runtime, no extra files beside the output. The Quick Action in `quick-action/` is generated from the converter by `scripts/build_quick_action.py`; never edit the bundle by hand, and keep the heredoc marker out of the converter.

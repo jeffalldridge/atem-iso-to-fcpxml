@@ -13,11 +13,11 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 
 One import gives you an event containing:
 
-- **A multicam clip** with one angle per camera input you chose. Each angle is the camera's high-quality ISO `.mp4` for picture and its 24-bit `.wav` for sound, so the compressed AAC audio inside the MP4 is never used.
+- **A multicam clip** with one angle per camera input you chose. Each angle is the camera's high-quality ISO `.mp4` for picture and its 24-bit `.wav` for sound, when its matching WAV is present. Missing WAVs fall back to MP4 audio with a warning.
 - **A "Live Edit" project**: the switch you performed on the ATEM, cut for cut, on the multicam clip. ATEM mix transitions become real, editable Cross Dissolves. The soundtrack stays on one audio angle (Camera 1's WAV by default) while the picture changes, exactly like a multicam edit made in Final Cut.
 - **Extra audio-only angles** for the ATEM mic inputs (`MIC 1`, `MIC 2`), so switching the whole soundtrack to the sound board feed is one click in the Angle Viewer.
 - **Media Player stills** as their own angle, so a graphic you put on air appears in the timeline too.
-- **Every source file** as a browser clip, in case you want to start from scratch.
+- **The selected video and audio source files** as browser clips, in case you want to start from scratch.
 
 The recording is never modified. The converter writes exactly one new file, `<name>.fcpxml`, next to the `.drp`.
 
@@ -29,7 +29,7 @@ The recording is never modified. The converter writes exactly one new file, `<na
 2. Double-click **ATEM ISO to FCPXML.workflow** and click **Install** when macOS asks.
 3. Mount the ATEM SSD, right-click the recording folder (or its `.drp`), and choose **Quick Actions → ATEM ISO to FCPXML**.
 
-Three small dialogs follow: which inputs become angles (the ones you actually switched to are pre-selected), which WAV is the main soundtrack, and whether to add the mic inputs as extra angles. Press Return through them to accept the defaults. When it finishes you can open the result straight into Final Cut Pro.
+Three small dialogs follow: which inputs become angles (the ones you actually switched to are pre-selected), which WAV is the main soundtrack, and which extra audio inputs to add as angles (deselect all to add none). Press Return through them to accept the defaults. When it finishes you can open the result straight into Final Cut Pro.
 
 The Quick Action is a plain Automator workflow with the converter embedded inside it; you can open it in Automator and read every line. It needs Python 3.9 or newer, which macOS installs with the Apple Command Line Tools (run `xcode-select --install` once, or install Python from [python.org](https://www.python.org/downloads/macos/)).
 
@@ -45,7 +45,9 @@ git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git
 python3 atem-iso-to-fcpxml/atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show"
 ```
 
-`pip install .` adds an `atem-iso-to-fcpxml` command if you prefer.
+You can also download `atem_iso_to_fcpxml.py` from a release and run it directly. From inside a cloned checkout, `python3 -m pip install .` adds an `atem-iso-to-fcpxml` command.
+
+To verify downloaded release files, put them beside `SHA256SUMS.txt` and run `shasum -a 256 -c SHA256SUMS.txt` in that folder. Download both the ZIP and Python file for every listed checksum to pass. Checksums detect damaged or mismatched downloads; they are not a signature.
 
 ## Command-line options
 
@@ -81,7 +83,7 @@ python3 atem_iso_to_fcpxml.py "/Volumes/ATEM SSD/Live Show" --cameras 1,2 --audi
 | Mix (dissolve) transition, auto or T-bar | Cross Dissolve of the same length, centred on the switch |
 | Dip, wipe, DVE or stinger transition | Cross Dissolve plus a marker saying what the ATEM did (`--transitions program` keeps the rendered look instead) |
 | Media Player still on air | The still as its own angle |
-| Upstream or downstream key on air, fade to black, colour generator | That stretch of the ATEM **program recording** as an angle, with a marker, so nothing you saw on the stream is lost |
+| Upstream or downstream key on air, fade to black, colour generator | That stretch of the ATEM **program recording** as an angle, with a marker, when available; otherwise a marked gap is inserted |
 | Transition to the same input, or a key-only transition | No change |
 
 Audio never follows the picture: every timeline clip plays the main soundtrack angle, and dissolves are audio-transparent when both sides use the same angle (measured, see [validation](docs/validation.md)).
@@ -90,7 +92,7 @@ Audio never follows the picture: every timeline clip plays the main soundtrack a
 
 The ATEM's ISO MP4s carry the switcher's **program mix** as AAC. The WAVs in `Audio Source Files` are each input's own 24-bit, 48 kHz audio before the ATEM mixer touches it. Using them gives you clean, per-source audio with full headroom for your own levelling, EQ and compression in Final Cut, and lets a mic input become the soundtrack even if it was not in the stream mix.
 
-Each WAV carries a Broadcast Wave time reference that matches the ATEM's master timecode, and every ISO MP4 carries that timecode too. The converter aligns them by those values; it does not analyse waveforms.
+Each WAV carries a Broadcast Wave time reference that matches the ATEM's master timecode, and every ISO MP4 carries that timecode too. The converter preserves those values and assumes the native files share a recording start. It warns about different start times or short media; it does not correct those offsets or analyse waveforms. Check sync and the end of the project before exporting.
 
 ## Requirements and limits
 
@@ -98,10 +100,17 @@ Each WAV carries a Broadcast Wave time reference that matches the ATEM's master 
 - Final Cut Pro 10.6 or newer (FCPXML 1.10). Verified on Final Cut Pro 12.4.
 - The recording folder as the ATEM wrote it: `<name>.drp`, `<name>.mp4`, `Video ISO Files/`, `Audio Source Files/`. You can rename the folder and move it to another drive; media is found relative to the `.drp`.
 - One session per conversion. If the ATEM appended a second session to the same `.drp`, choose it with `--session`.
+- Missing program media produces marked gaps for unsupported sections; those gaps also interrupt audio. Changes to Media Player assets during recording are not fully reconstructed.
 - Keys are not rebuilt as Final Cut effects; the program recording stands in for them. Titles and lower thirds are quick to redo in Final Cut on top of the clean ISO picture if you prefer.
-- Final Cut references the media on the SSD. Keep it mounted, or copy the recording folder to your edit drive before converting.
+- The XML references the media on the SSD. Final Cut’s import preferences determine whether it copies or links the files. Keep the SSD mounted until copying/consolidation finishes, or copy the recording folder to your edit drive before converting.
 
 Tested on two real ATEM Mini Pro ISO recordings (1080p60, 46 and 95 minutes, with and without transitions). Other models, frame rates and firmware versions follow the same documented format but have only synthetic test coverage; please report what you find.
+
+## Import destination and custom names
+
+Use **File → Import → XML** or the Quick Action’s **Import into Final Cut Pro** button. This creates the event described by the XML, not necessarily your selected event. `--event` sets the event name; `--no-event` uses a date-named event. Move the imported items into your preferred event afterward if needed.
+
+Camera labels come from the DRP; they do not need to say “Camera 1”. ISO paths come from its `file` fields, and matching WAVs share the ISO file stem. You can move or rename the recording folder, but keep its internal file names and subfolders intact.
 
 ## How it works
 
@@ -114,6 +123,10 @@ The `.drp` is not a DaVinci Resolve project archive. It is a newline-delimited J
 - [drp-trimmer](https://github.com/faithncode/drp-trimmer) trims `.drp` recordings and exports Premiere or Final Cut XML, with FFmpeg.
 
 This project is the small, free, inspectable option: one file, no dependencies, WAV audio by default.
+
+## Maintainer documentation
+
+Start with the [vendor reference and assistant guide](docs/vendor-reference.md): Blackmagic recording behavior, Apple FCPXML and import semantics, code entry points, and the limits of our evidence. The [validation record](docs/validation.md) distinguishes synthetic checks from real Final Cut imports.
 
 ## Contributing
 

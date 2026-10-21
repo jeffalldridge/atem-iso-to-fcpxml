@@ -1,6 +1,6 @@
 # Research notes
 
-Checked 2026-10-21. Links are to primary sources where they exist.
+Checked 2026-10-21. Links are to primary sources where they exist. See [vendor-reference.md](vendor-reference.md) for the reviewed vendor sections, code mapping, and evidence boundaries.
 
 ## Blackmagic ATEM ISO recording
 
