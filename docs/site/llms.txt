@@ -4,7 +4,7 @@
 
 A short navigation aid, not a crawler policy. The linked documentation is authoritative for current behavior.
 
-The native SwiftUI app requires macOS 15 or later and includes a Swift conversion engine. The Python 3.9+ command-line tool remains the reference implementation. GUI audio extras are opt-in; the CLI includes unpaired WAVs by default unless --no-extra-audio is supplied. Updates are manual through GitHub Releases.
+The native SwiftUI app requires macOS 15 or later and includes a Swift conversion engine. The Python 3.9+ command-line tool remains the reference implementation. The soundtrack defaults to a selected WAV when available. ATEM live mix is an optional recorded mixed soundtrack, preserving the audible result of AFV and mixer changes without reconstructing mixer automation. The CLI selects it with --live-mix, mutually exclusive with --audio. Extra angles do not automatically play. GUI audio extras are opt-in; the CLI includes unpaired WAVs by default unless --no-extra-audio is supplied. Updates are manual through GitHub Releases.
 
 ## Start Here
 
@@ -23,4 +23,4 @@ The native SwiftUI app requires macOS 15 or later and includes a Swift conversio
 
 ## Important Limits
 
-Tested with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. Other models and frame rates are untested on real media. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. A .drp that holds several recording sessions is not opened by the app; the command-line version can choose one with --session. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import creates a named event rather than targeting the selected event. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.
+Tested with ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4. Other models and frame rates are untested on real media. Matching WAVs replace camera audio when available; a camera without a WAV falls back to its MP4 audio. A .drp that holds several recording sessions is not opened by the app; the command-line version can choose one with --session. Start-time mismatches are warned about, not corrected. Keys use program footage when available, otherwise the first camera stands in with a marker. XML import specifies a named event rather than targeting the selected event. Matching event and clip names may prompt Keep Both / Replace; Keep Both preserves existing edits and may add numbered copies in that event. Camera and Media Player compounds share resources with their multicam angles, and selected source files, including still images, are visible in the browser. Generated compound names use plain hyphens. No transcoding, network calls, or AI at runtime. Never publish personal recordings, logs, or generated XML in bug reports.

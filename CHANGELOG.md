@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Camera compounds appear in the Final Cut event browser, linked to the same compounds used by the multicam. Media Player stills also have shared compounds and original-image browser clips, so their contents are available for editing.
+- Generated compound names use plain hyphens, such as `Camera 1 - ISO + WAV` and `Media Player 1 - Still`. Source file names and input labels are preserved.
+- Soundtrack offers **ATEM live mix** alongside the existing WAV choices. It preserves the recorded mixed sound, including the audible result of AFV and mixer changes; changing picture cuts later does not recompute AFV. WAV selection remains the default. The command line offers `--live-mix`, mutually exclusive with `--audio`.
+- Import guidance explains Final Cut's Keep Both / Replace prompt when event and clip names match an earlier import. Extra audio guidance distinguishes making an angle available from enabling it in the soundtrack.
+
+### Fixed
+
+- Multicam angle offsets no longer add the source timecode twice. The Angle Editor shows the clips at the correct duration instead of blank timelines with hours of excess length.
+- Cameras without matching WAV files use native MP4 clips, avoiding Final Cut's unsupported anchored-audio warning.
+
 ## 1.1.1 (2026-10-21)
 
 ### Changed
