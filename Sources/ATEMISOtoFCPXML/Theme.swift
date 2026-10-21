@@ -26,8 +26,6 @@ enum AnglePalette {
 /// One set of measurements for the whole window.
 enum Layout {
     static let gutter: CGFloat = 20
-    static let columnInset: CGFloat = 16
-    static let rowHeight: CGFloat = 28
     static let videoLane: CGFloat = 40
     static let audioLane: CGFloat = 24
     static let laneGap: CGFloat = 4

@@ -49,7 +49,6 @@ public final class Recording {
     public var duration: Rational { totalFrames * frameDuration }
     public func timecode(_ frame: Int) -> String { Timecode.label(startFrames + frame, fps: frameRate, drop: dropFrame) }
     public func source(_ index: Int) -> VideoSource? { sources.first { $0.index == index } }
-    public func audioFile(stem: String) -> URL? { audioFiles.first { $0.stem == stem }?.path }
 }
 
 public extension URL {

@@ -16,7 +16,7 @@ Checked 2026-10-21. Links are to primary sources where they exist. See [vendor-r
 | [ATEM Exporter](https://atemexporter.fcp.cafe/) (LateNite Films) | No, logs the switcher live over Ethernet | No | Not stated | Commercial |
 | [drp-trimmer](https://github.com/faithncode/drp-trimmer) | Yes | Picks a camera ISO as primary audio | Dissolves | MIT, needs FFmpeg |
 | [otio-drp-adapter](https://github.com/gilou/otio-drp-adapter) | Yes | No | No | Open source |
-| This project | Yes | Every camera's WAV by default, mics as angles | Dissolves, program fallback | MIT, no dependencies |
+| This project | Yes | Each camera's own WAV; mics as optional audio angles | Dissolves, program fallback | MIT, no dependencies |
 
 ## Apple FCPXML
 
