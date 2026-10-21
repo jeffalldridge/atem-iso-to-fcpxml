@@ -50,7 +50,7 @@ extension ContentView {
         switch model.phase {
         case .empty, .loading, .converting: 420
         case .ready: 820
-        case .done: 420
+        case .done: 318
         }
     }
 }
@@ -265,27 +265,30 @@ struct DoneView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ContentUnavailableView {
-                VStack(spacing: 12) {
-                    if let output = model.output {
-                        Image(nsImage: NSWorkspace.shared.icon(forFile: output.path)).resizable().frame(width: 72, height: 72)
-                    }
-                    Text("Ready for Final Cut Pro").font(.title2.weight(.semibold))
-                }
-            } description: {
-                VStack(spacing: 6) {
-                    Text(model.output?.lastPathComponent ?? "").font(.headline).textSelection(.enabled)
-                    Text("Saved next to the recording. Opening it in Final Cut creates an event with the multicam clip, the live edit, and every source file.")
-                }
-            } actions: {
-                HStack {
+            VStack(spacing: 14) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 52, weight: .regular))
+                    .foregroundStyle(.green)
+                    .accessibilityHidden(true)
+                Text("Ready for Final Cut Pro")
+                    .font(.title2.weight(.semibold))
+                Text("\(model.output?.lastPathComponent ?? "") was saved next to the recording.")
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 12) {
                     Button("Show in Finder") { model.revealInFinder() }
                     Button("Open in Final Cut Pro") { model.openInFinalCut() }
                         .buttonStyle(.borderedProminent)
                         .keyboardShortcut(.defaultAction)
                 }
                 .fixedSize()
+                .padding(.top, 6)
             }
+            .padding(.horizontal, 32)
+            .padding(.top, 36)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity)
 
             Divider()
             HStack {
