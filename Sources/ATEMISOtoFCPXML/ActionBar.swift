@@ -22,12 +22,16 @@ struct ActionBar: View {
     @ViewBuilder private var status: some View {
         switch model.phase {
         case .empty:
-            EmptyView()
+            EmptyView()  // the empty window has no action bar; see ContentView
         case .loading:
             ProgressView().controlSize(.small)
             Text("Reading the recording…").foregroundStyle(.secondary)
         case .ready:
-            Text(model.planSummary).foregroundStyle(.secondary).lineLimit(2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(model.planSummary).lineLimit(2)
+                Text(model.destinationNote).font(.caption).lineLimit(2)
+            }
+            .foregroundStyle(.secondary)
         case .converting:
             ProgressView().controlSize(.small)
             Text("Creating \(model.loaded?.outputURL.lastPathComponent ?? "the FCPXML")…").foregroundStyle(.secondary)
@@ -42,12 +46,7 @@ struct ActionBar: View {
 
     @ViewBuilder private var buttons: some View {
         switch model.phase {
-        case .empty, .loading:
-            Button("Choose Recording…") { model.chooseRecording() }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.canOpenRecording)
-        case .ready, .converting:
+        case .empty, .loading, .ready, .converting:
             Button("Create FCPXML") { model.convert() }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)

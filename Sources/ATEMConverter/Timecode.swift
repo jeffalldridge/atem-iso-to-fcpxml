@@ -2,7 +2,12 @@ import Foundation
 
 public struct ConversionError: Error, CustomStringConvertible, LocalizedError, Sendable {
     public let message: String
-    public init(_ message: String) { self.message = message }
+    /// Set when the log holds several recording sessions, so a front end can explain the choice in its own terms.
+    public let sessionCount: Int?
+    public init(_ message: String, sessionCount: Int? = nil) {
+        self.message = message
+        self.sessionCount = sessionCount
+    }
     public var description: String { message }
     public var errorDescription: String? { message }
 }

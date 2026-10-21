@@ -92,7 +92,7 @@ public func loadLog(_ path: URL, session: Int? = nil) throws -> Log {
     }
     if sessions.isEmpty { throw ConversionError("The first line of the .drp is missing sources, masterTimecode or videoMode.") }
     if sessions.count > 1 && session == nil {
-        throw ConversionError("This .drp holds \(sessions.count) recording sessions. Pick one with --session 1 to --session \(sessions.count), then check that the ISO file names match that session.")
+        throw ConversionError("This .drp holds \(sessions.count) recording sessions. Pick one with --session 1 to --session \(sessions.count), then check that the ISO file names match that session.", sessionCount: sessions.count)
     }
     let selected = session ?? 1
     guard selected >= 1 && selected <= sessions.count else {

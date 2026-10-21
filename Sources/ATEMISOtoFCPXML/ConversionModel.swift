@@ -63,6 +63,12 @@ enum TransitionStyle: String, CaseIterable, Identifiable {
     }
 }
 
+/// Something the person needs to read: what failed in the title, what to do in the message.
+struct Problem: Equatable {
+    let title: String
+    let message: String
+}
+
 @Observable
 @MainActor
 final class ConversionModel {
@@ -81,7 +87,7 @@ final class ConversionModel {
         recentRecordings = recordsRecentDocuments ? NSDocumentController.shared.recentDocumentURLs : []
     }
 
-    private(set) var phase: Phase = .empty
+    private(set) var phase: Phase = .empty { didSet { updateActivity() } }
     private(set) var loaded: LoadedRecording?
     var selectedCameras: Set<Int> = [] { didSet { if selectedCameras != oldValue { reconcileAudio(); choiceChanged(); refreshTimeline() } } }
     var soundtrack: String = "" { didSet { if soundtrack != oldValue { reconcileAudio(); choiceChanged() } } }
@@ -92,7 +98,7 @@ final class ConversionModel {
     var includeProgramAngle = false { didSet { if includeProgramAngle != oldValue { choiceChanged() } } }
     private(set) var output: URL?
     private(set) var summary: [String] = []
-    var errorMessage: String?
+    var problem: Problem?
     var showReplaceConfirmation = false
     var isTargeted = false
     private(set) var timeline: [TimelineSegment] = []
@@ -126,6 +132,29 @@ final class ConversionModel {
     func color(for angleID: String) -> Color { AnglePalette.color(for: angleID, cameraOrder: cameraOrder) }
 
     var isBusy: Bool { phase == .loading || phase == .converting }
+    /// Only conversion publishes a file; a read can be abandoned at any moment, so only this defers Quit.
+    var isPublishing: Bool { phase == .converting }
+
+    /// Whether the .fcpxml already exists next to the recording, checked when a recording opens and after each conversion.
+    private(set) var outputExists = false
+    var destinationNote: String {
+        guard let loaded else { return "" }
+        let name = loaded.outputURL.lastPathComponent
+        return outputExists ? "\(name) already exists next to the recording; you will be asked before it is replaced."
+                            : "Saves \(name) next to the recording."
+    }
+
+    /// While a recording is read or written, keep macOS from suspending or automatically terminating the app.
+    private var activity: NSObjectProtocol?
+    private func updateActivity() {
+        if isBusy, activity == nil {
+            activity = ProcessInfo.processInfo.beginActivity(options: [.userInitiated, .automaticTerminationDisabled],
+                                                             reason: "Reading or writing an ATEM recording")
+        } else if !isBusy, let activity {
+            ProcessInfo.processInfo.endActivity(activity)
+            self.activity = nil
+        }
+    }
 
     /// WAVs that can be added as separate angles: not the soundtrack and not already paired with a chosen camera.
     var optionalAudio: [AudioChoice] {
@@ -160,12 +189,12 @@ final class ConversionModel {
 
     func open(_ url: URL) {
         guard !isBusy else {
-            errorMessage = "A recording is being processed. Open the next recording when it finishes."
+            problem = Problem(title: "Still Working", message: "Open the next recording when this one finishes.")
             return
         }
         guard url.isFileURL else { return }
         phase = .loading
-        errorMessage = nil
+        problem = nil
         Task.detached(priority: .userInitiated) {
             do {
                 let log = try locateLog(url)
@@ -192,7 +221,7 @@ final class ConversionModel {
                                            outputURL: log.deletingPathExtension().appendingPathExtension("fcpxml"))
                 await MainActor.run { self.finishLoading(item, cameras: used, soundtrack: main, extras: []) }
             } catch {
-                await MainActor.run { self.fail(error) }
+                await MainActor.run { self.fail(error, title: "Couldn't Open the Recording") }
             }
         }
     }
@@ -206,6 +235,7 @@ final class ConversionModel {
         showReplaceConfirmation = false
         output = nil
         summary = []
+        outputExists = FileManager.default.fileExists(atPath: item.outputURL.path)
         phase = .ready
         refreshTimeline()
         if recordsRecentDocuments {
@@ -229,8 +259,16 @@ final class ConversionModel {
         }
     }
 
-    private func fail(_ error: Error) {
-        errorMessage = (error as? ConversionError)?.message ?? error.localizedDescription
+    private func fail(_ error: Error, title: String) {
+        let conversion = error as? ConversionError
+        if let sessions = conversion?.sessionCount {
+            problem = Problem(title: "This Recording Has \(sessions) Sessions",
+                              message: "The ATEM added more than one recording to this .drp, and the app cannot choose between them yet. The command line version can: run it with --session 1 to --session \(sessions). The README explains how.")
+        } else if title == "Couldn't Create the FCPXML" {
+            problem = Problem(title: title, message: "\(conversion?.message ?? error.localizedDescription)\n\nYour recording was not changed.")
+        } else {
+            problem = Problem(title: title, message: conversion?.message ?? error.localizedDescription)
+        }
         phase = loaded == nil ? .empty : (output == nil ? .ready : .done)
         operationFinished?(false)
     }
@@ -250,7 +288,7 @@ final class ConversionModel {
         options.includeProgram = includeProgramAngle
         let destination = loaded.outputURL
         phase = .converting
-        errorMessage = nil
+        problem = nil
         Task.detached(priority: .userInitiated) {
             do {
                 let recording = try openRecording(loaded.log)
@@ -263,12 +301,13 @@ final class ConversionModel {
                 let lines = plan.summary()
                 await MainActor.run {
                     self.output = destination
+                    self.outputExists = true
                     self.summary = lines
                     self.phase = .done
                     self.operationFinished?(true)
                 }
             } catch {
-                await MainActor.run { self.fail(error) }
+                await MainActor.run { self.fail(error, title: "Couldn't Create the FCPXML") }
             }
         }
     }
@@ -276,11 +315,12 @@ final class ConversionModel {
     func openInFinalCut() {
         guard let output else { return }
         guard let finalCut = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.FinalCut") else {
-            errorMessage = "Final Cut Pro is not installed on this Mac. The XML is saved next to the recording; import it with File → Import → XML in Final Cut Pro."
+            problem = Problem(title: "Final Cut Pro Isn't Installed",
+                              message: "The XML is saved next to the recording. Import it with File → Import → XML in Final Cut Pro on a Mac that has it.")
             return
         }
         NSWorkspace.shared.open([output], withApplicationAt: finalCut, configuration: NSWorkspace.OpenConfiguration()) { _, error in
-            if let error { Task { @MainActor in self.errorMessage = error.localizedDescription } }
+            if let error { Task { @MainActor in self.problem = Problem(title: "Couldn't Open Final Cut Pro", message: error.localizedDescription) } }
         }
     }
 
@@ -298,7 +338,8 @@ final class ConversionModel {
         extraAudio = []
         includeProgramAngle = false
         timeline = []
-        errorMessage = nil
+        problem = nil
+        outputExists = false
         showReplaceConfirmation = false
         phase = .empty
     }

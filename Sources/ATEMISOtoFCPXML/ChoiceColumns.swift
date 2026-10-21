@@ -16,6 +16,7 @@ struct ChoiceColumns: View {
                                 RoundedRectangle(cornerRadius: 2)
                                     .fill(model.color(for: "input-\(camera.id)"))
                                     .frame(width: 10, height: 10).padding(.top, 3)
+                                    .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 3) {
                                     Text(camera.name).fixedSize(horizontal: false, vertical: true)
                                     Text(camera.wavName == nil ? "MP4 audio" : "Paired with WAV audio")

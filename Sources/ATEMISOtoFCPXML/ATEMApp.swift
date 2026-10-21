@@ -34,12 +34,22 @@ struct ATEMApp: App {
                 .disabled(!delegate.model.canOpenRecording)
             }
             CommandGroup(after: .appInfo) {
-                Link("Download Updates…", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest")!)
+                Link("Latest Release on GitHub…", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest")!)
             }
             CommandGroup(replacing: .saveItem) {
+                // Replacing the save group also removes the standard Close item, so restore it.
+                Button("Close") { NSApp.keyWindow?.performClose(nil) }
+                    .keyboardShortcut("w")
+                Divider()
                 Button("Create FCPXML") { delegate.model.convert() }
                     .keyboardShortcut("s")
                     .disabled(delegate.model.phase != .ready || delegate.model.selectedCameras.isEmpty)
+                Divider()
+                Button("Show in Finder") { delegate.model.revealInFinder() }
+                    .keyboardShortcut("r")
+                    .disabled(delegate.model.phase != .done)
+                Button("Open in Final Cut Pro") { delegate.model.openInFinalCut() }
+                    .disabled(delegate.model.phase != .done)
             }
             CommandGroup(replacing: .help) {
                 Link("ATEM ISO to FCPXML Help", destination: URL(string: "https://jeffalldridge.github.io/atem-iso-to-fcpxml/")!)
@@ -72,7 +82,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         guard urls.count == 1, let url = urls.first else {
-            model.errorMessage = "Open one recording at a time. Select its folder or .drp file."
+            model.problem = Problem(title: "Open One Recording at a Time", message: "Select a single recording folder or .drp file.")
             return
         }
         model.open(url)
@@ -82,7 +92,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        termination.request(isBusy: model.isBusy) ? .terminateLater : .terminateNow
+        termination.request(isBusy: model.isPublishing) ? .terminateLater : .terminateNow
     }
 }
 

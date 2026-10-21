@@ -20,7 +20,7 @@ struct ContentView: View {
         }
         .frame(minWidth: Layout.minWidth, idealWidth: Layout.idealWidth, maxWidth: .infinity)
         .frame(minHeight: 560, maxHeight: .infinity)
-        .safeAreaInset(edge: .bottom, spacing: 0) { ActionBar(model: model) }
+        .safeAreaInset(edge: .bottom, spacing: 0) { if model.loaded != nil { ActionBar(model: model) } }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button { model.chooseRecording() } label: { Label("Open Recording…", systemImage: "folder") }
@@ -42,10 +42,10 @@ struct ContentView: View {
                     .allowsHitTesting(false)
             }
         }
-        .alert("Something Went Wrong", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
+        .alert(model.problem?.title ?? "", isPresented: Binding(get: { model.problem != nil }, set: { if !$0 { model.problem = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text(model.errorMessage ?? "")
+            Text(model.problem?.message ?? "")
         }
         .confirmationDialog("Replace the existing FCPXML?", isPresented: $model.showReplaceConfirmation, titleVisibility: .visible) {
             Button("Replace", role: .destructive) { model.convert(replace: true) }
@@ -70,6 +70,14 @@ struct EmptyStateView: View {
                 ProgressView("Reading the recording…").controlSize(.small)
             } else {
                 Text("Drop the recording folder from your ATEM SSD here, or choose it.")
+            }
+        } actions: {
+            if model.phase != .loading {
+                Button("Choose Recording…") { model.chooseRecording() }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!model.canOpenRecording)
             }
         }
         .frame(maxWidth: .infinity)

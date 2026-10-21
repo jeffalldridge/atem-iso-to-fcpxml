@@ -36,17 +36,17 @@ final class WorkflowTests: XCTestCase {
 
         model.convert()
         try await settle(model)
-        XCTAssertEqual(model.phase, .done, model.errorMessage ?? "")
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
         let saved = model.output
         model.open(fixture.root.appendingPathComponent("Missing.drp"))
         try await settle(model)
         XCTAssertEqual(model.phase, .done)
         XCTAssertEqual(model.output, saved)
-        XCTAssertNotNil(model.errorMessage)
+        XCTAssertNotNil(model.problem)
 
         model.startOver()
         XCTAssertEqual(model.phase, .empty)
-        XCTAssertNil(model.errorMessage)
+        XCTAssertNil(model.problem)
         XCTAssertTrue(model.timeline.isEmpty)
         XCTAssertNil(model.output)
     }
@@ -59,15 +59,15 @@ final class WorkflowTests: XCTestCase {
         let model = ConversionModel(recordsRecentDocuments: false)
         model.open(try fixture.write())
         try await settle(model)
-        XCTAssertEqual(model.phase, .ready, model.errorMessage ?? "")
+        XCTAssertEqual(model.phase, .ready, model.problem?.message ?? "")
         model.convert()
         try await settle(model)
-        XCTAssertEqual(model.phase, .done, model.errorMessage ?? "")
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
         model.extraAudio.insert("Show MIC 2.wav")
         model.convert(replace: true)
         try await settle(model)
         XCTAssertEqual(model.phase, .ready)
-        XCTAssertNotNil(model.errorMessage)
+        XCTAssertNotNil(model.problem)
     }
 
     func testUnchangedChoicesKeepTheSavedResult() async throws {
@@ -107,6 +107,35 @@ final class WorkflowTests: XCTestCase {
         XCTAssertTrue(termination.request(isBusy: true))
         XCTAssertEqual(termination.finish(succeeded: false), false)
         XCTAssertFalse(termination.pending)
+    }
+
+    func testMultipleSessionsExplainTheCommandLineOption() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write([Fixtures.header(), Fixtures.me("10:00:10:00", ["source": 2]), Fixtures.header(tc: "11:00:00:00")]))
+        try await settle(model)
+        XCTAssertEqual(model.phase, .empty)
+        let problem = try XCTUnwrap(model.problem)
+        XCTAssertEqual(problem.title, "This Recording Has 2 Sessions")
+        XCTAssertTrue(problem.message.contains("--session"))
+    }
+
+    func testDestinationIsStatedBeforeConversionAndReadingNeverDefersQuit() async throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        let model = ConversionModel(recordsRecentDocuments: false)
+        model.open(try fixture.write())
+        XCTAssertEqual(model.phase, .loading)
+        XCTAssertTrue(model.isBusy)
+        XCTAssertFalse(model.isPublishing, "Quitting during a read must not wait")
+        try await settle(model)
+        XCTAssertEqual(model.destinationNote, "Saves Show.fcpxml next to the recording.")
+        model.convert()
+        XCTAssertTrue(model.isPublishing)
+        try await settle(model)
+        model.includeProgramAngle = true
+        XCTAssertTrue(model.destinationNote.contains("already exists"), model.destinationNote)
     }
 
     func testChangingChoicesRequiresExplicitReplacement() async throws {
