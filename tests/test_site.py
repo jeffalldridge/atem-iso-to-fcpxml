@@ -116,6 +116,12 @@ class SiteTests(unittest.TestCase):
                 self.assertTrue(attrs["alt"])
         self.assertEqual(len(screenshots), 3)
 
+    def test_native_window_edges_are_not_restyled(self):
+        css = (SITE / "style.css").read_text()
+        rule = css.split(".screenshots img {", 1)[1].split("}", 1)[0]
+        for property_name in ("border-radius:", "box-shadow:", "border:"):
+            self.assertNotIn(property_name, rule)
+
     def test_schema_faq_matches_readable_content(self):
         faq = next(node for node in self.graph if node["@type"] == "FAQPage")
         for question in faq["mainEntity"]:

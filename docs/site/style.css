@@ -100,10 +100,8 @@ td { color:var(--muted); }
 .resolve-note img { flex:none; }
 .screenshots { display:grid; grid-template-columns:1fr; gap:56px; }
 .screenshots figure { min-width:0; display:grid; grid-template-columns:240px minmax(0,1fr); gap:36px; align-items:center; }
-.screenshots figcaption { order:-1; }
-.screenshots a { display:flex; align-items:flex-start; justify-content:center; }
-.screenshots img { display:block; width:100%; height:auto; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,.45); border:1px solid var(--line); }
-.screenshots figcaption { text-align:left; }
+.screenshots figcaption { order:-1; text-align:left; }
+.screenshots img { display:block; width:100%; height:auto; }
 .screenshots h3 { font-size:21px; }
 .screenshots p { margin-top:10px; color:var(--muted); font-size:16px; }
 @media(max-width:600px) {
@@ -116,3 +114,9 @@ td { color:var(--muted); }
  .screenshots figcaption { order:0; }
 }
 .section-heading .section-intro { max-width:none; }
+
+/* Stack before the native window becomes too small to read. Preserve its own alpha edges. */
+@media (min-width:601px) and (max-width:900px) {
+ .screenshots figure { grid-template-columns:1fr; gap:20px; }
+ .screenshots figcaption { order:0; max-width:42ch; }
+}

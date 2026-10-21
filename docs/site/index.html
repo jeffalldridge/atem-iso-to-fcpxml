@@ -137,7 +137,7 @@
           "name": "Does It Use the WAV Files?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Each camera angle pairs the camera's ISO MP4 with its own WAV from Audio Source Files, so the compressed audio inside the MP4 is never used. You choose one soundtrack for the live edit, and the mic inputs can be added as separate audio angles."
+            "text": "Each camera uses its matching WAV from Audio Source Files when available, or the MP4 audio if the WAV is missing. Choose one soundtrack for the live edit and add other WAVs as extra audio angles if needed."
           }
         },
         {
@@ -193,7 +193,7 @@
 <h1>Your Live Edit.<br><span>Ready for <span class="keep-together">Final Cut.</span></span>
 </h1>
 <p class="intro">Open the recording folder from your Blackmagic ATEM Mini ISO and get a Final Cut Pro multicam project with your live cuts, your camera angles, and uncompressed WAV audio. No DaVinci Resolve, no transcoding, no uploads.</p>
-<div class="actions"><a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">Download for Mac <span aria-hidden="true">↓</span></a><a class="text-link" href="#how">See how it works <span aria-hidden="true">↗</span></a>
+<div class="actions"><a class="button" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest">Download for Mac <span aria-hidden="true">↓</span></a><a class="text-link" href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">View on GitHub <span aria-hidden="true">↗</span></a>
 </div>
 <p class="requirements">macOS 15 or later · Apple silicon and Intel · Signed and notarized · 2 MB</p>
 <div class="format-path" aria-label="ATEM recording to Final Cut Pro">
@@ -214,11 +214,12 @@
 <ol class="steps">
 <li>
 <h3>Install the App</h3>
-<p>Download the disk image, drag <strong>ATEM ISO to FCPXML</strong> to Applications, and open it. That is the whole installation.</p>
+<p>Download the disk image, drag <strong>ATEM ISO to FCPXML</strong> to Applications, and open it. Free, open source, and licensed under MIT.</p>
+<p class="small">Updating? Quit the app, drag the new copy into the same Applications folder, and choose Replace. Your Quick Action will use the new version.</p>
 </li>
 <li>
 <h3>Open Your Recording</h3>
-<p>Mount the ATEM SSD and drop the recording folder on the window, or click <strong>Choose Recording…</strong>. Double-clicking the <code>.drp</code> inside the folder works too.</p>
+<p>Mount the ATEM SSD and drop the recording folder on the window, or click <strong>Choose Recording…</strong>. In Finder, you can also use Open With on the <code>.drp</code> file.</p>
 </li>
 <li>
 <h3>Pick Cameras and Audio</h3>
@@ -232,11 +233,11 @@
 </section>
 <section class="band" id="screens" aria-labelledby="screens-title">
 <div class="wrap section">
-<div class="section-heading"><h2 id="screens-title">Three Screens.</h2>
+<div class="section-heading"><h2 id="screens-title">Inside the app</h2>
 <p class="section-intro">Shown with a synthetic demo recording.</p></div>
 <div class="screenshots">
-<figure><img src="images/01-open.png" width="1836" height="1002" loading="lazy" alt="The empty ATEM ISO to FCPXML window inviting you to drop a recording folder or choose one"><figcaption><h3>Open a recording</h3><p>Drop the folder from the SSD, choose it, or double-click the .drp.</p></figcaption></figure>
-<figure><img src="images/02-choices.png" width="1836" height="1002" loading="lazy" alt="The recording window: a colored timeline of the live switch across the top, then Cameras, Audio, and Options columns, and a Create FCPXML button in the bottom bar"><figcaption><h3>Confirm cameras and audio</h3><p>Inputs used live start checked. One soundtrack; mics as separate angles.</p></figcaption></figure>
+<figure><img src="images/01-open.png" width="1836" height="1002" loading="lazy" alt="The empty ATEM ISO to FCPXML window inviting you to drop a recording folder or choose one"><figcaption><h3>Open a recording</h3><p>Drop the folder from the SSD, choose it, or use Finder’s Open With menu.</p></figcaption></figure>
+<figure><img src="images/02-choices.png" width="1836" height="1002" loading="lazy" alt="The recording window: a colored timeline of the live switch across the top, then Cameras, Audio, and Options columns, and a Create FCPXML button in the bottom bar"><figcaption><h3>Confirm cameras and audio</h3><p>Inputs used live start checked. Choose one continuous soundtrack and any extra audio angles.</p></figcaption></figure>
 <figure><img src="images/03-done.png" width="1836" height="1002" loading="lazy" alt="The same window after the conversion: a green checkmark saying the FCPXML was saved, with Details, Show in Finder, and Open in Final Cut Pro buttons"><figcaption><h3>Open in Final Cut Pro</h3><p>The XML is saved next to the recording and opens straight into Final Cut.</p></figcaption></figure>
 </div>
 </div>
@@ -290,7 +291,7 @@
 </article>
 <article class="answer">
 <h3>Does It Use the WAV Files?</h3>
-<p>Yes. Each camera angle pairs the camera&#x27;s ISO MP4 with its own WAV from Audio Source Files, so the compressed audio inside the MP4 is never used. You choose one soundtrack for the live edit, and the mic inputs can be added as separate audio angles.</p>
+<p>Each camera uses its matching WAV from Audio Source Files when available, or the MP4 audio if the WAV is missing. Choose one soundtrack for the live edit and add other WAVs as extra audio angles if needed.</p>
 </article>
 <article class="answer">
 <h3>Can I Rename My Recording or Inputs?</h3>
@@ -315,7 +316,7 @@
 <div><a class="wordmark" href="./">ATEM ISO → <span>FCPXML</span></a>
 <p>By <a href="https://tentstudios.com/">Tent Studios, LLC</a>.</p>
 </div>
-<nav aria-label="Project resources"><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">Source code</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues">Report a problem</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/vendor-reference.md">Technical reference</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/LICENSE">MIT license</a>
+<nav aria-label="Project resources"><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml">GitHub source code</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues">Report a problem</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/docs/vendor-reference.md">Technical reference</a><a href="https://github.com/jeffalldridge/atem-iso-to-fcpxml/blob/main/LICENSE">MIT license</a>
 </nav>
 <p class="legal">Not affiliated with Blackmagic Design or Apple. ATEM and Final Cut Pro are trademarks of their respective owners.</p>
 </footer>
