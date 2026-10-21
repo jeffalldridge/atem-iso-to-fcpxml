@@ -1,6 +1,6 @@
 import Foundation
 
-public let converterVersion = "1.1.0"
+public let converterVersion = "1.1.1"
 public let fcpxmlVersion = "1.10"  // Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 public let crossDissolveUID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
 

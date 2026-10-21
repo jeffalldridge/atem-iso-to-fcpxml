@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.1 (2026-10-21)
 
 - Both engines reject media outside explicit supported ranges instead of risking overflow; Swift arithmetic is overflow-safe, and the Swift MP4 reader stops at the index like the Python one.
 - The window says where the `.fcpxml` will be saved (and when it already exists). Failures have specific titles, failed conversions say the recording was not changed, and a recording with several sessions is explained instead of quoting command-line flags. Closing the window while only reading quits at once; only a conversion defers Quit. The File menu regains Close (⌘W) and gains Show in Finder and Open in Final Cut Pro. The empty window has one Choose Recording button.
