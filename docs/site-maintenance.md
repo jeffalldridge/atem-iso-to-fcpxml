@@ -4,7 +4,7 @@ Reviewed 2026-10-21. The website remains static HTML and CSS on GitHub Pages: no
 
 ## Design and content
 
-Keep the dark charcoal/orange palette, system typography, clear spacing and a single primary download action. Keep captions focused on what the tool does; avoid unnecessary explanatory disclaimers. Keep answers and command-line instructions visible by default, using headings and dividers rather than dropdowns or accordions. This follows the owner’s preference to avoid extra steps just to read information. Use balanced heading wraps, readable paragraph measures and a consistent type scale. Keep “Final Cut” together in the hero. Preserve keyboard focus styles, table headings and the skip link. Long filenames and command blocks must not widen mobile layouts.
+Keep the dark charcoal/orange palette, system typography, clear spacing and a single primary download action. Keep captions focused on what the tool does; avoid unnecessary explanatory disclaimers. Keep answers visible, using headings and dividers rather than dropdowns or accordions. Link to command-line instructions in the README. Use direct section headings; cut repeated selling points and implementation details that do not help someone use the tool. This follows the owner’s preference to avoid extra steps just to read information. Use balanced heading wraps, readable paragraph measures and a consistent type scale. Keep “Final Cut” together in the hero. Preserve keyboard focus styles, table headings and the skip link. Long filenames and command blocks must not widen mobile layouts.
 
 The compatibility statement is deliberately narrower than hardware marketing: real-media verification is Mini Pro ISO, 1080p60, Final Cut Pro 12.4. Do not turn synthetic coverage into a claim of verified hardware support. The download links target the latest release page; no unreleased version is advertised in metadata.
 
@@ -20,7 +20,7 @@ The page includes a canonical URL, description, Open Graph and large-image Twitt
 
 - The existing public page was inspected using Firecrawl raw HTML and links; it returned HTTP 200. Its missing social image, FAQ/content mismatch and invalid figure label reference were corrected locally.
 - The latest-release destination returned HTTP 200. New technical-reference documents and social assets require publication before their public links become available.
-- The final local page was visually reviewed at 1280px and 390px widths; document width also matched the 320px viewport. FAQ answers and command-line instructions remain visible without disclosure controls.
+- The final local page was visually reviewed at 1280px and 390px widths; document width also matched the 320px viewport. FAQ answers remain visible without disclosure controls; command-line instructions are linked.
 - The screenshot in ignored `local/site-review/typography.jpg` records the refined desktop hero. This is browser emulation, not physical-device or VoiceOver acceptance.
 - `tests/test_site.py` checks canonical/social consistency, PNG dimensions, local links and accessibility references, schema graph references, exact FAQ parity, sitemap and assistant reference. The Pages workflow runs these before uploading the site.
 - No Search Console indexing, ranking, Core Web Vitals, external rich-result validator, social-platform cache refresh, or post-deployment checks were performed. Do not report those as passed.
