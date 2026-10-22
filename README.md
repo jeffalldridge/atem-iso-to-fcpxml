@@ -134,6 +134,6 @@ swift test && python3 -m unittest discover -s tests
 make app      # build/ATEM ISO to FCPXML.app, universal and ad-hoc signed
 ```
 
-Technical documentation is in [docs/](docs/): [app structure](docs/app.md), [architecture](docs/architecture.md), the [`.drp` format](docs/drp-format.md), the [FCPXML structures](docs/fcpxml-structure.md), [validation](docs/validation.md), [vendor references](docs/vendor-reference.md), [releasing](docs/releasing.md), and the [website](docs/website.md).
+Technical documentation is in [docs/](docs/): [app structure](docs/app.md), [architecture](docs/architecture.md), the [maintainer handoff and future considerations](docs/next-work.md), the [`.drp` format](docs/drp-format.md), the [FCPXML structures](docs/fcpxml-structure.md), [validation](docs/validation.md), [vendor references](docs/vendor-reference.md), [releasing](docs/releasing.md), and the [website](docs/website.md).
 
 MIT licensed. Not affiliated with Blackmagic Design or Apple; ATEM, Final Cut Pro, and DaVinci Resolve are their trademarks.
