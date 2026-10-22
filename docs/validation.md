@@ -17,7 +17,7 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 **Not yet verified**
 
 - Other ATEM models (Extreme ISO, SDI ISO, Television Studio HD8 ISO) and other frame rates, especially 59.94 and 29.97 drop-frame, with real media. Synthetic coverage only.
-- Keys, fade to black, and non-mix transitions on real recordings. The fallback to the program recording is exercised synthetically and has not been imported into Final Cut.
+- Keys, fade to black, and non-mix transitions on real recordings. Native synthetic tests cover Program stand-in sections; they do not establish behavior across those operations on real hardware recordings.
 - A multi-session `.drp` from a real stop-and-start recording. How later sessions name their media is inferred from the log, which is why the app does not offer a session chooser.
 - Lip sync by ear over a full-length recording. Alignment is by timecode and Broadcast Wave time reference, which matched exactly on the real recordings; no waveform analysis is done.
 - Final Cut Pro versions older than 12.4.
