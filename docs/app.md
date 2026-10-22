@@ -35,10 +35,10 @@ One resizable window. System appearance, accent color, toolbar, radio buttons, c
 - **Empty window**: one **Choose Recording…** button (Return) and drag-and-drop. There is no action bar until a recording is open.
 - **Recording**: name, format, duration, and a strip of the actual edit decisions (cut for cut, dissolves marked) with the soundtrack beneath. The strip is drawn from the same edit list the converter uses; it is not decoded video and not a waveform.
 - **Camera angles**: inputs used live start checked. Each camera uses its paired WAV when there is one, and says so.
-- **Soundtrack**: visible radio choices select the audio that plays across every cut.
+- **Soundtrack**: visible radio choices select the audio that plays across every cut. A WAV remains the default when available. **ATEM live mix** preserves the recorded mix, including baked-in AFV and input on/off decisions; later picture edits do not recompute it. With no WAVs, live mix is selected automatically. It uses Program audio or an audio-bearing selected ISO.
 - **Extra audio angles**: start unchecked. A WAV already paired with a selected camera, or chosen as the soundtrack, is not offered again, and a hidden choice is cleared so it cannot come back checked.
-- **Transitions**: dissolves, cuts, or program video, with the program recording as an optional angle.
-- **Action bar**: what will be made, and where (`<name>.fcpxml` next to the recording, noting an existing file that will need confirmation). **Create FCPXML** (Return or ⌘S) becomes **Details…**, **Show in Finder**, and **Open in Final Cut Pro** when it finishes. Changing a choice after a conversion makes the window ready to convert again; the saved file stays where it is, and replacing it asks first.
+- **Transitions**: dissolves, cuts, or program video, with the program picture as an optional angle, independent of the soundtrack.
+- **Action bar**: what will be made, and where (`<name>.fcpxml` next to the recording, noting an existing file that will need confirmation). **Create FCPXML** (Return or ⌘S) becomes **Details…**, **Show in Finder**, and **Open in Final Cut Pro** when it finishes, with a visible count of recording notes to review in Details. Changing a choice after a conversion makes the window ready to convert again; the saved file stays where it is, and replacing it asks first.
 
 The camera, soundtrack, and extra-audio lists scroll independently, so eight cameras or many WAVs stay usable. The File menu has Open Recording… (⌘O), Open Recent, Close (⌘W), Create FCPXML (⌘S), Show in Finder (⌘R), and Open in Final Cut Pro.
 

@@ -1,6 +1,6 @@
 import Foundation
 
-public let converterVersion = "1.1.1"
+public let converterVersion = "1.2.0"
 public let fcpxmlVersion = "1.10"  // Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 public let crossDissolveUID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
 
@@ -161,36 +161,52 @@ public func buildFCPXML(_ plan: Plan) throws -> Data {
     let multicamID = nextID()
     let media = resources.child("media", [("id", multicamID), ("name", "\(plan.name) Multicam")])
     let multicam = media.child("multicam", [("format", formatID), ("tcStart", t0.fcpxml), ("tcFormat", tcFormat)])
+    var compounds: [(id: String, name: String, duration: Rational)] = []
+    // Angle offsets are relative to the multicam origin; tcStart supplies its displayed clock.
+    // Using t0 again hides the clips in the Angle Editor and inflates the browser duration.
     for angle in plan.angles {
         let mcAngle = multicam.child("mc-angle", [("name", angle.name), ("angleID", angle.id)])
-        if angle.kind == "camera" || angle.kind == "program" {
+        if angle.kind == "program-audio" {
+            let (videoID, videoStart, videoLength) = try videoAsset(angle.video!, probeMp4(angle.video!))
+            mcAngle.child("asset-clip", [("ref", videoID), ("name", angle.name), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", min(duration, videoLength).fcpxml), ("srcEnable", "audio"), ("audioRole", "dialogue")])
+        } else if angle.kind == "camera" || angle.kind == "program" {
             let (videoID, videoStart, videoLength) = try videoAsset(angle.video!, nil)
             let clipLength = min(duration, videoLength)
             if let audio = angle.audio {
                 // Final Cut keeps a connected audio clip inside a multicam angle only through a compound clip.
                 let compoundID = nextID()
-                let compound = resources.child("media", [("id", compoundID), ("name", angle.name)])
+                let compoundName = "\(angle.name) - ISO + WAV"
+                compounds.append((compoundID, compoundName, clipLength))
+                let compound = resources.child("media", [("id", compoundID), ("name", compoundName)])
                 let sequence = compound.child("sequence", [("format", formatID), ("duration", clipLength.fcpxml), ("tcStart", "0s"), ("tcFormat", tcFormat), ("audioLayout", "stereo"), ("audioRate", "48k")])
                 let spine = sequence.child("spine")
                 let clip = spine.child("clip", [("name", angle.name), ("offset", "0s"), ("start", "0s"), ("duration", clipLength.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
                 clip.child("video", [("ref", videoID), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", clipLength.fcpxml)])
                 let (audioID, audioStart, audioLength) = try audioAsset(audio)
                 clip.child("asset-clip", [("ref", audioID), ("lane", "-1"), ("offset", "0s"), ("name", audio.stem), ("start", audioStart.fcpxml), ("duration", min(clipLength, audioLength).fcpxml), ("audioRole", "dialogue")])
-                mcAngle.child("ref-clip", [("ref", compoundID), ("name", angle.name), ("offset", t0.fcpxml), ("start", "0s"), ("duration", clipLength.fcpxml)])
+                mcAngle.child("ref-clip", [("ref", compoundID), ("name", compoundName), ("offset", "0s"), ("start", "0s"), ("duration", clipLength.fcpxml)])
+            } else if angle.kind == "camera" {
+                // A native asset-clip retains MP4 audio without unsupported connected items in the angle.
+                mcAngle.child("asset-clip", [("ref", videoID), ("name", angle.name), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", clipLength.fcpxml), ("audioRole", "dialogue")])
             } else {
-                let clip = mcAngle.child("clip", [("name", angle.name), ("offset", t0.fcpxml), ("start", "0s"), ("duration", clipLength.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
+                let clip = mcAngle.child("clip", [("name", angle.name), ("offset", "0s"), ("start", "0s"), ("duration", clipLength.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
                 clip.child("video", [("ref", videoID), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", clipLength.fcpxml)])
-                if angle.kind == "camera" {
-                    clip.child("audio", [("ref", videoID), ("lane", "-1"), ("offset", "0s"), ("start", videoStart.fcpxml), ("duration", clipLength.fcpxml), ("role", "dialogue")])
-                }
             }
         } else if angle.kind == "still" {
             let (stillID, _, _) = try videoAsset(angle.video!, nil, still: true)
-            let clip = mcAngle.child("clip", [("name", angle.name), ("offset", t0.fcpxml), ("start", "0s"), ("duration", duration.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
+            let compoundID = nextID()
+            let compoundName = "\(angle.name) - Still"
+            compounds.append((compoundID, compoundName, duration))
+            let compound = resources.child("media", [("id", compoundID), ("name", compoundName)])
+            let sequence = compound.child("sequence", [("format", formatID), ("duration", duration.fcpxml), ("tcStart", "0s"), ("tcFormat", tcFormat), ("audioLayout", "stereo"), ("audioRate", "48k")])
+            let spine = sequence.child("spine")
+            // Keep the rate-undefined still's clip/video shape inside a shared, editable compound.
+            let clip = spine.child("clip", [("name", angle.video!.stem), ("offset", "0s"), ("start", "0s"), ("duration", duration.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
             clip.child("video", [("ref", stillID), ("offset", "0s"), ("start", "0s"), ("duration", duration.fcpxml)])
+            mcAngle.child("ref-clip", [("ref", compoundID), ("name", compoundName), ("offset", "0s"), ("start", "0s"), ("duration", duration.fcpxml)])
         } else {
             let (audioID, audioStart, audioLength) = try audioAsset(angle.audio!)
-            mcAngle.child("asset-clip", [("ref", audioID), ("name", angle.name), ("offset", t0.fcpxml), ("start", audioStart.fcpxml), ("duration", min(duration, audioLength).fcpxml), ("audioRole", "dialogue")])
+            mcAngle.child("asset-clip", [("ref", audioID), ("name", angle.name), ("offset", "0s"), ("start", audioStart.fcpxml), ("duration", min(duration, audioLength).fcpxml), ("audioRole", "dialogue")])
         }
     }
 
@@ -207,12 +223,25 @@ public func buildFCPXML(_ plan: Plan) throws -> Data {
         }
     }
 
+    // Browser compounds share the angle resources, so edits propagate into the live edit.
+    // Let Final Cut assign UIDs and present its native matching-name import dialog.
     let browser = container.child("mc-clip", [("ref", multicamID), ("name", "\(plan.name) Multicam"), ("start", t0.fcpxml), ("duration", duration.fcpxml)])
     mcSources(browser, firstCamera)
+    for compound in compounds {
+        container.child("ref-clip", [("ref", compound.id), ("name", compound.name), ("start", "0s"), ("duration", compound.duration.fcpxml)])
+    }
+    var browserAssets: Set<String> = []
     for angle in plan.angles {
         for path in [angle.video, angle.audio] {
-            guard let path, angle.kind != "still" else { continue }
+            guard let path else { continue }
             let key = path.resolvedPath
+            guard browserAssets.insert(key).inserted else { continue }
+            if angle.kind == "still" {
+                // A still has no finite source duration; give its browser clip the recording range.
+                let clip = container.child("clip", [("name", path.stem), ("start", "0s"), ("duration", duration.fcpxml), ("format", formatID), ("tcFormat", tcFormat)])
+                clip.child("video", [("ref", assets[key]!), ("offset", "0s"), ("start", "0s"), ("duration", duration.fcpxml)])
+                continue
+            }
             let times = assetTimes[key]!
             var attrs = [("ref", assets[key]!), ("name", path.stem), ("start", times.0.fcpxml), ("duration", times.1.fcpxml)]
             if path == angle.video { attrs += [("format", formatID), ("tcFormat", tcFormat)] } else { attrs.append(("audioRole", "dialogue")) }

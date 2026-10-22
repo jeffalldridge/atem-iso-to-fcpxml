@@ -16,20 +16,29 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 Open the disk image, drag the app to Applications, and open it. Then:
 
 1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. You can also select the `.drp` in Finder and use **Open With → ATEM ISO to FCPXML**.
-2. Check the cameras you used (the ones you switched to live are already checked), pick the WAV for the soundtrack, and add the mic inputs as extra angles if you want them. The window shows where the file will be saved.
+2. Check the cameras you used (the ones you switched to live are already checked), pick a WAV or **ATEM live mix** for the soundtrack, and add the mic inputs as extra angles if you want them. The window shows where the file will be saved.
 3. Click **Create FCPXML**, then **Open in Final Cut Pro**.
 
-Final Cut creates an event named after the recording folder containing the multicam clip, the Live Edit project, and every source file. Trim, fix a switch in the Angle Viewer, add titles, and export.
+Final Cut creates an event named after the recording folder containing the multicam clip, the Live Edit project, the camera and Media Player compounds, and the source files. Trim, fix a switch in the Angle Viewer, add titles, and export.
 
 ## What You Get in Final Cut Pro
 
 - **A multicam clip** with one angle per camera input you chose. Each angle is the camera's high-quality ISO `.mp4` for picture and its 24-bit `.wav` for sound, when available. A camera without a matching WAV falls back to its MP4 audio, with a note.
 - **A "Live Edit" project**: the switch you performed on the ATEM, cut for cut. ATEM mix transitions become real, editable Cross Dissolves. The soundtrack stays on one audio angle while the picture changes, exactly like a multicam edit made in Final Cut.
-- **Extra audio-only angles** for the ATEM mic inputs, so switching the whole soundtrack to the sound board feed is one click in the Angle Viewer.
-- **Media Player stills** as their own angle, so a graphic you put on air appears in the timeline too.
-- **Every selected source file** as a browser clip.
+- **Extra audio-only angles** for the ATEM mic inputs, available to switch to or mix in Final Cut. Adding an angle makes it available; it does not turn it on in the initial Live Edit.
+- **Media Player stills** as their own angle, with a linked “Media Player 1 - Still” compound and the original image visible in the browser. Open the compound to edit the graphic used by the multicam.
+- **Camera compounds in the browser**, named “Camera 1 - ISO + WAV” (or your input label). Each is the same compound used by its multicam angle, ready to open and edit.
+- **Every selected MP4, WAV, and still image** as a browser clip.
 
 The recording is never modified. The app writes exactly one new file, `<name>.fcpxml`, next to the `.drp`, and asks before replacing an existing one.
+
+### Editing the Sources
+
+Double-click the multicam in the browser to open the Angle Editor. Each angle shows its clip at the recording's original timecode. Double-click a camera or Media Player compound, either there or in the browser, to open its contents in a separate timeline. A camera compound contains the ISO picture and connected WAV; a Media Player compound contains the original still image. You can also select the compound and choose **Clip → Open Clip**. Edit the contents of that compound to update its uses in the multicam and Live Edit. The raw MP4 browser clips retain their original compressed audio; the compounds use the WAV.
+
+These are shared clips: editing a compound changes its uses throughout the library.
+
+The event keeps the recording folder's name. If you import again with matching event and clip names, Final Cut may ask **Keep Both** or **Replace**. Choose **Keep Both** to preserve your edits; in Final Cut Pro 12.4 this adds numbered copies in the existing event. A different event name keeps the imports separate (`--event` on the command line, or rename the recording folder before conversion). The converter cannot inspect names already in your Final Cut library. Each conversion writes exactly one Live Edit project and one multicam. Older imports with different names, including early development names with an em dash, remain separate items; a new import does not remove them.
 
 ## How ATEM Operations Are Translated
 
@@ -49,6 +58,14 @@ Audio never follows the picture: every timeline clip plays the soundtrack angle,
 The ATEM's ISO MP4s carry the switcher's **program mix** as AAC. The WAVs in `Audio Source Files` are each input's own 24-bit, 48 kHz audio before the ATEM mixer touches it. Using them gives you clean, per-source audio with full headroom for your own leveling, EQ, and compression in Final Cut, and lets a mic input become the soundtrack even if it was not in the stream mix.
 
 Each WAV carries a Broadcast Wave time reference that matches the ATEM's master timecode, and every ISO MP4 carries that timecode too. The converter preserves those values and assumes the native files share a recording start. It warns about different start times or short media; it does not correct those offsets or analyze waveforms.
+
+### What Happens to the Live Audio Mix?
+
+The converter rebuilds the picture edit and uses **one selected audio source continuously**. Choose **ATEM live mix** to keep the recorded mix, or a WAV to use one isolated input. The converter does not reconstruct separate audio-follow-video (AFV), input on/off, fader, EQ, or dynamics automation. A camera WAV is that input's isolated recording, not the live mixed soundtrack. Choosing a WAV can therefore bring back sound that was off in the live mix, or omit other inputs that were on. Extra audio angles remain available for editing; they do not play automatically.
+
+Final Cut supports audio from multiple multicam angles at once. Select a multicam clip in the project timeline, open the **Audio inspector**, and enable the additional angle components. Choose **Clip → Expand Audio Components** to adjust them individually. In the Angle Viewer, audio-only switching also lets you Option-Command-click an angle to add or remove its audio. These are Final Cut editing controls, not a reconstruction of the original ATEM mixer. See Apple's [multicam audio guidance](https://support.apple.com/guide/final-cut-pro/multicam-editing-tips-verb1160b2d/mac) and [audio switching instructions](https://support.apple.com/guide/final-cut-pro/cut-and-switch-camera-angles-ver23c76c9c/mac).
+
+The recorded program audio contains the live mixed result. Preserving that recording preserves how the live AFV and mixer decisions sounded, but those decisions are baked into the mix rather than separately editable. Choose **ATEM live mix** under Soundtrack (or `--live-mix` on the command line). It uses the Program MP4 when it has audio, otherwise a selected ISO MP4 with audio. WAV remains the default when available; recordings with no WAVs use the live mix automatically. The optional **Program** angle supplies picture independently. Changing the picture edit later does not recompute AFV in an existing recorded mix.
 
 ## Requirements and Limits
 
@@ -80,6 +97,7 @@ RECORDING                the .drp file, or the recording folder that contains it
 -o, --output FILE        write here instead of next to the .drp
 --cameras 1,2            inputs to include as angles (default: the inputs used in the live switch)
 --audio "MIC 1"          soundtrack WAV, by suffix or file name (default: the first camera's WAV)
+--live-mix               recorded ATEM mix instead of an isolated WAV; cannot combine with --audio
 --extra-audio "CAM 3"    add an audio-only angle; repeatable (default: every WAV with no camera, i.e., the mics)
 --no-extra-audio         no audio-only angles
 --transitions MODE       dissolve (default), cut, or program
@@ -116,6 +134,6 @@ swift test && python3 -m unittest discover -s tests
 make app      # build/ATEM ISO to FCPXML.app, universal and ad-hoc signed
 ```
 
-Technical documentation is in [docs/](docs/): [app structure](docs/app.md), [architecture](docs/architecture.md), the [`.drp` format](docs/drp-format.md), the [FCPXML structures](docs/fcpxml-structure.md), [validation](docs/validation.md), [vendor references](docs/vendor-reference.md), [releasing](docs/releasing.md), and the [website](docs/website.md).
+Technical documentation is in [docs/](docs/): [app structure](docs/app.md), [architecture](docs/architecture.md), the [maintainer handoff and future considerations](docs/next-work.md), the [`.drp` format](docs/drp-format.md), the [FCPXML structures](docs/fcpxml-structure.md), [validation](docs/validation.md), [vendor references](docs/vendor-reference.md), [releasing](docs/releasing.md), and the [website](docs/website.md).
 
 MIT licensed. Not affiliated with Blackmagic Design or Apple; ATEM, Final Cut Pro, and DaVinci Resolve are their trademarks.

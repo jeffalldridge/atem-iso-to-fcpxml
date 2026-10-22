@@ -24,6 +24,20 @@ final class CLITests: XCTestCase {
         }
     }
 
+    func testLiveMixAndExclusiveChoices() throws {
+        let fixture = try Fixtures.RecordingDir()
+        defer { fixture.cleanup() }
+        try fixture.write()
+        let (code, message) = try run([fixture.drp.path, "--live-mix", "--dry-run"])
+        XCTAssertEqual(code, 0, message)
+        XCTAssertTrue(message.contains("Angle ATEM live mix:"))
+        for choices in [["--live-mix", "--audio", "CAM 1"], ["--audio", "CAM 1", "--live-mix"]] {
+            let (code, message) = try run([fixture.drp.path, "--dry-run"] + choices)
+            XCTAssertEqual(code, 2)
+            XCTAssertTrue(message.contains("either --live-mix or --audio"))
+        }
+    }
+
     func testNoExtraAudioWinsRegardlessOfOptionOrder() throws {
         let fixture = try Fixtures.RecordingDir()
         defer { fixture.cleanup() }

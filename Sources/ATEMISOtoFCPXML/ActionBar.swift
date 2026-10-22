@@ -36,10 +36,16 @@ struct ActionBar: View {
             ProgressView().controlSize(.small)
             Text("Creating \(model.loaded?.outputURL.lastPathComponent ?? "the FCPXML")…").foregroundStyle(.secondary)
         case .done:
-            Label {
-                Text("Saved \(model.output?.lastPathComponent ?? "") next to the recording.")
-            } icon: {
-                Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 4) {
+                Label {
+                    Text("Saved \(model.output?.lastPathComponent ?? "") next to the recording.")
+                } icon: {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                }
+                if model.warningCount > 0 {
+                    Label("\(model.warningCount) recording note\(model.warningCount == 1 ? "" : "s"). Open Details to review.", systemImage: "exclamationmark.triangle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
             }
         }
     }

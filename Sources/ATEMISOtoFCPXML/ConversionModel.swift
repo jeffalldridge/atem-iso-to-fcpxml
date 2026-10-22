@@ -12,6 +12,8 @@ struct CameraChoice: Identifiable, Hashable {
 }
 
 struct AudioChoice: Identifiable, Hashable {
+    // A NUL cannot occur in a file name, so this app-only choice cannot collide with a WAV.
+    static let liveMixID = "\0live-mix"
     let id: String  // file name
     let title: String  // the camera's name for a camera WAV, otherwise the WAV's own name
     let detail: String  // the file name
@@ -32,6 +34,7 @@ struct LoadedRecording {
     let recording: Recording
     let cameras: [CameraChoice]
     let audio: [AudioChoice]
+    let liveMixCameras: Set<Int>
     let cutCount: Int
     let dissolveCount: Int
     let outputURL: URL
@@ -104,9 +107,15 @@ final class ConversionModel {
     private(set) var timeline: [TimelineSegment] = []
     var cameraOrder: [Int] { loaded?.cameras.map(\.id) ?? [] }
     var liveSwitchText: String { "\(timeline.count) clip\(timeline.count == 1 ? "" : "s"), \(timeline.filter(\.dissolveIn).count) dissolves" }
+    var liveMixAvailable: Bool {
+        guard let loaded, !selectedCameras.isEmpty else { return false }
+        return loaded.recording.programInfo?.hasAudio == true || !loaded.liveMixCameras.isDisjoint(with: selectedCameras)
+    }
+    var warningCount: Int { summary.filter { $0.hasPrefix("Warning:") }.count }
     var soundtrackName: String {
         guard let loaded else { return "" }
-        return loaded.audio.first { $0.id == soundtrack }?.title ?? "MP4 audio"
+        if soundtrack == AudioChoice.liveMixID { return "ATEM live mix" }
+        return loaded.audio.first { $0.id == soundtrack }?.title ?? "ATEM live mix (MP4)"
     }
     func angleName(_ angleID: String) -> String {
         if angleID.hasPrefix("input-"), let index = Int(angleID.dropFirst(6)) { return loaded?.cameras.first { $0.id == index }?.name ?? angleID }
@@ -116,9 +125,11 @@ final class ConversionModel {
     }
     /// One line saying what the current choices make.
     var planSummary: String {
-        guard loaded != nil else { return "" }
+        guard let loaded else { return "" }
         if selectedCameras.isEmpty { return "Choose at least one camera." }
-        let extras = optionalAudio.filter { extraAudio.contains($0.id) }.count
+        let paired = Set(loaded.cameras.filter { selectedCameras.contains($0.id) }.compactMap(\.wavName))
+        let independentSoundtrack = soundtrack == AudioChoice.liveMixID || (!soundtrack.isEmpty && !paired.contains(soundtrack))
+        let extras = optionalAudio.filter { extraAudio.contains($0.id) }.count + (independentSoundtrack ? 1 : 0)
         var angles = "\(selectedCameras.count) camera\(selectedCameras.count == 1 ? "" : "s")"
         if extras > 0 { angles += " and \(extras) audio angle\(extras == 1 ? "" : "s")" }
         return "Multicam clip with \(angles) · Live Edit project with \(liveSwitchText) · Soundtrack: \(soundtrackName)"
@@ -215,8 +226,13 @@ final class ConversionModel {
                     let short = entry.stem.hasPrefix(prefix) && entry.stem.count > prefix.count ? String(entry.stem.dropFirst(prefix.count)) : entry.stem
                     return AudioChoice(id: file, title: cameraNames[file] ?? short, detail: file, isCameraAudio: cameraNames[file] != nil)
                 }
-                let main = defaults.angles.first { $0.id == defaults.mainAudioAngle }?.audio?.lastPathComponent ?? ""
-                let item = LoadedRecording(log: log, recording: recording, cameras: cameras, audio: audio,
+                // Read headers off the main actor. Conversion rechecks the actual selected sources.
+                let liveMixCameras = Set(recording.sources.filter { source in
+                    guard let path = source.mp4, source.kind == "Video" else { return false }
+                    return (try? probeMp4(path).hasAudio) == true
+                }.map(\.index))
+                let main = defaults.angles.first { $0.id == defaults.mainAudioAngle }?.audio?.lastPathComponent ?? AudioChoice.liveMixID
+                let item = LoadedRecording(log: log, recording: recording, cameras: cameras, audio: audio, liveMixCameras: liveMixCameras,
                                            cutCount: defaults.edit.cuts.count, dissolveCount: defaults.edit.cuts.filter { $0.transitionIn != nil }.count,
                                            outputURL: log.deletingPathExtension().appendingPathExtension("fcpxml"))
                 await MainActor.run { self.finishLoading(item, cameras: used, soundtrack: main, extras: []) }
@@ -281,7 +297,8 @@ final class ConversionModel {
         }
         var options = PlanOptions()
         options.cameras = selectedCameras.sorted()
-        options.audio = soundtrack.isEmpty ? nil : soundtrack
+        options.liveMix = soundtrack == AudioChoice.liveMixID
+        options.audio = soundtrack.isEmpty || options.liveMix ? nil : soundtrack
         let allowed = Set(optionalAudio.map(\.id))
         options.extraAudio = extraAudio.intersection(allowed).sorted()
         options.transitions = transitions.rawValue
@@ -346,6 +363,13 @@ final class ConversionModel {
 
     /// A hidden extra must not silently return checked when a camera or soundtrack changes again.
     private func reconcileAudio() {
+        // An empty camera list is often a temporary step while changing cameras.
+        if !selectedCameras.isEmpty && soundtrack == AudioChoice.liveMixID && !liveMixAvailable {
+            soundtrack = loaded?.audio.first?.id ?? ""
+        }
+        if soundtrack.isEmpty && loaded?.audio.isEmpty == true && liveMixAvailable {
+            soundtrack = AudioChoice.liveMixID
+        }
         let valid = extraAudio.intersection(Set(optionalAudio.map(\.id)))
         if valid != extraAudio { extraAudio = valid }
     }

@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
-__version__ = "1.1.1"
+__version__ = "1.2.0"
 
 FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
@@ -794,7 +794,7 @@ def build_edit_list(rec: Recording, cameras: Sequence[int], transitions: str = "
 class Angle:
     id: str
     name: str
-    kind: str  # camera | still | program | audio
+    kind: str  # camera | still | program | program-audio | audio
     video: Optional[Path] = None
     audio: Optional[Path] = None
     source_index: Optional[int] = None
@@ -853,9 +853,18 @@ def resolve_audio(rec: Recording, label: Optional[str]) -> Optional[Path]:
     raise ConversionError(f"{label!r} matches several WAVs: " + ", ".join(p.name for p in matches) + ".")
 
 
+def live_mix_source(rec: Recording, cameras: Sequence[int]) -> Optional[Path]:
+    """The program mix is embedded in both Program and ISO MP4s."""
+    candidates = ([rec.program_mp4] if rec.program_mp4 else []) + [rec.sources[i].mp4 for i in cameras]
+    return next((path for path in candidates if path and probe_mp4(path).has_audio), None)
+
+
 def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Optional[str] = None,
               extra_audio: Optional[Sequence[str]] = None, transitions: str = "dissolve",
-              name: Optional[str] = None, event: Optional[str] = None, include_program: bool = False) -> Plan:
+              name: Optional[str] = None, event: Optional[str] = None, include_program: bool = False,
+              live_mix: bool = False) -> Plan:
+    if live_mix and audio is not None:
+        raise ConversionError("Choose either --live-mix or --audio, not both.")
     if transitions not in ("dissolve", "cut", "program"):
         raise ConversionError("transitions must be dissolve, cut or program.")
     cameras_available = [i for i, s in sorted(rec.sources.items()) if s.kind == "Video" and s.mp4]
@@ -880,7 +889,8 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
         if source.wav:
             source.wav_info = probe_wav(source.wav)
         else:
-            rec.warnings.append(f"{source.name}: no WAV named '{Path(source.relative).stem}.wav' in {AUDIO_DIR}; using the MP4's compressed audio.")
+            fallback = "using the MP4's compressed audio." if source.mp4_info.has_audio else "the MP4 has no audio either."
+            rec.warnings.append(f"{source.name}: no WAV named '{Path(source.relative).stem}.wav' in {AUDIO_DIR}; {fallback}")
         angles.append(Angle(f"input-{index}", source.name, "camera", source.mp4, source.wav, index))
     for key, (index, label, _) in edit.stills.items():
         if key in edit.angles_used:
@@ -889,7 +899,7 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
         angles.append(Angle("program", "Program", "program", rec.program_mp4, None))
 
     main_path = resolve_audio(rec, audio) if audio else None
-    if main_path is None:
+    if main_path is None and not live_mix:
         first = rec.sources[cameras[0]]
         main_path = first.wav or next((p for p in rec.audio_files.values()), None)
     camera_wavs = {a.audio for a in angles if a.audio}
@@ -918,8 +928,13 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
 
     main_angle = next((a.id for a in angles if main_path is not None and a.audio == main_path), None)
     if main_angle is None:
-        main_angle = next((a.id for a in angles if a.kind == "camera"), angles[0].id)
-        rec.warnings.append("No WAV files found; the main soundtrack is the first camera's MP4 audio.")
+        mix_path = live_mix_source(rec, cameras)
+        if mix_path is None:
+            raise ConversionError("No recorded live mix audio was found in the Program or selected camera MP4s. Choose a WAV soundtrack or restore the recording's audio files.")
+        angles.append(Angle("atem-live-mix", "ATEM live mix", "program-audio", mix_path))
+        main_angle = "atem-live-mix"
+        if not live_mix:
+            rec.warnings.append("No WAV files found; the main soundtrack is the recorded ATEM live mix.")
     # Asset start describes a source's own clock; it does NOT align two files
     # placed at the same offset. Native ATEM files should share the start.
     # Keep the round-tripped XML shape; flag mismatches for manual sync instead
@@ -1056,16 +1071,25 @@ def build_fcpxml(plan: Plan) -> bytes:
     multicam_id = res.next_id()
     media = ET.SubElement(resources_el, "media", id=multicam_id, name=f"{plan.name} Multicam")
     multicam = ET.SubElement(media, "multicam", format=format_id, tcStart=fmt_time(t0), tcFormat=tc_format)
+    compounds: List[Tuple[str, str, Fraction]] = []
+    # Angle offsets are relative to the multicam origin; tcStart supplies its displayed clock.
+    # Using t0 again hides the clips in the Angle Editor and inflates the browser duration.
     for angle in plan.angles:
         mc_angle = ET.SubElement(multicam, "mc-angle", name=angle.name, angleID=angle.id)
-        if angle.kind in ("camera", "program"):
+        if angle.kind == "program-audio":
+            video_id, video_start, video_length = video_asset(angle.video, probe_mp4(angle.video))
+            ET.SubElement(mc_angle, "asset-clip", ref=video_id, name=angle.name, offset="0s", start=fmt_time(video_start),
+                          duration=fmt_time(min(duration, video_length)), srcEnable="audio", audioRole="dialogue")
+        elif angle.kind in ("camera", "program"):
             video_id, video_start, video_length = video_asset(angle.video, None)
             clip_length = min(duration, video_length)
             if angle.audio:
                 # Final Cut accepts a connected audio clip inside a multicam angle only through a compound clip
                 # (media/sequence). A plain clip or sync-clip in an angle silently drops its connected items.
                 compound_id = res.next_id()
-                compound = ET.SubElement(resources_el, "media", id=compound_id, name=angle.name)
+                compound_name = f"{angle.name} - ISO + WAV"
+                compounds.append((compound_id, compound_name, clip_length))
+                compound = ET.SubElement(resources_el, "media", id=compound_id, name=compound_name)
                 sequence = ET.SubElement(compound, "sequence", format=format_id, duration=fmt_time(clip_length), tcStart="0s",
                                          tcFormat=tc_format, audioLayout="stereo", audioRate="48k")
                 spine = ET.SubElement(sequence, "spine")
@@ -1075,23 +1099,35 @@ def build_fcpxml(plan: Plan) -> bytes:
                 audio_id, audio_start, audio_length = audio_asset(angle.audio)
                 ET.SubElement(clip, "asset-clip", ref=audio_id, lane="-1", offset="0s", name=angle.audio.stem,
                               start=fmt_time(audio_start), duration=fmt_time(min(clip_length, audio_length)), audioRole="dialogue")
-                ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=angle.name, offset=fmt_time(t0), start="0s",
+                ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=compound_name, offset="0s", start="0s",
                               duration=fmt_time(clip_length))
+            elif angle.kind == "camera":
+                # Without a separate WAV, a native asset-clip keeps the MP4 audio without
+                # the unsupported connected audio that Final Cut drops inside an angle.
+                ET.SubElement(mc_angle, "asset-clip", ref=video_id, name=angle.name, offset="0s",
+                              start=fmt_time(video_start), duration=fmt_time(clip_length), audioRole="dialogue")
             else:
-                clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset=fmt_time(t0), start="0s",
+                clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset="0s", start="0s",
                                      duration=fmt_time(clip_length), format=format_id, tcFormat=tc_format)
                 ET.SubElement(clip, "video", ref=video_id, offset="0s", start=fmt_time(video_start), duration=fmt_time(clip_length))
-                if angle.kind == "camera":
-                    ET.SubElement(clip, "audio", ref=video_id, lane="-1", offset="0s", start=fmt_time(video_start),
-                                  duration=fmt_time(clip_length), role="dialogue")
         elif angle.kind == "still":
             still_id, _, _ = video_asset(angle.video, None, still=True)
-            clip = ET.SubElement(mc_angle, "clip", name=angle.name, offset=fmt_time(t0), start="0s", duration=fmt_time(duration),
+            compound_id = res.next_id()
+            compound_name = f"{angle.name} - Still"
+            compounds.append((compound_id, compound_name, duration))
+            compound = ET.SubElement(resources_el, "media", id=compound_id, name=compound_name)
+            sequence = ET.SubElement(compound, "sequence", format=format_id, duration=fmt_time(duration), tcStart="0s",
+                                     tcFormat=tc_format, audioLayout="stereo", audioRate="48k")
+            spine = ET.SubElement(sequence, "spine")
+            # Keep the rate-undefined still's clip/video shape inside a shared, editable compound.
+            clip = ET.SubElement(spine, "clip", name=angle.video.stem, offset="0s", start="0s", duration=fmt_time(duration),
                                  format=format_id, tcFormat=tc_format)
             ET.SubElement(clip, "video", ref=still_id, offset="0s", start="0s", duration=fmt_time(duration))
+            ET.SubElement(mc_angle, "ref-clip", ref=compound_id, name=compound_name, offset="0s", start="0s",
+                          duration=fmt_time(duration))
         else:
             audio_id, audio_start, audio_length = audio_asset(angle.audio)
-            ET.SubElement(mc_angle, "asset-clip", ref=audio_id, name=angle.name, offset=fmt_time(t0), start=fmt_time(audio_start),
+            ET.SubElement(mc_angle, "asset-clip", ref=audio_id, name=angle.name, offset="0s", start=fmt_time(audio_start),
                           duration=fmt_time(min(duration, audio_length)), audioRole="dialogue")
 
     container = root
@@ -1107,14 +1143,26 @@ def build_fcpxml(plan: Plan) -> bytes:
             ET.SubElement(parent, "mc-source", angleID=video_angle, srcEnable="video")
             ET.SubElement(parent, "mc-source", angleID=plan.main_audio_angle, srcEnable="audio")
 
-    # Browser clips: the multicam and every source file.
+    # Browser compounds share the angle resources, so edits propagate into the live edit.
+    # Let Final Cut assign UIDs and present its native matching-name import dialog.
+    # Browser clips: one multicam, shared camera/still compounds, and every selected source.
     browser = ET.SubElement(container, "mc-clip", ref=multicam_id, name=f"{plan.name} Multicam", start=fmt_time(t0), duration=fmt_time(duration))
     mc_sources(browser, first_camera)
+    for compound_id, compound_name, clip_length in compounds:
+        ET.SubElement(container, "ref-clip", ref=compound_id, name=compound_name, start="0s", duration=fmt_time(clip_length))
+    browser_assets = set()
     for angle in plan.angles:
         for path in (angle.video, angle.audio):
-            if path is None or angle.kind == "still":
+            if path is None or path in browser_assets:
                 continue
+            browser_assets.add(path)
             asset_id = res.assets[path]
+            if angle.kind == "still":
+                # A still has no finite source duration; give its browser clip the recording range.
+                clip = ET.SubElement(container, "clip", name=path.stem, start="0s", duration=fmt_time(duration),
+                                     format=format_id, tcFormat=tc_format)
+                ET.SubElement(clip, "video", ref=asset_id, offset="0s", start="0s", duration=fmt_time(duration))
+                continue
             start, length = asset_times[path]
             attrs = dict(ref=asset_id, name=path.stem, start=fmt_time(start), duration=fmt_time(length))
             if path == angle.video:
@@ -1266,7 +1314,7 @@ def show_alert(message: str, title: str = "ATEM ISO to FCPXML") -> None:
                     "-e", "end run", title, message], capture_output=True, text=True)
 
 
-def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[str]]:
+def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[str], bool]:
     """Ask which inputs, which main soundtrack, and which extra WAVs to use."""
     cameras = [i for i, s in sorted(rec.sources.items()) if s.kind == "Video" and s.mp4]
     probe = build_edit_list(rec, cameras, "cut")
@@ -1281,11 +1329,17 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
 
     wavs = list(rec.audio_files.values())
     if not wavs:
-        return selected, None, []
+        return selected, None, [], False
     first = rec.sources[selected[0]]
     default_main = first.wav.name if first.wav else wavs[0].name
-    main = choose_from_list("Which WAV is the main soundtrack for the timeline?\n\nYou can switch audio angles later in Final Cut Pro.",
-                            [w.name for w in wavs], [default_main], False)[0]
+    # WAV filenames end in .wav, so this display choice cannot collide with one.
+    mix_label = "ATEM live mix (recorded program audio)"
+    choices = [w.name for w in wavs]
+    if live_mix_source(rec, selected):
+        choices.insert(0, mix_label)
+    main = choose_from_list("Which soundtrack should play throughout the edit?\n\nATEM live mix preserves the recorded broadcast sound. A WAV uses that individual input.",
+                            choices, [default_main], False)[0]
+    live_mix = main == mix_label
 
     selected_stems = {Path(s.relative).stem for s in rec.sources.values() if s.kind == "Video" and s.index in selected}
     candidates = [w for w in wavs if w.stem not in selected_stems and w.name != main]
@@ -1294,7 +1348,7 @@ def interactive_choices(rec: Recording) -> Tuple[List[int], Optional[str], List[
         extras = choose_checkboxes([w.name for w in candidates], [], title="Extra audio angles",
                                    prompt="Check WAVs to add as separate audio angles. Your main soundtrack is already included.",
                                    allow_empty=True)
-    return selected, main, extras
+    return selected, None if live_mix else main, extras, live_mix
 
 
 # ------------------------------------------------------------------------------- CLI
@@ -1366,7 +1420,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("input", type=Path, help="the ATEM .drp file or its recording folder")
     parser.add_argument("-o", "--output", type=Path, help="where to write the .fcpxml (default: next to the .drp)")
     parser.add_argument("--cameras", metavar="LIST", help="inputs to include as angles, e.g. 1,2 (default: inputs used in the live switch)")
-    parser.add_argument("--audio", metavar="WAV", help="main soundtrack: a WAV name or suffix such as 'CAM 1' or 'MIC 1' (default: first camera's WAV)")
+    soundtrack = parser.add_mutually_exclusive_group()
+    soundtrack.add_argument("--live-mix", action="store_true", help="use the recorded ATEM live mix, including AFV and mixer changes")
+    soundtrack.add_argument("--audio", metavar="WAV", help="main soundtrack: a WAV name or suffix such as 'CAM 1' or 'MIC 1' (default: first camera's WAV)")
     parser.add_argument("--extra-audio", metavar="WAV", action="append", help="extra audio-only angle; repeatable (default: every WAV without a camera, e.g. MIC 1 and MIC 2)")
     parser.add_argument("--no-extra-audio", action="store_true", help="do not add audio-only angles")
     parser.add_argument("--transitions", choices=("dissolve", "cut", "program"), default="dissolve",
@@ -1390,9 +1446,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         audio = args.audio
         extra = [] if args.no_extra_audio else args.extra_audio
         if interactive:
-            cameras, audio, chosen = interactive_choices(rec)
+            cameras, audio, chosen, live_mix = interactive_choices(rec)
             extra = chosen
-        plan = make_plan(rec, cameras, audio, extra, args.transitions, args.name, "" if args.no_event else args.event, args.program_angle)
+            args.live_mix = live_mix
+        plan = make_plan(rec, cameras, audio, extra, args.transitions, args.name, "" if args.no_event else args.event, args.program_angle, args.live_mix)
         payload = build_fcpxml(plan)
         try:
             ET.fromstring(payload)  # Reject control characters before touching output.

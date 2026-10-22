@@ -29,6 +29,7 @@ while !arguments.isEmpty {
         }
         options.cameras = cameras
     case "--audio": options.audio = value(argument)
+    case "--live-mix": options.liveMix = true
     case "--extra-audio": extras.append(value(argument)); extrasGiven = true
     case "--no-extra-audio": noExtraAudio = true
     case "--transitions": options.transitions = value(argument)

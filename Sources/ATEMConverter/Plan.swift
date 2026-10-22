@@ -3,7 +3,7 @@ import Foundation
 public struct Angle: Sendable {
     public let id: String
     public let name: String
-    public let kind: String  // camera | still | program | audio
+    public let kind: String  // camera | still | program | program-audio | audio
     public let video: URL?
     public let audio: URL?
     public let sourceIndex: Int?
@@ -62,10 +62,21 @@ public struct PlanOptions: Sendable {
     public var name: String? = nil
     public var event: String? = nil  // nil: same as name; "" : no event element
     public var includeProgram = false
+    public var liveMix = false
     public init() {}
 }
 
+/// The program mix is embedded in both Program and ISO MP4s.
+public func liveMixSource(_ rec: Recording, cameras: [Int]) throws -> URL? {
+    let candidates = [rec.programMp4].compactMap { $0 } + cameras.compactMap { rec.source($0)?.mp4 }
+    for path in candidates where try probeMp4(path).hasAudio { return path }
+    return nil
+}
+
 public func makePlan(_ rec: Recording, _ options: PlanOptions = PlanOptions()) throws -> Plan {
+    if options.liveMix && options.audio != nil {
+        throw ConversionError("Choose either --live-mix or --audio, not both.")
+    }
     guard ["dissolve", "cut", "program"].contains(options.transitions) else {
         throw ConversionError("transitions must be dissolve, cut or program.")
     }
@@ -94,7 +105,8 @@ public func makePlan(_ rec: Recording, _ options: PlanOptions = PlanOptions()) t
         let source = rec.source(index)!
         source.mp4Info = try probeMp4(source.mp4!)
         if source.wav == nil {
-            rec.warnings.append("\(source.name): no WAV named '\(URL(fileURLWithPath: source.relative).stem).wav' in \(audioDirectory); using the MP4's compressed audio.")
+            let fallback = source.mp4Info!.hasAudio ? "using the MP4's compressed audio." : "the MP4 has no audio either."
+            rec.warnings.append("\(source.name): no WAV named '\(URL(fileURLWithPath: source.relative).stem).wav' in \(audioDirectory); \(fallback)")
         } else {
             _ = try probeWav(source.wav!)
         }
@@ -108,7 +120,7 @@ public func makePlan(_ rec: Recording, _ options: PlanOptions = PlanOptions()) t
     }
 
     var mainPath = try options.audio.flatMap { try resolveAudio(rec, $0) }
-    if mainPath == nil {
+    if mainPath == nil && !options.liveMix {
         let first = rec.source(cameras[0])!
         mainPath = first.wav ?? rec.audioFiles.first?.path
     }
@@ -138,8 +150,12 @@ public func makePlan(_ rec: Recording, _ options: PlanOptions = PlanOptions()) t
 
     var mainAngle = angles.first { mainPath != nil && $0.audio?.resolvedPath == mainPath!.resolvedPath }?.id
     if mainAngle == nil {
-        mainAngle = angles.first { $0.kind == "camera" }?.id ?? angles[0].id
-        rec.warnings.append("No WAV files found; the main soundtrack is the first camera's MP4 audio.")
+        guard let mix = try liveMixSource(rec, cameras: cameras) else {
+            throw ConversionError("No recorded live mix audio was found in the Program or selected camera MP4s. Choose a WAV soundtrack or restore the recording's audio files.")
+        }
+        angles.append(Angle(id: "atem-live-mix", name: "ATEM live mix", kind: "program-audio", video: mix, audio: nil, sourceIndex: nil))
+        mainAngle = "atem-live-mix"
+        if !options.liveMix { rec.warnings.append("No WAV files found; the main soundtrack is the recorded ATEM live mix.") }
     }
     for angle in angles {
         if let audio = angle.audio {

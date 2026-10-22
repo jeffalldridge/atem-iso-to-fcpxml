@@ -2,7 +2,7 @@
 
 Instructions for AI coding agents working in this repository. Human contributors should start with [CONTRIBUTING.md](CONTRIBUTING.md); this file adds only what is specific to agents. `CLAUDE.md` and `GEMINI.md` import this file so that every tool reads the same instructions.
 
-Read [README.md](README.md), [docs/fcpxml-structure.md](docs/fcpxml-structure.md), and [docs/validation.md](docs/validation.md) before changing behavior. For vendor documentation and the line between specification, observed ATEM behavior, and Final Cut round-trip evidence, read [docs/vendor-reference.md](docs/vendor-reference.md).
+Read [README.md](README.md), [docs/fcpxml-structure.md](docs/fcpxml-structure.md), and [docs/validation.md](docs/validation.md) before changing behavior. For vendor documentation and the line between specification, observed ATEM behavior, and Final Cut round-trip evidence, read [docs/vendor-reference.md](docs/vendor-reference.md). For accepted product decisions, release handoff, and prioritized evidence gaps, read [docs/next-work.md](docs/next-work.md).
 
 ## Product boundary
 
@@ -20,7 +20,8 @@ Verified by import and XML round trip in Final Cut Pro 12.4 (details in docs/fcp
 - A camera angle with separate WAV audio is a `ref-clip` to a compound `media/sequence` whose `clip` holds a `video` component plus an `asset-clip lane="-1"`. A plain `clip` or `sync-clip` directly inside `mc-angle` loses its connected audio with only a warning.
 - Timeline clips are `mc-clip`s with `mc-source` video and audio angles. Adjacent clips butt-join, and a `transition` with `offset = cut - duration/2` sits between them. Final Cut adds the audio crossfade itself; with the same audio angle on both sides it is gain-neutral.
 - Stills are `clip/video` on a `duration="0s"` asset with an `FFVideoFormatRateUndefined` format.
-- WAV assets carry the Broadcast Wave time reference as `start`; MP4 assets carry their embedded timecode.
+- WAV assets carry the Broadcast Wave time reference as `start`; MP4 assets carry their embedded timecode. Angle offsets are relative to the multicam origin (`0s`), not the source clock.
+- Browser camera/WAV and Media Player compounds reference the same resources as their multicam angles. Keep those contents visible. The recorded live mix uses a separate native `asset-clip` angle with audio-only project `mc-source` selections; Program picture remains independent.
 
 Do not change these shapes without a new Final Cut round trip, recorded in docs/validation.md. A DTD or XML parser pass is not a substitute.
 

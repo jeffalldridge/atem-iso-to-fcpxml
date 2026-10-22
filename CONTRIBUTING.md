@@ -24,7 +24,7 @@ Before pasting any output, read it for names and paths you do not want public.
 The most helpful report is a minimal invented recording that shows the problem. The tests build one in a few lines:
 
 - `tests/test_converter.py` has `RecordingDir`, which writes tiny MP4, WAV, and PNG files that contain valid headers and no real media, plus a hand-written `.drp`. Copy the closest existing test and change what differs.
-- A `.drp` is newline-delimited JSON: a header line and sparse updates (see [docs/drp-format.md](docs/drp-format.md)). A trimmed excerpt with the `file`, `projectPath`, `volume`, and `name` values replaced is welcome in an issue.
+- A `.drp` is newline-delimited JSON: a header line and sparse updates (see [docs/drp-format.md](docs/drp-format.md)). Create an invented log with generic names and paths for a public issue; do not post an excerpt from a real recording.
 
 ## Setting up
 

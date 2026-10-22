@@ -9,13 +9,13 @@ A release is a git tag `vX.Y.Z` on a commit that is on `main`; the workflow refu
 
 ## Workflow status
 
-The workflow has not produced a release in its current form. The run for `v1.1.0` passed its version and test steps but skipped signing, notarization, and publishing (no signing secrets were configured then), and the four assets on that release were attached separately about ten seconds later. Review the first real run closely, or try it with a tag in a scratch repository, before relying on it. It has not been run since the draft-first, two-job restructure, which was checked with `actionlint` only.
+The `v1.1.1` workflow completed on a hosted runner: version and tag checks, tests, Developer ID signing, app and disk-image notarization, Gatekeeper and stapler checks, and draft release creation. The maintainer then opened the downloaded disk image without a Gatekeeper warning. See [validation.md](validation.md) for the scope of that verification; it did not cover a second machine or account.
 
-The workflow reads six secrets, named exactly as in the sibling project macSubtitleOCR-gui, so the same values work for both. None exist in this repository yet. The `release` environment still holds three secrets from an older workflow (`CERTIFICATE_PASSWORD`, `DEVELOPER_ID_CERTIFICATE`, `SIGNING_IDENTITY`) that nothing uses now and that can be deleted. Until the six are added, the credentials step fails by name. A signed, notarized, stapled disk image from a clean Mac is what the download claims promise; check it as described under *Before publishing the draft*.
+The workflow requires the six credentials below. The successful run establishes that they were available for that release, not that their configuration or validity has been checked since. Do not change signing credentials as part of ordinary development.
 
-## One-time setup: repository secrets
+## Credential setup
 
-Add these under Settings → Secrets and variables → Actions, with the same values as macSubtitleOCR-gui. GitHub never shows a secret's value again, so copy them from wherever you keep the original certificate export and App Store Connect key. The runner's keychain password is generated inside the job, so `KEYCHAIN_PASSWORD` is not needed. The build job also declares the `release` environment, so you can later add a required reviewer there without changing the workflow.
+For a new repository or intentional credential rotation, configure these under Settings → Secrets and variables → Actions, or in the `release` environment. GitHub never shows a secret's value again, so copy them from wherever you keep the original certificate export and App Store Connect key. The runner's keychain password is generated inside the job, so `KEYCHAIN_PASSWORD` is not needed. The build job also declares the `release` environment, so you can later add a required reviewer there without changing the workflow.
 
 | Secret | Value |
 | --- | --- |
