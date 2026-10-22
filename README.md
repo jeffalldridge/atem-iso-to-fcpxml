@@ -32,6 +32,10 @@ Final Cut creates an event named after the recording folder containing the multi
 
 The recording is never modified. The app writes exactly one new file, `<name>.fcpxml`, next to the `.drp`, and asks before replacing an existing one.
 
+### Polish the Livestream for Publishing Afterward
+
+After the livestream, trim the beginning and end, adjust the camera cuts, and export a finished recording from the separate camera ISOs. The live edit is already in place, ready for those changes in Final Cut. On the ATEM Mini Pro ISO, the program recording uses the selected streaming quality setting, while camera ISO files can record at up to 70 Mb/s. When Program uses a lower streaming setting, rebuilding the edit from the ISOs gives you a higher-quality source for the final export without recreating the switches by hand. The converter references those files without transcoding them; sections using Program as a stand-in retain the program file's quality. See [Blackmagic's specifications](https://www.blackmagicdesign.com/products/atemmini/techspecs) and the [vendor notes](docs/vendor-reference.md).
+
 ### Editing the Sources
 
 Double-click the multicam in the browser to open the Angle Editor. Each angle shows its clip at the recording's original timecode. Double-click a camera or Media Player compound, either there or in the browser, to open its contents in a separate timeline. A camera compound contains the ISO picture and connected WAV; a Media Player compound contains the original still image. You can also select the compound and choose **Clip → Open Clip**. Edit the contents of that compound to update its uses in the multicam and Live Edit. The raw MP4 browser clips retain their original compressed audio; the compounds use the WAV.

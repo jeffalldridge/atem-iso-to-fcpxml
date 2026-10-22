@@ -1,0 +1,19 @@
+# Product facts used by the Tent Studios project listing.
+# This is a partial fact sheet; expand it from code and vendor evidence as needed.
+name: ATEM ISO to FCPXML
+quality_finishing:
+  benefit: Polish a livestream recording for later publication, keeping the live cuts and finishing from the separate camera ISO recordings.
+  implementation:
+    file: atem_iso_to_fcpxml.py
+    symbols: [make_plan, build_fcpxml]
+    behavior: Camera angles reference camera ISO MP4s; Live Edit mc-clips select those angles using the recorded switching decisions. Media is referenced without transcoding.
+  vendor:
+    model: ATEM Mini Pro ISO
+    checked: 2026-10-21
+    source: https://www.blackmagicdesign.com/products/atemmini/techspecs
+    iso_recording: H.264 camera ISO inputs, up to 70 Mb/s.
+    program_recording: H.264 program output at the selected streaming quality setting.
+  qualification: ISO recordings can provide a higher-quality finishing source when the program recording uses a lower streaming quality setting. Actual bitrates vary; 70 Mb/s is a maximum, not a fixed recording rate or a converter speed.
+  limits:
+    - The converter does not upscale or restore detail to the program recording.
+    - Sections using Program as a stand-in retain the quality of that program file.
