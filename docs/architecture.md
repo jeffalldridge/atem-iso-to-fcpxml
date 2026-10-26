@@ -1,6 +1,6 @@
 # Architecture
 
-Two implementations of the same five-stage conversion, with no runtime dependencies in the Mac app. The standard-library Python file is the reference; `Sources/ATEMConverter` is the Swift port, verified by byte-for-byte parity fixtures. See [app.md](app.md) for the SwiftUI state and window architecture. See [vendor-reference.md](vendor-reference.md) for official sources and the boundaries between specifications and observed behavior.
+Two implementations of the same five-stage conversion, with no runtime dependencies in the conversion engine. The Mac app bundles Sparkle for software updates. The standard-library Python file is the reference; `Sources/ATEMConverter` is the Swift port, verified by byte-for-byte parity fixtures. See [app.md](app.md) for the SwiftUI state and window architecture. See [vendor-reference.md](vendor-reference.md) for official sources and the boundaries between specifications and observed behavior.
 
 ```
 .drp + recording folder

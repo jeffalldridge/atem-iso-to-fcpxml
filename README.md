@@ -11,7 +11,7 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 
 ## Download
 
-**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg)** (macOS 15 or later, Apple silicon and Intel, signed and notarized, about 3 MB). The [release page](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) lists the other files. Free and open source under the MIT license.
+**[Download ATEM ISO to FCPXML for Mac](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg)** (macOS 15 or later, Apple silicon and Intel, signed and notarized, about 4 MB). The [release page](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) lists the other files. Free and open source under the MIT license.
 
 Open the disk image, drag the app to Applications, and open it. Then:
 
@@ -84,7 +84,9 @@ Tested with recordings from the ATEM Mini Pro ISO at 1080p60, with and without t
 
 ### Updating
 
-Open the [latest release](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest) (**Latest Release on GitHub…** in the app menu opens it), quit the app, and drag the new version into the same Applications folder. Choose **Replace** when Finder asks. Keep one installed copy. Updates are manual: the app makes no network requests and does not check for new versions. If you also installed the optional Finder Quick Action, install the newer one over it, because it carries its own copy of the converter.
+Choose **ATEM ISO to FCPXML → Check for Updates…** to download and install a newer published GitHub release. **Settings → Updates** controls automatic checks and automatic download/installation. Automatic checks are opt-in; automatic installation is off by default and occurs when the app quits. An active conversion finishes before quitting. Updates use Sparkle with signed feeds and signed downloads; recordings are never uploaded.
+
+Versions before 1.3.0 need one manual update: download the [latest disk image](https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest), quit the app, and replace it in Applications. Keep one installed copy. The optional Quick Action’s embedded Python fallback still needs a separate manual update.
 
 ## Command Line and Automation
 
@@ -127,7 +129,7 @@ The `.drp` is not a DaVinci Resolve project archive. It is a newline-delimited J
 - [ATEM Exporter](https://atemexporter.fcp.cafe/) logs the switcher live over the network instead of reading the `.drp`.
 - [drp-trimmer](https://github.com/faithncode/drp-trimmer) trims `.drp` recordings and exports Premiere or Final Cut XML, with FFmpeg.
 
-This project is free and open source: a native Mac app with no dependencies, per-camera WAV audio, and a one-file script that does the same conversion.
+This project is free and open source: a native Mac app with a bundled updater, per-camera WAV audio, and a one-file script that does the same conversion.
 
 ## Contributing
 

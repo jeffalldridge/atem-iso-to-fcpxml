@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Assemble the distributable ATEM ISO to FCPXML.app: one universal Swift
-# executable, an icon, and an Info.plist. Nothing is shelled out to at runtime.
+# executable, the Sparkle updater, an icon, and an Info.plist.
 #
 #   DEV_ID  Developer ID Application identity. When set, the bundle is signed
 #           with the hardened runtime, ready for notarization; otherwise it is
@@ -27,6 +27,20 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$APP_EXEC" "$APP/Contents/MacOS/${EXEC_NAME}"
 cp "$INFO_PLIST" "$APP/Contents/Info.plist"
 chmod +x "$APP/Contents/MacOS/${EXEC_NAME}"
+
+# Preserve framework symlinks and sign nested helpers before the outer bundle.
+SPARKLE_SOURCE=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+[[ -d "$SPARKLE_SOURCE" ]] || { echo "Error: resolve the Sparkle package first." >&2; exit 1; }
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$SPARKLE_SOURCE" "$SPARKLE"
+cp .build/artifacts/sparkle/Sparkle/LICENSE "$APP/Contents/Resources/Sparkle-LICENSE.txt"
+SIGN_ARGS=(--force --sign "${DEV_ID:--}")
+if [[ -n "${DEV_ID:-}" ]]; then SIGN_ARGS+=(--options runtime --timestamp); fi
+for component in XPCServices/Installer.xpc XPCServices/Downloader.xpc Autoupdate Updater.app; do
+    codesign "${SIGN_ARGS[@]}" --preserve-metadata=entitlements "$SPARKLE/Versions/B/$component"
+done
+codesign "${SIGN_ARGS[@]}" "$SPARKLE"
 
 archs="$(lipo -archs "$APP/Contents/MacOS/${EXEC_NAME}")"
 echo "==> Executable architectures: $archs"

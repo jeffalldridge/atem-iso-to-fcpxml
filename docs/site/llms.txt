@@ -4,7 +4,7 @@
 
 A short navigation aid, not a crawler policy. The linked documentation is authoritative for current behavior.
 
-The native SwiftUI app requires macOS 15 or later and includes a Swift conversion engine. The Python 3.9+ command-line tool remains the reference implementation. The soundtrack defaults to a selected WAV when available. ATEM live mix is an optional recorded mixed soundtrack, preserving the audible result of AFV and mixer changes without reconstructing mixer automation. The CLI selects it with --live-mix, mutually exclusive with --audio. Extra angles do not automatically play. GUI audio extras are opt-in; the CLI includes unpaired WAVs by default unless --no-extra-audio is supplied. Updates are manual through GitHub Releases.
+The native SwiftUI app requires macOS 15 or later and includes a Swift conversion engine. The Python 3.9+ command-line tool remains the reference implementation. The soundtrack defaults to a selected WAV when available. ATEM live mix is an optional recorded mixed soundtrack, preserving the audible result of AFV and mixer changes without reconstructing mixer automation. The CLI selects it with --live-mix, mutually exclusive with --audio. Extra angles do not automatically play. GUI audio extras are opt-in; the CLI includes unpaired WAVs by default unless --no-extra-audio is supplied. Version 1.3.0 adds Check for Updates and optional automatic installation from signed GitHub Releases. Older app versions require one manual upgrade.
 
 ## Start Here
 

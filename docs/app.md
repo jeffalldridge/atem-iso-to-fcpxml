@@ -1,6 +1,6 @@
 # The Mac App
 
-`ATEM ISO to FCPXML.app` is a SwiftUI application with no runtime dependencies: one universal Mach-O executable, an icon, and an Info.plist. It is built with Swift Package Manager; there is no Xcode project.
+`ATEM ISO to FCPXML.app` is a SwiftUI application containing a universal executable, the Sparkle update framework and helpers, an icon, and an Info.plist. The conversion engine remains dependency-free. It is built with Swift Package Manager; there is no Xcode project.
 
 ```
 Package.swift
@@ -56,7 +56,9 @@ If the ATEM appended a second recording to the same `.drp`, the app refuses to o
 
 ## Updates and the Quick Action
 
-**Latest Release on GitHub…** in the app menu opens the releases page. Updates are manual and the app makes no network requests: quit the app, drag the new copy into the same Applications folder, and choose Replace. The bundle name and identifier stay stable. There is no background updater, no check, and no download.
+**Check for Updates…** uses Sparkle to check the signed `appcast.xml` asset of the latest published GitHub release. It verifies the feed and download before extraction, replaces the app, and relaunches it. **Settings → Updates** offers automatic checks and automatic download/installation. Sparkle asks permission for automatic checks on the second launch; automatic installation starts off. Downloads queued for automatic installation install on quit. The existing deferred-termination policy waits for an active conversion and cancels quitting on conversion failure. New checks are disabled while reading or converting.
+
+Update traffic goes to GitHub and its download CDN. System profiling is disabled; no recording paths or contents are sent. Missing feeds, offline failures, and invalid signatures produce an update error without changing the installed app. Sparkle handles version ordering, skipped versions, minimum macOS requirements, installation authorization, and relaunch. The app and signed feed use the same dedicated Ed25519 key; release instructions are in [releasing.md](releasing.md). **Latest Release on GitHub…** remains a manual fallback. Older app versions require a manual upgrade to acquire the updater.
 
 The Quick Action hands the selected recording to the installed app: first `/Applications`, then `~/Applications`, then any copy LaunchServices finds by bundle identifier (a renamed or moved app, or one running from a disk image). If the hand-off fails, or no app is found, it runs its embedded Python converter with native dialogs. Keep one installed copy to avoid ambiguity. Replacing the app updates the Quick Action's native experience too. The embedded converter does not update itself; install the newer workflow over the old one. Finder's Get Info on the workflow shows which converter version it carries. Its extra audio choices also start unchecked, and its dialogs do not expose every option the app has; the options they share are held to byte-identical output by the parity tests.
 

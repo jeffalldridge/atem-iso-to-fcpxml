@@ -17,6 +17,7 @@ name: Release
 #   NOTARY_KEY              base64-encoded App Store Connect API .p8
 #   NOTARY_KEY_ID           10-character Key ID
 #   NOTARY_ISSUER_ID        Issuer UUID
+#   SPARKLE_PRIVATE_KEY     dedicated Ed25519 update-signing key
 #
 # The runner's keychain password is generated inside the job and never stored.
 
@@ -79,9 +80,10 @@ jobs:
           NOTARY_KEY: ${{ secrets.NOTARY_KEY }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          for name in MACOS_CERT_P12 MACOS_CERT_PASSWORD DEV_ID NOTARY_KEY NOTARY_KEY_ID NOTARY_ISSUER_ID; do
+          for name in MACOS_CERT_P12 MACOS_CERT_PASSWORD DEV_ID NOTARY_KEY NOTARY_KEY_ID NOTARY_ISSUER_ID SPARKLE_PRIVATE_KEY; do
             [[ -n "${!name}" ]] || { echo "::error::Missing release secret: $name"; exit 1; }
           done
 
@@ -121,13 +123,21 @@ jobs:
           DEV_ID: ${{ secrets.DEV_ID }}
         run: make release
 
+      - name: Sign the GitHub update feed
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          [[ -n "$SPARKLE_PRIVATE_KEY" ]] || { echo "::error::SPARKLE_PRIVATE_KEY is required"; exit 1; }
+          python scripts/build_appcast.py
+
       - name: Quick Action and checksums
         run: |
           set -euo pipefail
           python scripts/build_quick_action.py --zip build/ATEM-ISO-to-FCPXML-Quick-Action.zip
           cp atem_iso_to_fcpxml.py build/
           cd build
-          shasum -a 256 ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py > SHA256SUMS.txt
+          shasum -a 256 ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py appcast.xml > SHA256SUMS.txt
           shasum -a 256 -c SHA256SUMS.txt
 
       - name: Verify the signed app and disk image
@@ -148,6 +158,7 @@ jobs:
             build/ATEM-ISO-to-FCPXML-Quick-Action.zip
             build/atem_iso_to_fcpxml.py
             build/SHA256SUMS.txt
+            build/appcast.xml
 
       - name: Remove temporary signing material
         if: always()
@@ -179,4 +190,4 @@ jobs:
           sha256sum -c SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --verify-tag --generate-notes \
             --title "ATEM ISO to FCPXML $GITHUB_REF_NAME" \
-            ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py SHA256SUMS.txt
+            ATEM-ISO-to-FCPXML.dmg ATEM-ISO-to-FCPXML-Quick-Action.zip atem_iso_to_fcpxml.py SHA256SUMS.txt appcast.xml

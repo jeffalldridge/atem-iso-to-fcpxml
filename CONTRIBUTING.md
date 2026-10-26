@@ -28,7 +28,7 @@ The most helpful report is a minimal invented recording that shows the problem. 
 
 ## Setting up
 
-You need a Mac with macOS 15 or later and Xcode 26 or later (the app icon uses Icon Composer), plus Python 3.9 or later. There are no other dependencies.
+You need a Mac with macOS 15 or later and Xcode 26 or later (the app icon uses Icon Composer), plus Python 3.9 or later. Swift Package Manager downloads the pinned Sparkle binary package for the app updater. The converter itself has no dependencies.
 
 ```sh
 git clone https://github.com/jeffalldridge/atem-iso-to-fcpxml.git

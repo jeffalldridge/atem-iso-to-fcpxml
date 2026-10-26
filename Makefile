@@ -1,4 +1,4 @@
-.PHONY: build test app dmg package-dmg notarize submit-dmg-notarization release clean site-icons
+.PHONY: appcast build test app dmg package-dmg notarize submit-dmg-notarization release clean site-icons
 
 APP_NAME   := ATEM ISO to FCPXML
 APP_BUNDLE := build/$(APP_NAME).app
@@ -41,6 +41,9 @@ notarize: app
 	xcrun stapler validate "$(APP_BUNDLE)"
 	spctl --assess --type execute --verbose=1 "$(APP_BUNDLE)"
 	@rm -f build/notarize.zip
+
+appcast:
+	python3 scripts/build_appcast.py
 
 submit-dmg-notarization:
 	xcrun notarytool submit "$(DMG_PATH)" --keychain-profile "$(NOTARY_PROFILE)" --wait

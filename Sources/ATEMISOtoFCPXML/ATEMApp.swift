@@ -34,6 +34,8 @@ struct ATEMApp: App {
                 .disabled(!delegate.model.canOpenRecording)
             }
             CommandGroup(after: .appInfo) {
+                Button("Check for Updates…", action: delegate.updater.check)
+                    .disabled(!delegate.updater.canCheck || delegate.model.isBusy)
                 Link("Latest Release on GitHub…", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest")!)
             }
             CommandGroup(replacing: .saveItem) {
@@ -56,6 +58,9 @@ struct ATEMApp: App {
                 Link("Report a Problem", destination: URL(string: "https://github.com/jeffalldridge/atem-iso-to-fcpxml/issues")!)
             }
         }
+        Settings {
+            UpdateSettingsView(updater: delegate.updater, model: delegate.model)
+        }
     }
 }
 
@@ -63,6 +68,7 @@ struct ATEMApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = ConversionModel()
     let termination = DeferredTermination()
+    private(set) lazy var updater = AppUpdater(isBusy: { [weak self] in self?.model.isBusy ?? true })
 
     override init() {
         super.init()
@@ -78,6 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.activate(ignoringOtherApps: true)
+        updater.start()
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {

@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.2.0 (2026-10-21)
+## 1.3.0 (2026-10-25)
+
+- Added Check for Updates and optional automatic checks and installation using Sparkle and GitHub Releases. Signed feeds and archives are verified before installation; conversions finish before the app quits.
+- Update settings show the installed version, last check, and when a recording operation prevents checking.
+- Bundled the updater and added signed appcast generation to the existing draft-release pipeline. Conversion remains offline and no recording data is sent during update checks.
+
+## 1.2.0 (included in 1.3.0; no public installer)
 
 ### Changed
 
