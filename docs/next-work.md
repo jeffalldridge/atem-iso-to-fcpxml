@@ -12,23 +12,23 @@ Updated 2026-10-25 for the 1.3.0 updater work. This is a public handoff, not a p
 - The live mix contains the audible result of AFV, input on/off changes, levels, and processing. Changing picture cuts later does not recompute that recorded mix. Do not imply the converter reconstructs editable mixer automation or add a mixer UI without a new product decision.
 - Use plain hyphens in generated compound names and preserve source names and input labels. Matching event and clip names can trigger Final Cut's Keep Both / Replace prompt. The converter cannot inspect a library for name collisions; reimporting does not guarantee a fresh event or remove legacy projects.
 
-## Update Delivery (1.3.0, In Development)
+## Update Delivery (1.3.0, Published)
 
 The maintainer requested GitHub-backed update checking and automatic installation on 2026-10-25. The Mac app now uses Sparkle; the converter remains dependency-free. A dedicated update-signing key is configured in the release environment. This supersedes the manual-only update policy. The maintainer authorized the first updater-equipped release on 2026-10-25; older installed versions need one manual upgrade. See [releasing.md](releasing.md) for signed feed delivery and [validation.md](validation.md) for current evidence.
 
-## Next Release Steps
+## Release Handoff
 
-The local 1.3.0 changes include the existing source-visibility fixes, Sparkle integration, update-signing configuration, and signed-feed release tooling. Checks and evidence are in [validation.md](validation.md). The latest published installer checked on 2026-10-25 is 1.1.1.
+Version 1.3.0 was published on 2026-10-25 from commit `57bd713`. [Release workflow 40247683271](https://github.com/jeffalldridge/atem-iso-to-fcpxml/actions/runs/40247683271) passed tests, Developer ID signing, app and DMG notarization, stapling, Gatekeeper checks, and signed feed generation. The public release has all five assets and is the latest stable release. The installed Applications copy was manually upgraded to the signed build, with automatic checks and installation enabled.
 
-After maintainer-authorized commit/push and merge, a `v1.3.0` tag on `main` starts the signed release workflow. Follow [releasing.md](releasing.md): verify nested framework signing, notarization, stapling, checksums, the signed appcast, and draft assets. Check an installed signed build before publishing. The local notarization profile is not configured; use the established GitHub release workflow. Never move an existing release tag. Push, tagging, draft creation, and public release remain separate actions requiring authorization.
+A temporary updater-equipped fixture reporting 1.2.0 fetched the production feed, downloaded the published DMG, installed it, and relaunched as 1.3.0. This fixture was ad-hoc signed; it was not the original 1.2.0 app, which has no updater. A real pre-1.3 installation still requires one manual upgrade. See [validation.md](validation.md) for evidence limits.
 
-The Pages workflow deploys site changes merged to `main`. Its installer link follows the latest published release. Keep website and installer publication coordinated; the automatic-update feed is a GitHub release asset, independent of Pages.
+For future releases follow [releasing.md](releasing.md), preserve the signing key and asset names, and never move an existing version tag. The Pages workflow deploys site changes on `main`; the updater feed is an independent GitHub release asset. The local notarization profile is not configured; use the established GitHub release workflow.
 
 ## Validation Priorities
 
 These are evidence gaps, not known failures. Record results and exact limits in [validation.md](validation.md).
 
-1. Test the signed 1.3.0 installer, including replacement of an installed older app and Finder Quick Action lookup when several copies exist.
+1. Test the signed installer on a second machine/account and Finder Quick Action lookup when several copies exist. Local Applications replacement and production-feed update/relaunch passed for 1.3.0.
 2. Play the ISO fallback for ATEM live mix in Final Cut with Program missing or silent. It has unit/parity coverage; native rendering currently covers the Program-backed mix.
 3. Test source replacement and relinking inside an exposed camera or still compound, checking all uses in the multicam and Live Edit. Do not infer that behavior solely from the shared-content edit test.
 4. Check lip sync over a long recording. Different media starts currently produce a warning, not automatic offset correction; any future correction needs native round-trip and playback evidence.

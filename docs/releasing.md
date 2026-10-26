@@ -10,6 +10,8 @@ A release is a git tag `vX.Y.Z` on a commit that is on `main`; the workflow refu
 
 ## Workflow status
 
+The `v1.3.0` workflow also completed, including nested Sparkle signing and signed feed generation. Downloaded assets passed local signature, checksum, Gatekeeper, and stapler verification. The published production feed completed download, installation, and relaunch in an isolated older-version fixture. See [validation.md](validation.md) for the fixture and same-machine limits.
+
 The `v1.1.1` workflow completed on a hosted runner: version and tag checks, tests, Developer ID signing, app and disk-image notarization, Gatekeeper and stapler checks, and draft release creation. The maintainer then opened the downloaded disk image without a Gatekeeper warning. See [validation.md](validation.md) for the scope of that verification; it did not cover a second machine or account.
 
 The workflow requires the credentials below. The successful run establishes that they were available for that release, not that their configuration or validity has been checked since. Do not change signing credentials as part of ordinary development.
