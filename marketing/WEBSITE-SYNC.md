@@ -11,3 +11,5 @@ The corresponding Tent Studios files are:
 - `docs/marketing/social/social-posts.csv`: ATEM social entries; regenerate the scheduling workbook with `scripts/build-social-calendar.py` in the site repository.
 
 Update the facts here before transcribing a changed capability to the site. Do not describe every program recording as a fixed low bitrate, every ISO as 70 Mb/s, or the converter as enhancing or re-encoding footage. Native Program stand-ins remain limited by their source recording. Drafts describing unreleased features must be checked against the published installer before posting.
+
+Version 1.4 session selection is traced in `product.yml` to the parser, media resolver, and app chooser. Keep the project documentation and launch article current, including the distinction between offline conversion and network-based update delivery. Release announcements must follow the published installer.

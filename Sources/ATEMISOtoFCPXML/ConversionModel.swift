@@ -72,6 +72,18 @@ struct Problem: Equatable {
     let message: String
 }
 
+struct SessionChoice: Identifiable {
+    let id: Int
+    let start: String
+    let duration: String
+}
+
+struct SessionSelection: Identifiable {
+    let id = UUID()
+    let log: URL
+    let choices: [SessionChoice]
+}
+
 @Observable
 @MainActor
 final class ConversionModel {
@@ -81,7 +93,8 @@ final class ConversionModel {
     var operationFinished: ((Bool) -> Void)?
     var reopenWindow: (() -> Void)?
     private(set) var isChoosingRecording = false
-    var canOpenRecording: Bool { !isBusy && !isChoosingRecording }
+    var canOpenRecording: Bool { !isBusy && !isChoosingRecording && sessionSelection == nil }
+    var sessionSelection: SessionSelection?
 
     private let recordsRecentDocuments: Bool
 
@@ -198,7 +211,7 @@ final class ConversionModel {
         }
     }
 
-    func open(_ url: URL) {
+    func open(_ url: URL, session: Int? = nil) {
         guard !isBusy else {
             problem = Problem(title: "Still Working", message: "Open the next recording when this one finishes.")
             return
@@ -209,7 +222,33 @@ final class ConversionModel {
         Task.detached(priority: .userInitiated) {
             do {
                 let log = try locateLog(url)
-                let recording = try openRecording(log)
+                let sessions = try loadSessions(log)
+                if sessions.count > 1 && session == nil {
+                    let choices = sessions.enumerated().map { index, rows in
+                        let start = rows[0]["masterTimecode"] as? String ?? "Unknown start"
+                        var duration = "Duration unavailable"
+                        if let mode = rows[0]["videoMode"] as? String,
+                           let rate = try? VideoMode.parse(mode).rate,
+                           let first = try? Timecode.parse(start, fps: rate),
+                           let stop = rows.last(where: { row in
+                               (row["mixEffectBlocks"] as? [[String: Any]])?.contains { ($0["onAir"] as? Bool) == false } == true
+                           })?["masterTimecode"] as? String,
+                           let last = try? Timecode.parse(stop, fps: rate) {
+                            var frames = last.frames - first.frames
+                            if frames < 0 { frames += Timecode.framesPerDay(fps: rate, drop: first.drop) }
+                            let seconds = Int((Rational(frames) / rate).doubleValue.rounded())
+                            duration = String(format: "%d:%02d:%02d", seconds / 3600, seconds % 3600 / 60, seconds % 60)
+                        }
+                        return SessionChoice(id: index + 1, start: start, duration: duration)
+                    }
+                    await MainActor.run {
+                        self.phase = self.loaded == nil ? .empty : (self.output == nil ? .ready : .done)
+                        self.sessionSelection = SessionSelection(log: log, choices: choices)
+                        self.operationFinished?(true)
+                    }
+                    return
+                }
+                let recording = try openRecording(log, session: session)
                 // Inspection must use the same opt-in audio defaults as conversion: an unused
                 // damaged mic file must not prevent opening the rest of the recording.
                 var initialOptions = PlanOptions()
@@ -234,7 +273,7 @@ final class ConversionModel {
                 let main = defaults.angles.first { $0.id == defaults.mainAudioAngle }?.audio?.lastPathComponent ?? AudioChoice.liveMixID
                 let item = LoadedRecording(log: log, recording: recording, cameras: cameras, audio: audio, liveMixCameras: liveMixCameras,
                                            cutCount: defaults.edit.cuts.count, dissolveCount: defaults.edit.cuts.filter { $0.transitionIn != nil }.count,
-                                           outputURL: log.deletingPathExtension().appendingPathExtension("fcpxml"))
+                                           outputURL: recording.outputURL)
                 await MainActor.run { self.finishLoading(item, cameras: used, soundtrack: main, extras: []) }
             } catch {
                 await MainActor.run { self.fail(error, title: "Couldn't Open the Recording") }
@@ -242,7 +281,14 @@ final class ConversionModel {
         }
     }
 
+    func chooseSession(_ number: Int) {
+        guard let selection = sessionSelection, selection.choices.contains(where: { $0.id == number }), !isBusy else { return }
+        sessionSelection = nil
+        open(selection.log, session: number)
+    }
+
     private func finishLoading(_ item: LoadedRecording, cameras: Set<Int>, soundtrack: String, extras: Set<String>) {
+        sessionSelection = nil
         loaded = item
         selectedCameras = cameras
         self.soundtrack = soundtrack
@@ -277,10 +323,7 @@ final class ConversionModel {
 
     private func fail(_ error: Error, title: String) {
         let conversion = error as? ConversionError
-        if let sessions = conversion?.sessionCount {
-            problem = Problem(title: "This Recording Has \(sessions) Sessions",
-                              message: "The ATEM added more than one recording to this .drp, and the app cannot choose between them yet. The command line version can open one at a time: add --session and a number from 1 to \(sessions). The README explains how.")
-        } else if title == "Couldn't Create the FCPXML" {
+        if title == "Couldn't Create the FCPXML" {
             problem = Problem(title: title, message: "\(conversion?.message ?? error.localizedDescription)\n\nYour recording was not changed.")
         } else {
             problem = Problem(title: title, message: conversion?.message ?? error.localizedDescription)
@@ -290,7 +333,7 @@ final class ConversionModel {
     }
 
     func convert(replace: Bool = false) {
-        guard let loaded, phase == .ready, !selectedCameras.isEmpty else { return }
+        guard let loaded, phase == .ready, sessionSelection == nil, !selectedCameras.isEmpty else { return }
         if !replace && FileManager.default.fileExists(atPath: loaded.outputURL.path) {
             showReplaceConfirmation = true
             return
@@ -308,7 +351,7 @@ final class ConversionModel {
         problem = nil
         Task.detached(priority: .userInitiated) {
             do {
-                let recording = try openRecording(loaded.log)
+                let recording = try openRecording(loaded.log, session: loaded.recording.log.sessionNumber)
                 let plan = try makePlan(recording, options)
                 let payload = try buildFCPXML(plan)
                 if OutputWriter.protectedPaths(recording).contains(destination.resolvedPath) {
@@ -347,6 +390,7 @@ final class ConversionModel {
 
     func startOver() {
         guard !isBusy else { return }
+        sessionSelection = nil
         loaded = nil
         output = nil
         summary = []

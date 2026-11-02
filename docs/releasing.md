@@ -64,7 +64,7 @@ Use `NOTARY_PROFILE=name` to pick a different stored profile.
 
 ## Before publishing the draft
 
-Download the disk image from the draft from the release page on a Mac that has never seen the build, open it, drag the app to Applications, and open it: no Gatekeeper warning should appear. Then press Publish. Confirm `https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg` redirects to the new file, and that the size the website states (about 4 MB) is still right.
+Download the disk image from the draft from the release page on a Mac that has never seen the build, open it, drag the app to Applications, and open it: no Gatekeeper warning should appear. Then press Publish. Confirm `https://github.com/jeffalldridge/atem-iso-to-fcpxml/releases/latest/download/ATEM-ISO-to-FCPXML.dmg` redirects to the new file, and update any pending-release notice on the website.
 
 ## Sparkle update delivery
 

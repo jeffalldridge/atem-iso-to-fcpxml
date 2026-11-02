@@ -217,3 +217,23 @@ extension ParityTests {
         try compare(dir, rows: dir.rows)
     }
 }
+
+
+extension ParityTests {
+    func testAppendedSessionsKeepTheirOwnMediaAndMatchPython() throws {
+        let fixture = try Fixtures.appendedRecording()
+        defer { fixture.cleanup() }
+        for number in [1, 2] {
+            let recording = try openRecording(fixture.drp, session: number)
+            XCTAssertEqual(recording.totalFrames, number == 1 ? 1200 : 3600)
+            XCTAssertEqual(recording.audioFiles.count, 6)
+            XCTAssertTrue(recording.audioFiles.allSatisfy { $0.stem.hasSuffix(String(format: " %02d", number)) })
+            XCTAssertEqual(recording.outputURL.lastPathComponent, String(format: "Show - Session %02d.fcpxml", number))
+            let swift = try buildFCPXML(try makePlan(recording))
+            let python = try XCTUnwrap(reference(fixture.drp, ["--session", String(number)]))
+            XCTAssertEqual(swift, python)
+        }
+        try Fixtures.makeMp4(fixture.root.appendingPathComponent("Video ISO Files/Show CAM 1 01.mp4"), frames: 1200, tcFrames: 2376000)
+        XCTAssertThrowsError(try openRecording(fixture.drp, session: 1))
+    }
+}

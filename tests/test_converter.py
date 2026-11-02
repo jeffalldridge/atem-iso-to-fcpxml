@@ -1093,5 +1093,74 @@ class LiveMixTests(unittest.TestCase):
         self.assertEqual(error.exception.code, 2)
 
 
+class AppendedSessionTests(unittest.TestCase):
+    def fixture(self):
+        first = RecordingDir(frames=1200)
+        second = RecordingDir(tc="11:00:00:00", frames=3600)
+        self.addCleanup(first.cleanup)
+        self.addCleanup(second.cleanup)
+        for source, number in [(first, 1), (second, 2)]:
+            for path in list(source.root.rglob("*")):
+                if path.suffix not in (".mp4", ".wav"):
+                    continue
+                relative = path.relative_to(source.root)
+                target = first.root / relative.with_name(path.stem + f" {number:02d}" + path.suffix)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(path.read_bytes())
+                if number == 1:
+                    path.unlink()
+        latter = second.rows[0]
+        for source in latter["sources"]:
+            if source.get("type") == "Video":
+                source["file"] = source["file"].replace(".mp4", " 02.mp4")
+        first.write([first.rows[0], {"masterTimecode": "10:00:20:00", "mixEffectBlocks": [{"_index_": 0, "onAir": False}]}, latter])
+        return first
+
+    def test_numbered_sources_audio_and_distinct_names(self):
+        fixture = self.fixture()
+        for number, frames in [(1, 1200), (2, 3600)]:
+            rec = c.open_recording(fixture.drp, number)
+            self.assertEqual(rec.total_frames, frames)
+            self.assertEqual(rec.program_mp4.name, f"Show {number:02d}.mp4")
+            self.assertTrue(all(p.stem.endswith(f" {number:02d}") for p in rec.audio_files.values()))
+            self.assertEqual(len(rec.audio_files), 6)
+            self.assertTrue(all(s.wav and s.wav.stem == s.mp4.stem for s in rec.sources.values() if s.kind == "Video"))
+            plan = c.make_plan(rec)
+            self.assertIn(f"Session {number:02d}", plan.name)
+            xml = c.build_fcpxml(plan)
+            self.assertNotIn(f"%20{3-number:02d}.mp4", xml.decode())
+
+    def test_wrong_session_video_is_rejected(self):
+        fixture = self.fixture()
+        path = fixture.root / "Video ISO Files/Show CAM 1 01.mp4"
+        path.write_bytes((fixture.root / "Video ISO Files/Show CAM 1 02.mp4").read_bytes())
+        with self.assertRaisesRegex(c.ConversionError, "cannot confirm.*session 1"):
+            c.open_recording(fixture.drp, 1)
+
+    def test_missing_program_uses_selected_session_iso(self):
+        fixture = self.fixture()
+        (fixture.root / "Show 02.mp4").unlink()
+        rec = c.open_recording(fixture.drp, 2)
+        self.assertIsNone(rec.program_mp4)
+        self.assertEqual(rec.total_frames, 3600)
+        self.assertTrue(all(p.stem.endswith(" 02") for p in rec.audio_files.values()))
+
+
+    def test_wrong_session_wav_is_rejected(self):
+        fixture = self.fixture()
+        path = fixture.root / "Audio Source Files/Show CAM 1 01.wav"
+        path.write_bytes((fixture.root / "Audio Source Files/Show CAM 1 02.wav").read_bytes())
+        with self.assertRaisesRegex(c.ConversionError, "Broadcast Wave"):
+            c.open_recording(fixture.drp, 1)
+
+    def test_numbering_separates_sessions_even_if_timecode_resets(self):
+        fixture = self.fixture()
+        for path in (fixture.root / "Audio Source Files").glob("* 02.wav"):
+            make_wav(path, 960000, 1728000000)
+        rec = c.open_recording(fixture.drp, 1)
+        self.assertEqual(len(rec.audio_files), 6)
+        self.assertTrue(all(p.stem.endswith(" 01") for p in rec.audio_files.values()))
+
+
 if __name__ == "__main__":
     unittest.main()

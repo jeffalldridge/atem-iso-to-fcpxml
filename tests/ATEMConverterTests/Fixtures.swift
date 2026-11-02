@@ -154,3 +154,30 @@ enum Fixtures {
         func cleanup() { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     }
 }
+
+
+extension Fixtures {
+    static func appendedRecording() throws -> RecordingDir {
+        let first = try RecordingDir(frames: 1200)
+        let second = try RecordingDir(tc: "11:00:00:00", frames: 3600)
+        defer { second.cleanup() }
+        for (source, number) in [(first, 1), (second, 2)] {
+            let files = FileManager.default.enumerator(at: source.root, includingPropertiesForKeys: nil)!.allObjects as! [URL]
+            for path in files where ["mp4", "wav"].contains(path.pathExtension) {
+                let relative = String(path.resolvedPath.dropFirst(source.root.resolvedPath.count + 1))
+                let original = first.root.appendingPathComponent(relative)
+                let target = original.deletingLastPathComponent().appendingPathComponent(path.stem + String(format: " %02d.", number) + path.pathExtension)
+                try FileManager.default.copyItem(at: path, to: target)
+                if number == 1 { try FileManager.default.removeItem(at: path) }
+            }
+        }
+        var header = second.rows[0]
+        var sources = header["sources"] as! [[String: Any]]
+        for index in sources.indices where sources[index]["type"] as? String == "Video" {
+            sources[index]["file"] = (sources[index]["file"] as! String).replacingOccurrences(of: ".mp4", with: " 02.mp4")
+        }
+        header["sources"] = sources
+        try first.write([first.rows[0], me("10:00:20:00", ["onAir": false]), header, me("11:01:00:00", ["onAir": false])])
+        return first
+    }
+}

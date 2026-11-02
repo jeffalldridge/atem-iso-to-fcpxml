@@ -182,7 +182,7 @@ public func makePlan(_ rec: Recording, _ options: PlanOptions = PlanOptions()) t
             }
         }
     }
-    let base = options.name ?? rec.root.lastPathComponent
+    let base = options.name ?? (rec.root.lastPathComponent + rec.sessionSuffix)
     return Plan(recording: rec, edit: edit, angles: angles, mainAudioAngle: mainAngle!, name: base,
                 event: options.event ?? base, transitions: options.transitions)
 }

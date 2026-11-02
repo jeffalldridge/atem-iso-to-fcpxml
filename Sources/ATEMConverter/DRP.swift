@@ -7,6 +7,8 @@ public struct Log {
     public let path: URL
     public let header: [String: Any]
     public let events: [[String: Any]]
+    public var sessionNumber: Int = 1
+    public var sessionCount: Int = 1
 
     /// Sources in header order, keyed by `_index_`.
     public var sources: [(index: Int, source: [String: Any])] {
@@ -47,7 +49,7 @@ func validateStateShape(_ row: [String: Any]) throws {
 }
 
 /// Read the ATEM log. A log can hold several sessions if the same name was recorded twice.
-public func loadLog(_ path: URL, session: Int? = nil) throws -> Log {
+public func loadSessions(_ path: URL) throws -> [[[String: Any]]] {
     let attributes = try FileManager.default.attributesOfItem(atPath: path.path)
     if let size = attributes[.size] as? Int, size > maxLogBytes {
         throw ConversionError("The .drp is larger than 16 MiB; that is not an ATEM switcher log.")
@@ -91,6 +93,11 @@ public func loadLog(_ path: URL, session: Int? = nil) throws -> Log {
         }
     }
     if sessions.isEmpty { throw ConversionError("The first line of the .drp is missing sources, masterTimecode or videoMode.") }
+    return sessions
+}
+
+public func loadLog(_ path: URL, session: Int? = nil) throws -> Log {
+    let sessions = try loadSessions(path)
     if sessions.count > 1 && session == nil {
         throw ConversionError("This .drp holds \(sessions.count) recording sessions. Pick one with --session 1 to --session \(sessions.count), then check that the ISO file names match that session.", sessionCount: sessions.count)
     }
@@ -106,7 +113,7 @@ public func loadLog(_ path: URL, session: Int? = nil) throws -> Log {
             throw ConversionError("Unsupported ATEM log version \(pythonReprValue(version)); only version 1 is known.")
         }
     }
-    return Log(path: path, header: header, events: Array(chosen.dropFirst()))
+    return Log(path: path, header: header, events: Array(chosen.dropFirst()), sessionNumber: selected, sessionCount: sessions.count)
 }
 
 func pythonReprValue(_ value: Any) -> String {

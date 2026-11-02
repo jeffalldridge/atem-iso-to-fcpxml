@@ -44,7 +44,7 @@ The camera, soundtrack, and extra-audio lists scroll independently, so eight cam
 
 Conversion re-reads the recording instead of trusting the earlier inspection, so a file that changed or went missing in between is caught then.
 
-Every failure names what failed in its title and says what to do; failed conversions also say the recording was not changed. A failed open leaves an already saved result alone. The Open sheet, drops, Finder Open With, and the Quick Action accept one recording at a time. Recordings with several sessions are not opened (see below).
+Every failure names what failed in its title and says what to do; failed conversions also say the recording was not changed. A failed open leaves an already saved result alone. The Open sheet, drops, Finder Open With, and the Quick Action accept one recording at a time. Logs with several recording sessions open a chooser (see below).
 
 ## Closing during work
 
@@ -52,7 +52,9 @@ Only a conversion defers Quit, because it is the one operation that publishes a 
 
 ## Recordings with several sessions
 
-If the ATEM appended a second recording to the same `.drp`, the app refuses to open it and explains that the command line version can choose a session with `--session`. A native chooser is deliberately not offered yet: how later sessions name their media is inferred from the log, not verified on a real stop-and-start recording, and choosing a session silently, or showing a chooser whose media association was never confirmed, risks converting the wrong take. Add one only with a real multi-session recording to test against.
+If the ATEM appended recordings to the same `.drp`, the app first lists the sessions with their start timecodes and logged durations. No session is selected automatically. Choosing one opens its camera and audio choices; **Change Session…** returns to the list. Cancel preserves the previously loaded recording and any saved result. A single-session log bypasses the chooser.
+
+Each session writes a separate ` - Session NN.fcpxml` and gets distinct default Final Cut event, multicam, and project names. Conversion reopens the same selected session. The first session's unsuffixed paths can resolve to ATEM-renamed `01` media; subsequent sessions use their logged paths. Video timecodes and paired WAV Broadcast Wave references must agree with the selected session. Only matching-session WAVs are offered. This was verified on a real two-session recording; it is not an arbitrary-media relinking or synchronization feature.
 
 ## Updates and the Quick Action
 

@@ -60,7 +60,7 @@ do {
     let recording = try openRecording(log, session: session)
     let plan = try makePlan(recording, options)
     let payload = try buildFCPXML(plan)
-    let destination = output.map { URL(fileURLWithPath: $0) } ?? log.deletingPathExtension().appendingPathExtension("fcpxml")
+    let destination = output.map { URL(fileURLWithPath: $0) } ?? recording.outputURL
     if dryRun {
         print(plan.summary().joined(separator: "\n"))
         print("Would write \(destination.path)")

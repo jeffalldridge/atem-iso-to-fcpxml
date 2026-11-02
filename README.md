@@ -16,7 +16,7 @@ Website: **https://jeffalldridge.github.io/atem-iso-to-fcpxml/**
 Open the disk image, drag the app to Applications, and open it. Then:
 
 1. Mount the ATEM SSD and drop the recording folder on the window, or click **Choose Recording…**. You can also select the `.drp` in Finder and use **Open With → ATEM ISO to FCPXML**.
-2. Check the cameras you used (the ones you switched to live are already checked), pick a WAV or **ATEM live mix** for the soundtrack, and add the mic inputs as extra angles if you want them. The window shows where the file will be saved.
+2. If the log contains several recordings, choose a session by its start time and duration. Then check the cameras you used (the ones you switched to live are already checked), pick a WAV or **ATEM live mix** for the soundtrack, and add the mic inputs as extra angles if you want them. The window shows where the file will be saved.
 3. Click **Create FCPXML**, then **Open in Final Cut Pro**.
 
 Final Cut creates an event named after the recording folder containing the multicam clip, the Live Edit project, the camera and Media Player compounds, and the source files. Trim, fix a switch in the Angle Viewer, add titles, and export.
@@ -30,7 +30,7 @@ Final Cut creates an event named after the recording folder containing the multi
 - **Camera compounds in the browser**, named “Camera 1 - ISO + WAV” (or your input label). Each is the same compound used by its multicam angle, ready to open and edit.
 - **Every selected MP4, WAV, and still image** as a browser clip.
 
-The recording is never modified. The app writes exactly one new file, `<name>.fcpxml`, next to the `.drp`, and asks before replacing an existing one.
+The recording is never modified. The app writes one `.fcpxml` per conversion next to the `.drp`, and asks before replacing an existing one. Single-session files use `<name>.fcpxml`; appended recordings use `<name> - Session 01.fcpxml`, `Session 02`, and so on. **Change Session…** opens another session; its export and Final Cut event have distinct names.
 
 ### Polish the Livestream for Publishing Afterward
 
@@ -75,7 +75,7 @@ The recorded program audio contains the live mixed result. Preserving that recor
 
 - The app needs macOS 15 or later. Final Cut Pro 10.6 or newer reads the XML (FCPXML 1.10); verified on Final Cut Pro 12.4.
 - The recording folder as the ATEM wrote it: `<name>.drp`, `<name>.mp4`, `Video ISO Files/`, `Audio Source Files/`. You can rename the folder and move it to another drive; media is found relative to the `.drp`. Keep the files inside it as they are.
-- One session per conversion. If the ATEM appended a second session to the same `.drp`, the app tells you so and does not open it; use the command line with `--session`. Multi-session logs have only been tested with invented recordings.
+- One session per conversion. The app offers a chooser for appended recordings; the command line requires `--session N`. Numbered media and session isolation were checked on a real two-session recording. The converter requires matching embedded video timecode and matching Broadcast Wave references for camera WAVs in multi-session logs; ambiguous media is refused rather than mixed across sessions.
 - Keys are not rebuilt as Final Cut effects; the program recording stands in for them. Media Player graphics swapped during the recording are not reconstructed.
 - The XML references the media where it is. Keep the SSD mounted while Final Cut imports (and copies, if your import settings copy media), or copy the recording folder to your edit drive first.
 - Final Cut imports into the event named in the file, not the event you have selected. Move the items afterward if you want them elsewhere.

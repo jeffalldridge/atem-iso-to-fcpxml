@@ -1,10 +1,10 @@
 # Maintainer Handoff and Future Considerations
 
-Updated 2026-10-25 for the 1.3.0 updater work. This is a public handoff, not a promise to implement every idea below. Verify the current GitHub release and workflow results before reporting release status. The version in source alone does not establish that an installer has been published.
+Updated 2026-11-01 for local 1.4.0 session selection. This is a public handoff, not a promise to implement every idea below. Verify the current GitHub release and workflow results before reporting release status. The version in source alone does not establish that an installer has been published.
 
 ## Decisions to Preserve
 
-- Keep the converter simple: one recording, one `.fcpxml`, one Live Edit project, and one multicam. Preserve Python/Swift byte parity and the dependency-free runtime. Read [AGENTS.md](../AGENTS.md) before changing behavior.
+- Keep the converter simple: one selected recording session, one `.fcpxml`, one Live Edit project, and one multicam. Preserve Python/Swift byte parity and the dependency-free runtime. Read [AGENTS.md](../AGENTS.md) before changing behavior.
 - Expose the compounds and sources in the Final Cut event browser. Camera/WAV and Media Player compounds share their resources with the multicam; editing their contents affects their uses. Shared-content edits were tested; replacing or relinking media has not been separately verified.
 - Keep multicam angle offsets relative to the multicam origin (`0s`), while retaining original source timestamps and multicam `tcStart`. Repeating source timecode as an angle offset caused blank Angle Editor timelines and inflated duration.
 - Keep WAV as the soundtrack default when available. **ATEM live mix** preserves the recorded mixed result, using Program audio or an audio-bearing selected ISO. Program picture is independent. No-WAV recordings use the mix automatically; silent MP4s cannot supply it.
@@ -24,6 +24,12 @@ A temporary updater-equipped fixture reporting 1.2.0 fetched the production feed
 
 For future releases follow [releasing.md](releasing.md), preserve the signing key and asset names, and never move an existing version tag. The Pages workflow deploys site changes on `main`; the updater feed is an independent GitHub release asset. The local notarization profile is not configured; use the established GitHub release workflow.
 
+## 1.4.0 Release Preparation
+
+The maintainer authorized website and documentation cleanup, commit/push, the signed 1.4.0 release build, publication after verification, and an installed 1.3.0-to-1.4.0 update test. Preserve the installed 1.3.0 copy until that test. Source version and a draft build alone do not establish publication or updater acceptance.
+
+The native chooser shows start time and logged duration, with cancellation preserving the current result. Change Session returns to it. Numbered camera/Program lookup, matching-session WAV filtering, source-clock verification, distinct default export/event names, and CLI/Quick Action support are implemented in both engines. The original recording and media remain unchanged. Two session exports are available beside the private recording. See validation for native import/export and test evidence.
+
 ## Validation Priorities
 
 These are evidence gaps, not known failures. Record results and exact limits in [validation.md](validation.md).
@@ -32,12 +38,12 @@ These are evidence gaps, not known failures. Record results and exact limits in 
 2. Play the ISO fallback for ATEM live mix in Final Cut with Program missing or silent. It has unit/parity coverage; native rendering currently covers the Program-backed mix.
 3. Test source replacement and relinking inside an exposed camera or still compound, checking all uses in the multicam and Live Edit. Do not infer that behavior solely from the shared-content edit test.
 4. Check lip sync over a long recording. Different media starts currently produce a warning, not automatic offset correction; any future correction needs native round-trip and playback evidence.
-5. Broaden real recordings across ATEM ISO models, firmware, fractional frame rates, and drop-frame midnight. Synthetic coverage is not hardware validation. Real multi-session media naming remains unverified; the app intentionally refuses multi-session logs.
+5. Broaden real recordings across ATEM ISO models, firmware, fractional frame rates, and drop-frame midnight. Synthetic coverage is not hardware validation. Two-session numbered media now has real-recording evidence; other multi-session naming conventions still need samples.
 6. Check VoiceOver, Full Keyboard Access, macOS 15, Intel hardware, alternate appearance/accessibility settings, and physical slow/exFAT or failing destinations.
 
 ## Ideas Requiring a Separate Decision
 
 - Editable AFV or multi-input mixer reconstruction would require reliable source automation evidence and new native validation. The recorded mix already covers the common “game audio plus microphone” workflow without that complexity.
-- A session chooser, automatic synchronization, or library-aware import naming would expand the current scope. Establish a reproducible user need and inspect actual source evidence before designing them.
+- Automatic synchronization or library-aware import naming would expand the current scope. Establish a reproducible user need and inspect actual source evidence before designing them.
 
 Never publish real logs, footage, generated XML, library bundles, screenshots of real recordings, or personal paths. Ignored local validation artifacts are useful evidence on one workstation, but future sessions must be able to understand the public decisions and limits without them.

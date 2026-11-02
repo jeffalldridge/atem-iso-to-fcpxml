@@ -107,7 +107,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 import xml.etree.ElementTree as ET
 
-__version__ = "1.3.0"
+__version__ = "1.4.0"
 
 FCPXML_VERSION = "1.10"  # Final Cut Pro 10.6 and later; 12.x re-exports as 1.14
 CROSS_DISSOLVE_UID = "FxPlug:4731E73A-8DAC-4113-9A30-AE85B1761265"
@@ -245,6 +245,8 @@ class Drp:
     path: Path
     header: dict
     events: List[dict]
+    session_number: int = 1
+    session_count: int = 1
 
     @property
     def sources(self) -&gt; Dict[int, dict]:
@@ -276,7 +278,7 @@ def _validate_state_shape(row: dict) -&gt; None:
                 _validate_state_shape(item)
 
 
-def load_drp(path: Path, session: Optional[int] = None) -&gt; Drp:
+def load_sessions(path: Path) -&gt; List[List[dict]]:
     """Read the ATEM log. A log can hold several sessions if the same name was recorded twice."""
     if path.stat().st_size &gt; MAX_DRP_BYTES:
         raise ConversionError("The .drp is larger than 16 MiB; that is not an ATEM switcher log.")
@@ -303,6 +305,11 @@ def load_drp(path: Path, session: Optional[int] = None) -&gt; Drp:
             sessions[-1].append(row)
     if not sessions:
         raise ConversionError("The first line of the .drp is missing sources, masterTimecode or videoMode.")
+    return sessions
+
+
+def load_drp(path: Path, session: Optional[int] = None) -&gt; Drp:
+    sessions = load_sessions(path)
     if len(sessions) &gt; 1 and session is None:
         raise ConversionError(f"This .drp holds {len(sessions)} recording sessions. Pick one with --session 1"
                               f" to --session {len(sessions)}, then check that the ISO file names match that session.")
@@ -315,7 +322,7 @@ def load_drp(path: Path, session: Optional[int] = None) -&gt; Drp:
         raise ConversionError("The session header is missing masterTimecode.")
     if header.get("version") not in (None, 1):
         raise ConversionError(f"Unsupported ATEM log version {header.get('version')!r}; only version 1 is known.")
-    return Drp(path, header, chosen[1:])
+    return Drp(path, header, chosen[1:], selected, len(sessions))
 
 
 # -------------------------------------------------------------------------- media
@@ -614,11 +621,25 @@ def open_recording(drp_path: Path, session: Optional[int] = None) -&gt; Recordin
     master = Timecode.parse(header["masterTimecode"], frame_rate)
     warnings: List[str] = []
 
+    # Appended recordings rename the first session's files without rewriting its header.
+    # Resolve only the observed numbered fallback, then verify source clocks before use.
+    suffix = f" {drp.session_number:02d}"
+    if drp.session_count &gt; 1:
+        for source in drp.sources.values():
+            if source.get("type") != "Video" or not source.get("file"):
+                continue
+            path = contained_path(root, source["file"])
+            if not path.is_file():
+                alternate = path.with_name(path.stem + suffix + path.suffix)
+                alternate = contained_path(root, str(alternate.relative_to(root.resolve())))
+                if alternate.is_file():
+                    source["file"] = str(alternate.relative_to(root.resolve()))
+
     program_mp4: Optional[Path] = None
     program_info = None
     iso_stems = [Path(s["file"]).stem for s in drp.sources.values() if s.get("type") == "Video" and s.get("file")]
-    prefixes = [re.sub(r" CAM \d+$", "", stem) for stem in iso_stems if re.search(r" CAM \d+$", stem)]
-    for candidate in [drp_path.stem] + prefixes:
+    prefixes = [re.sub(r" CAM \d+( \d+)?$", lambda m: m.group(1) or "", stem) for stem in iso_stems if re.search(r" CAM \d+( \d+)?$", stem)]
+    for candidate in (prefixes + [drp_path.stem + suffix] if drp.session_count &gt; 1 else [drp_path.stem] + prefixes):
         path = contained_path(root, f"{candidate}.mp4")
         if path.is_file():
             program_mp4, program_info = path, probe_mp4(path)
@@ -643,6 +664,34 @@ def open_recording(drp_path: Path, session: Optional[int] = None) -&gt; Recordin
         sources[index] = item
 
     audio_files = list_wavs(root)
+    if drp.session_count &gt; 1:
+        # A different session's WAV must never become a soundtrack or optional angle.
+        matching = {}
+        paired_stems = {Path(s.relative).stem for s in sources.values() if s.kind == "Video"}
+        numbered = any(Path(s.relative).stem.endswith(suffix) for s in sources.values() if s.kind == "Video")
+        for stem, path in audio_files.items():
+            if numbered and not stem.endswith(suffix):
+                continue
+            try:
+                info = probe_wav(path)
+            except ConversionError:
+                if stem in paired_stems:
+                    raise
+                if numbered:
+                    warnings.append(f"{path.name}: excluded because its session audio could not be read.")
+                continue
+            if info.time_reference is not None and abs(Fraction(info.time_reference, info.sample_rate) - master.frames / frame_rate) &lt;= 1 / frame_rate:
+                matching[stem] = path
+            elif stem in paired_stems:
+                raise ConversionError(f"{path.name}: cannot confirm it belongs to session {drp.session_number}; its Broadcast Wave time reference must match the session start.")
+            elif numbered:
+                warnings.append(f"{path.name}: excluded because its Broadcast Wave time reference does not confirm this session.")
+        audio_files = matching
+        for path in ([program_mp4] if program_mp4 else []) + [s.mp4 for s in sources.values() if s.kind == "Video" and s.mp4]:
+            info = probe_mp4(path)
+            expected = Timecode.parse(header["masterTimecode"], info.frame_rate).frames
+            if info.timecode_frames != expected:
+                raise ConversionError(f"{path.name}: cannot confirm it belongs to session {drp.session_number}; its embedded timecode must match the session start.")
     for item in sources.values():
         if item.kind == "Video":
             item.wav = audio_files.get(Path(item.relative).stem)
@@ -1037,7 +1086,7 @@ def make_plan(rec: Recording, cameras: Optional[Sequence[int]] = None, audio: Op
                 rec.warnings.append(f"{angle.video.name}: start time differs from the log; automatic offset correction is not supported. Check sync in Final Cut.")
             if info.frames &lt; rec.total_frames:
                 rec.warnings.append(f"{angle.video.name}: video ends before the project; check the tail for missing picture.")
-    base = name or rec.root.name
+    base = name or (rec.root.name + (f" - Session {rec.drp.session_number:02d}" if rec.drp.session_count &gt; 1 else ""))
     return Plan(rec, edit, angles, main_angle, base, base if event is None else event, transitions)
 
 
@@ -1522,6 +1571,15 @@ def main(argv: Optional[Sequence[str]] = None) -&gt; int:
     interactive = args.interactive and sys.platform == "darwin"
     try:
         drp_path = locate_drp(args.input)
+        if interactive and args.session is None:
+            sessions = load_sessions(drp_path)
+            if len(sessions) &gt; 1:
+                labels = [f"Session {i}: {rows[0].get('masterTimecode', 'Unknown start')}" for i, rows in enumerate(sessions, 1)]
+                selection = choose_from_list("Choose a recording session to convert.", labels, [], False)
+                chosen = selection[0] if selection else ""
+                if chosen not in labels:
+                    raise ConversionError("Canceled.")
+                args.session = labels.index(chosen) + 1
         rec = open_recording(drp_path, args.session)
         cameras = parse_cameras(args.cameras)
         audio = args.audio
@@ -1537,7 +1595,7 @@ def main(argv: Optional[Sequence[str]] = None) -&gt; int:
         except ET.ParseError as exc:
             raise ConversionError("A recording name or log label contains characters that XML cannot represent. Rename it or correct the label.") from exc
 
-        output = (args.output.expanduser() if args.output else drp_path.with_suffix(".fcpxml")).absolute()
+        output = (args.output.expanduser() if args.output else (drp_path.with_name(drp_path.stem + f" - Session {rec.drp.session_number:02d}.fcpxml") if rec.drp.session_count &gt; 1 else drp_path.with_suffix(".fcpxml"))).absolute()
         if output.suffix.lower() != ".fcpxml":
             raise ConversionError("The output name must end in .fcpxml")
         if args.dry_run:

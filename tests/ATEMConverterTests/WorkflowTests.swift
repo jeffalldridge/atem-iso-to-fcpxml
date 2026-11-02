@@ -244,16 +244,41 @@ final class WorkflowTests: XCTestCase {
         XCTAssertTrue(xml.contains("angleID=\"atem-live-mix\" srcEnable=\"audio\""))
     }
 
-    func testMultipleSessionsExplainTheCommandLineOption() async throws {
-        let fixture = try Fixtures.RecordingDir()
+    func testSessionChooserCancellationAndSeparateExports() async throws {
+        let fixture = try Fixtures.appendedRecording()
         defer { fixture.cleanup() }
         let model = ConversionModel(recordsRecentDocuments: false)
-        model.open(try fixture.write([Fixtures.header(), Fixtures.me("10:00:10:00", ["source": 2]), Fixtures.header(tc: "11:00:00:00")]))
+        model.open(fixture.drp)
         try await settle(model)
-        XCTAssertEqual(model.phase, .empty)
-        let problem = try XCTUnwrap(model.problem)
-        XCTAssertEqual(problem.title, "This Recording Has 2 Sessions")
-        XCTAssertTrue(problem.message.contains("--session"))
+        XCTAssertNil(model.problem)
+        XCTAssertEqual(model.sessionSelection?.choices.map(\.start), ["10:00:00:00", "11:00:00:00"])
+        XCTAssertEqual(model.sessionSelection?.choices.map(\.duration), ["0:00:20", "0:01:00"])
+        XCTAssertFalse(model.canOpenRecording)
+        model.chooseSession(1)
+        try await settle(model)
+        XCTAssertEqual(model.phase, .ready, model.problem?.message ?? "")
+        XCTAssertEqual(model.loaded?.recording.log.sessionNumber, 1)
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        let firstOutput = try XCTUnwrap(model.output)
+        let firstBytes = try Data(contentsOf: firstOutput)
+        model.open(fixture.drp)
+        try await settle(model)
+        model.sessionSelection = nil
+        XCTAssertEqual(model.output, firstOutput)
+        XCTAssertEqual(model.phase, .done)
+        model.open(fixture.drp)
+        try await settle(model)
+        model.chooseSession(2)
+        try await settle(model)
+        XCTAssertEqual(model.loaded?.recording.totalFrames, 3600)
+        XCTAssertTrue(model.loaded?.audio.allSatisfy { $0.id.hasSuffix(" 02.wav") } == true)
+        model.convert()
+        try await settle(model)
+        XCTAssertEqual(model.phase, .done, model.problem?.message ?? "")
+        XCTAssertNotEqual(model.output, firstOutput)
+        XCTAssertEqual(try Data(contentsOf: firstOutput), firstBytes)
     }
 
     func testDestinationIsStatedBeforeConversionAndReadingNeverDefersQuit() async throws {

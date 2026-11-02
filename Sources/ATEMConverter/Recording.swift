@@ -45,6 +45,8 @@ public final class Recording {
         self.sources = sources; self.audioFiles = audioFiles; self.warnings = warnings
     }
 
+    public var sessionSuffix: String { log.sessionCount > 1 ? String(format: " - Session %02d", log.sessionNumber) : "" }
+    public var outputURL: URL { root.appendingPathComponent(log.path.stem + sessionSuffix + ".fcpxml") }
     public var startTime: Rational { startFrames * frameDuration }
     public var duration: Rational { totalFrames * frameDuration }
     public func timecode(_ frame: Int) -> String { Timecode.label(startFrames + frame, fps: frameRate, drop: dropFrame) }
@@ -128,7 +130,7 @@ func recordingStopped(_ event: [String: Any]) -> Bool {
 }
 
 public func openRecording(_ logPath: URL, session: Int? = nil) throws -> Recording {
-    let log = try loadLog(logPath, session: session)
+    var log = try loadLog(logPath, session: session)
     let root = logPath.deletingLastPathComponent()
     let header = log.header
     let mode = try VideoMode.parse(JSONValues.string(header["videoMode"]) ?? "")
@@ -136,19 +138,38 @@ public func openRecording(_ logPath: URL, session: Int? = nil) throws -> Recordi
     var master = try Timecode.parse(JSONValues.string(header["masterTimecode"]) ?? "", fps: frameRate)
     var warnings: [String] = []
 
+    // Append recording can rename the first take without updating its original header.
+    // Try only the numbered counterpart; verify source clocks before using it.
+    let suffix = String(format: " %02d", log.sessionNumber)
+    if log.sessionCount > 1 {
+        var resolved = log.header
+        var entries = (resolved["sources"] as? [[String: Any]]) ?? []
+        for index in entries.indices {
+            guard entries[index]["type"] as? String == "Video", let file = entries[index]["file"] as? String, !file.isEmpty else { continue }
+            let path = try containedPath(root: root, relative: file)
+            if !isFile(path) {
+                let relative = (file as NSString).deletingPathExtension + suffix + "." + path.pathExtension
+                let alternate = try containedPath(root: root, relative: relative)
+                if isFile(alternate) { entries[index]["file"] = relative }
+            }
+        }
+        resolved["sources"] = entries
+        log = Log(path: log.path, header: resolved, events: log.events, sessionNumber: log.sessionNumber, sessionCount: log.sessionCount)
+    }
+
     var programMp4: URL?
     var programInfo: Mp4Info?
     let isoStems = log.sources.compactMap { entry -> String? in
         guard JSONValues.string(entry.source["type"]) == "Video", let file = JSONValues.string(entry.source["file"]), !file.isEmpty else { return nil }
         return URL(fileURLWithPath: file).stem
     }
-    let camPattern = try! NSRegularExpression(pattern: #" CAM \d+$"#)
+    let camPattern = try! NSRegularExpression(pattern: #" CAM \d+( \d+)?$"#)
     let prefixes = isoStems.compactMap { stem -> String? in
         let range = NSRange(stem.startIndex..., in: stem)
         guard camPattern.firstMatch(in: stem, range: range) != nil else { return nil }
-        return camPattern.stringByReplacingMatches(in: stem, range: range, withTemplate: "")
+        return camPattern.stringByReplacingMatches(in: stem, range: range, withTemplate: "$1")
     }
-    for candidate in [logPath.stem] + prefixes {
+    for candidate in (log.sessionCount > 1 ? prefixes + [logPath.stem + suffix] : [logPath.stem] + prefixes) {
         let path = try containedPath(root: root, relative: "\(candidate).mp4")
         if isFile(path) {
             programMp4 = path
@@ -175,7 +196,40 @@ public func openRecording(_ logPath: URL, session: Int? = nil) throws -> Recordi
         if let position = sources.firstIndex(where: { $0.index == entry.index }) { sources[position] = item } else { sources.append(item) }
     }
 
-    let audioFiles = try listWavs(root: root)
+    var audioFiles = try listWavs(root: root)
+    // Restrict optional WAVs as well as camera pairs; another take is never extra audio.
+    if log.sessionCount > 1 {
+        let pairedStems = Set(sources.filter { $0.kind == "Video" }.map { URL(fileURLWithPath: $0.relative).stem })
+        let numbered = sources.contains { $0.kind == "Video" && URL(fileURLWithPath: $0.relative).stem.hasSuffix(suffix) }
+        var matching: [(stem: String, path: URL)] = []
+        for entry in audioFiles {
+            if numbered && !entry.stem.hasSuffix(suffix) { continue }
+            let info: WavInfo
+            do { info = try probeWav(entry.path) }
+            catch {
+                if pairedStems.contains(entry.stem) { throw error }
+                if numbered { warnings.append("\(entry.path.lastPathComponent): excluded because its session audio could not be read.") }
+                continue
+            }
+            if let reference = info.timeReference,
+               (Rational(reference, info.sampleRate) - Rational(master.frames) / frameRate).magnitude <= Rational(1) / frameRate {
+                matching.append(entry)
+            } else if pairedStems.contains(entry.stem) {
+                throw ConversionError("\(entry.path.lastPathComponent): cannot confirm it belongs to session \(log.sessionNumber); its Broadcast Wave time reference must match the session start.")
+            } else if numbered {
+                warnings.append("\(entry.path.lastPathComponent): excluded because its Broadcast Wave time reference does not confirm this session.")
+            }
+        }
+        audioFiles = matching
+        let paths = (programMp4.map { [$0] } ?? []) + sources.filter { $0.kind == "Video" }.compactMap(\.mp4)
+        for path in paths {
+            let info = try probeMp4(path)
+            let expected = try Timecode.parse(JSONValues.string(header["masterTimecode"]) ?? "", fps: info.frameRate).frames
+            if info.timecodeFrames != expected {
+                throw ConversionError("\(path.lastPathComponent): cannot confirm it belongs to session \(log.sessionNumber); its embedded timecode must match the session start.")
+            }
+        }
+    }
     for item in sources where item.kind == "Video" {
         item.wav = audioFiles.first { $0.stem == URL(fileURLWithPath: item.relative).stem }?.path
     }

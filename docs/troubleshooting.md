@@ -6,7 +6,9 @@ Open the recording folder itself (the one containing the `.drp`, the `.mp4`, `Vi
 
 ## "This Recording Has 2 Sessions"
 
-The ATEM appended a second session to the same log because the recording was stopped and started under the same name. The app cannot choose between sessions yet. Use the command line and pick one: `python3 atem_iso_to_fcpxml.py "<folder>" --session 2`. Check that the ISO file names in the output match the session you chose; multi-session logs have only been tested with synthetic recordings.
+In version 1.4 or later, choose the recording by its start time and duration. Convert it, then use **Change Session…** for the next one. Each has its own default XML filename and Final Cut event name. Older apps need an update; the command line selects a session with `--session 2`.
+
+Keep the ATEM's numbered media names intact. Multi-session conversion checks embedded video timecodes and camera WAV Broadcast Wave references against the selected session. If a source cannot be confirmed, restore the original recording files rather than renaming another session's media to fit. A real two-session recording has passed import and XML round trips in Final Cut Pro 12.4; other naming conventions remain unverified.
 
 ## "Cannot find …" for a recording on a drive
 

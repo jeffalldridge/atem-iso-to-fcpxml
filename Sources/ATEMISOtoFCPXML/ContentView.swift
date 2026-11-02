@@ -10,6 +10,15 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             if let loaded = model.loaded {
+                if loaded.recording.log.sessionCount > 1 {
+                    HStack {
+                        Text("Session \(loaded.recording.log.sessionNumber) of \(loaded.recording.log.sessionCount)").font(.headline)
+                        Spacer()
+                        Button("Change Session…") { model.open(loaded.log) }
+                            .disabled(!model.canOpenRecording)
+                    }
+                    .padding(.horizontal, Layout.gutter).padding(.top, 12)
+                }
                 RecordingHeader(model: model, loaded: loaded)
                 Divider()
                 ChoiceColumns(model: model, loaded: loaded)
@@ -41,6 +50,9 @@ struct ContentView: View {
                     .background(.tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
                     .allowsHitTesting(false)
             }
+        }
+        .sheet(item: $model.sessionSelection) { selection in
+            SessionChooser(model: model, selection: selection)
         }
         .alert(model.problem?.title ?? "", isPresented: Binding(get: { model.problem != nil }, set: { if !$0 { model.problem = nil } })) {
             Button("OK", role: .cancel) {}
@@ -82,5 +94,36 @@ struct EmptyStateView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(maxHeight: .infinity)
+    }
+}
+
+struct SessionChooser: View {
+    let model: ConversionModel
+    let selection: SessionSelection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Choose a Recording Session").font(.title2.bold())
+            Text("This log contains \(selection.choices.count) recordings. Open one to review its cameras and soundtrack. Each session saves to a separate FCPXML.")
+                .foregroundStyle(.secondary)
+            ScrollView {
+                VStack(spacing: 10) {
+                    ForEach(selection.choices) { choice in
+                        Button { model.chooseSession(choice.id) } label: {
+                            HStack {
+                                Text("Session \(choice.id)").font(.headline)
+                                Spacer()
+                                Text("Start \(choice.start) · Length \(choice.duration)").monospacedDigit()
+                            }.frame(maxWidth: .infinity).padding(8)
+                        }.buttonStyle(.bordered)
+                    }
+                }
+            }.frame(maxHeight: 240)
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { model.sessionSelection = nil }
+                    .keyboardShortcut(.cancelAction)
+            }
+        }.padding(24).frame(width: 570)
     }
 }

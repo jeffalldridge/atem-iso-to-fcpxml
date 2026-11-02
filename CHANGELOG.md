@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.0 (2026-11-01)
+
+- Choose a recording session by start time and duration when the ATEM appended multiple recordings to one log. Change Session opens another recording; cancelling keeps the current result.
+- Resolve the first session’s ATEM-renamed `01` media, preserve later session suffixes for Program video, and keep WAV choices within the selected session. Verify video and paired WAV source clocks before conversion.
+- Give each session a distinct default XML filename and Final Cut event/project name. The command line and Quick Action fallback support the same media matching; single-session behavior remains unchanged.
+
 ## 1.3.0 (2026-10-25)
 
 - Added Check for Updates and optional automatic checks and installation using Sparkle and GitHub Releases. Signed feeds and archives are verified before installation; conversions finish before the app quits.

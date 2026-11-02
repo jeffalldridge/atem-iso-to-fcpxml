@@ -2,6 +2,15 @@
 
 What has been checked, on what, and what has not. Unit tests, engine parity, XML well-formedness, DTD validation, native UI interaction, Final Cut import, signing, notarization, and Gatekeeper acceptance are different kinds of evidence; none substitutes for another. Dates are absolute. Earlier, finer-grained development notes are in the Git history of this file.
 
+## 2026-11-01: Local 1.4.0 Session Selection
+
+- A real appended recording has a 1:58 first session and a 58:52 second session. The first header retained unsuffixed camera paths while its media had been renamed with `01`; the second used `02`. Camera/Program embedded timecodes and all twelve WAV Broadcast Wave references match their respective header starts. The shared still remains a common source.
+- Python and Swift outputs match byte for byte for both real sessions. Their XML passes the installed FCPXML 1.10 DTD. Separate output files were created without overwriting media or the log.
+- Native app: the session chooser shows both start clocks and durations; selecting session 2 displays 48 clips/44 dissolves and only `02` WAVs. Change Session selects session 1 with two clips/one dissolve and only `01` WAVs. Existing-output notices name the session-specific destination. The chooser layout was inspected visually.
+- Final Cut Pro 12.4: both session exports imported into the private validation library without an import warning. Angle Editor clips span 1:58 and 58:52 respectively at zero-relative offsets. The long-session camera, computer, and Program footage was visibly populated. Both events were exported as FCPXML 1.14. Exact rational comparison confirms project clip/transition offsets, starts, durations, and video/audio angle assignments match; original source paths survive and angle offsets remain zero.
+- Automated checks: 39 Swift tests, including engine parity and chooser cancellation/separate-export lifecycle, and 95 Python tests passed. Regressions cover first-session renaming, matching Program and WAV discovery, wrong-session camera/WAV rejection, missing Program, and audio isolation when clocks reset. Quick Action freshness and diff whitespace checks pass. Universal local app packaging passed ad-hoc signature verification and engine self-check.
+- Limits: no new long-duration listening/lip-sync test, other ATEM hardware/firmware, macOS 15, Intel hardware, accessibility audit, release signing, notarization, publication, or updater installation. These checks preceded release authorization; the installed signed 1.3.0 app is preserved for the production update test.
+
 ## Current Status
 
 **Verified**
@@ -18,11 +27,11 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 
 - Other ATEM models (Extreme ISO, SDI ISO, Television Studio HD8 ISO) and other frame rates, especially 59.94 and 29.97 drop-frame, with real media. Synthetic coverage only.
 - Keys, fade to black, and non-mix transitions on real recordings. Native synthetic tests cover Program stand-in sections; they do not establish behavior across those operations on real hardware recordings.
-- A multi-session `.drp` from a real stop-and-start recording. How later sessions name their media is inferred from the log, which is why the app does not offer a session chooser.
+- Multi-session naming conventions beyond the numbered two-session recording verified above.
 - Lip sync by ear over a full-length recording. Alignment is by timecode and Broadcast Wave time reference, which matched exactly on the real recordings; no waveform analysis is done.
 - Final Cut Pro versions older than 12.4.
 - VoiceOver, Full Keyboard Access, light appearance, Reduce Motion and Reduce Transparency, drag and drop from Finder, a real slow or exFAT drive, read-only and full destinations, macOS 15, and Intel hardware.
-- Replacing a running installation with a newer copy, and the Quick Action's lookup with several installed copies.
+- Replacing a running installation on a second machine/account, and the Quick Action's lookup with several installed copies. The 1.3.0 fixture update and relaunch passed on this machine.
 
 ## 2026-10-25: Version 1.3.0 Updater, Local Validation
 
