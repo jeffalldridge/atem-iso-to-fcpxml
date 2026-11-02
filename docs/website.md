@@ -7,7 +7,7 @@ The project page is static HTML and CSS in `docs/site/`, published to GitHub Pag
 - Keep the dark charcoal and orange palette, system typography, and a single primary download action.
 - State only what has been verified. Real-media testing covers ATEM Mini Pro ISO recordings at 1080p60 in Final Cut Pro 12.4; other models and frame rates are described as untested. See [validation.md](validation.md).
 - Keep answers visible. Use headings and dividers, not dropdowns or accordions.
-- The download button links to `releases/latest/download/ATEM-ISO-to-FCPXML.dmg`, so the release workflow must keep that asset name ([releasing.md](releasing.md)). The page states the download size (about 3 MB); recheck it when the disk image changes.
+- The download button links to `releases/latest/download/ATEM-ISO-to-FCPXML.dmg`, so the release workflow must keep that asset name ([releasing.md](releasing.md)). Avoid fixed download-size claims; bundled updater components can change the archive size.
 - The FAQ in the page and its `FAQPage` JSON-LD must match exactly.
 - No invented reviews, ratings, or search-ranking claims.
 

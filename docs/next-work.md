@@ -1,6 +1,6 @@
 # Maintainer Handoff and Future Considerations
 
-Updated 2026-11-01 for local 1.4.0 session selection. This is a public handoff, not a promise to implement every idea below. Verify the current GitHub release and workflow results before reporting release status. The version in source alone does not establish that an installer has been published.
+Updated 2026-11-01 after publishing 1.4.0 and verifying the installed-app update. This is a public handoff, not a promise to implement every idea below. Verify the current GitHub release and workflow results before reporting release status. The version in source alone does not establish that an installer has been published.
 
 ## Decisions to Preserve
 
@@ -18,15 +18,15 @@ The maintainer requested GitHub-backed update checking and automatic installatio
 
 ## Release Handoff
 
-Version 1.3.0 was published on 2026-10-25 from commit `57bd713`. [Release workflow 40247683271](https://github.com/jeffalldridge/atem-iso-to-fcpxml/actions/runs/40247683271) passed tests, Developer ID signing, app and DMG notarization, stapling, Gatekeeper checks, and signed feed generation. The public release has all five assets and is the latest stable release. The installed Applications copy was manually upgraded to the signed build, with automatic checks and installation enabled.
+Version 1.4.0 was published on 2026-11-01 from `32a9911`. [Release workflow 41367827674](https://github.com/jeffalldridge/atem-iso-to-fcpxml/actions/runs/41367827674) passed signing, notarization, stapling, Gatekeeper checks, and signed feed generation. Downloaded assets passed local checksum and signature verification. The existing signed Applications copy updated from 1.3.0 through the production feed and relaunched as 1.4.0, with both automatic preferences retained. The check was manually triggered; scheduled background checking and unattended installation on quit were not separately exercised.
 
 A temporary updater-equipped fixture reporting 1.2.0 fetched the production feed, downloaded the published DMG, installed it, and relaunched as 1.3.0. This fixture was ad-hoc signed; it was not the original 1.2.0 app, which has no updater. A real pre-1.3 installation still requires one manual upgrade. See [validation.md](validation.md) for evidence limits.
 
 For future releases follow [releasing.md](releasing.md), preserve the signing key and asset names, and never move an existing version tag. The Pages workflow deploys site changes on `main`; the updater feed is an independent GitHub release asset. The local notarization profile is not configured; use the established GitHub release workflow.
 
-## 1.4.0 Release Preparation
+## 1.4.0 Session Selection
 
-The maintainer authorized website and documentation cleanup, commit/push, the signed 1.4.0 release build, publication after verification, and an installed 1.3.0-to-1.4.0 update test. Preserve the installed 1.3.0 copy until that test. Source version and a draft build alone do not establish publication or updater acceptance.
+The maintainer authorized cleanup, push, signed build, publication, and the installed-app update test. These are complete; 1.4.0 is the published and installed release. See validation for exact evidence and limits.
 
 The native chooser shows start time and logged duration, with cancellation preserving the current result. Change Session returns to it. Numbered camera/Program lookup, matching-session WAV filtering, source-clock verification, distinct default export/event names, and CLI/Quick Action support are implemented in both engines. The original recording and media remain unchanged. Two session exports are available beside the private recording. See validation for native import/export and test evidence.
 

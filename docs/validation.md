@@ -11,6 +11,16 @@ What has been checked, on what, and what has not. Unit tests, engine parity, XML
 - Automated checks: 39 Swift tests, including engine parity and chooser cancellation/separate-export lifecycle, and 95 Python tests passed. Regressions cover first-session renaming, matching Program and WAV discovery, wrong-session camera/WAV rejection, missing Program, and audio isolation when clocks reset. Quick Action freshness and diff whitespace checks pass. Universal local app packaging passed ad-hoc signature verification and engine self-check.
 - Limits: no new long-duration listening/lip-sync test, other ATEM hardware/firmware, macOS 15, Intel hardware, accessibility audit, release signing, notarization, publication, or updater installation. These checks preceded release authorization; the installed signed 1.3.0 app is preserved for the production update test.
 
+## 2026-11-01: Published 1.4.0 and Installed-App Update
+
+- Release [workflow 41367827674](https://github.com/jeffalldridge/atem-iso-to-fcpxml/actions/runs/41367827674) succeeded from `32a9911`: universal build, Developer ID signing, app and disk-image notarization/stapling, Gatekeeper checks, signed feed, and draft assets. The separate test matrix also passed.
+- Downloaded draft assets passed all four SHA-256 checks. Sparkle verified both the feed and DMG signatures. Local deep/strict code-signature verification, app and DMG Gatekeeper assessment, and both stapler validations passed.
+- Published v1.4.0 with all five assets. The public latest feed matched the verified draft feed byte for byte.
+- The existing signed Applications installation reported 1.3.0 with both automatic preferences enabled. Native Check for Updates offered 1.4.0; Install Update downloaded it, and Install and Relaunch replaced the installed app and relaunched as 1.4.0. Both preferences remained enabled, a second check reported up to date, and the installed app passed signature and Gatekeeper checks. No manual app replacement was used.
+- The updated installed app reopened the real appended recording, showed both start clocks/durations, and loaded session 2 with 48 clips, 44 dissolves, and only `02` WAV choices. Existing exports were preserved.
+- Website cleanup: session guidance, troubleshooting, machine-readable FAQ, product facts, and Tent Studios product/article copy agree. Nine static website checks passed; Tent Studios build, 537 portfolio checks, SEO checks across 65 pages, and type checking passed. Browser layout checks at 375, 768, 1024, and 1440 pixels found no horizontal overflow on the changed pages.
+- Limits: the update check was manually triggered. This verifies production feed/download/installation/relaunch on the existing installation, not elapsed-time background scheduling or unattended installation on quit. No second-machine, Intel-hardware, macOS 15, accessibility, or long-duration lip-sync acceptance was added.
+
 ## Current Status
 
 **Verified**
